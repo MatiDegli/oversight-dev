@@ -5465,3 +5465,107 @@ built with until Oversight reloads, and a note under the control says so instead
 reload. This replaces “Day mode is for the submission gallery only” and “the switch repaints
 everything” (2026-10-26) and the missing switcher of the v4 tokens entry; full day-mode polish is
 still a later front. The Windows window is forced dark, so System there may always resolve to dark.
+
+## 2026-11-05 — The post-hackathon roadmap
+
+The maintainer approved docs/roadmap.md and all twelve choices on 2026-11-05, based on main 498639ff.
+It plans an IDE for any repository, language, model and harness, with visible person-owned policy,
+fixed authority invariants, configurable defaults, qualified execution or explicit trust, a bounded
+event log, native hosted harnesses and measured Rust adoption. Milestones start on conditions, not dates.
+This replaces docs/additions.md:83's queue order, which leaves recovery and execution dependencies implicit; today's rules stand until the named fronts land.
+
+## 2026-11-05 — Rust where it pays, not a rewrite
+
+The maintainer chose Rust for OS boundaries (sandbox, PTY, watcher, search and desktop) and measured
+hot paths; Python keeps orchestration and providers. M7 measures before moving more work.
+A full backend rewrite was rejected: months of migration would put roughly 13,000 pytest checks at
+risk without proving a gain. This extends the Python backend baseline in ARCHITECTURE.md:145;
+it replaces no runtime today and defers broader migration until profiles justify it.
+
+## 2026-11-05 — Native agents get a sandboxed shell after M3 qualifies
+
+The maintainer chose a native-agent shell inside the sandbox, policy-gated and defaulting to ask.
+It reaches native agents only once M3's sandbox qualifies on their platform; AGENTS.md:48 and the
+no-shell rationale in ARCHITECTURE.md:256 stand until then. M4 changes that tool list when it lands.
+Keeping no shell was rejected because general toolchains need commands beyond fixed tools;
+the sandbox and the person's policy must bound execution before that capability is available.
+
+## 2026-11-05 — The person's terminal is unsandboxed under shared authority
+
+The maintainer chose an unsandboxed terminal, as in an IDE, after M4's security plan is reviewed.
+It requires the shared authority checks, a per-session token, 127.0.0.1 and server-owned cleanup;
+capture also waits for the bounded log and Secrets gate. Sandboxing it by default was rejected
+because the person needs direct control. M4 replaces the "built last" order in DECISIONS.md:318,
+retaining its security boundary and the HTTP/WebSocket authority policy in DECISIONS.md:591.
+
+## 2026-11-05 — Store keys in the OS keychain
+
+The maintainer chose Windows Credential Manager, macOS Keychain and Secret Service, with .env as
+the development fallback. Hosted CLI credentials remain with each unmodified CLI, never stored
+or read by Oversight. Keeping .env as the only store was rejected because desktop use needs
+platform credential storage and isolation from tool children. This replaces the .env-only rule
+in AGENTS.md:24 when M2 lands; M0's rules front records that transition without moving keys now.
+
+## 2026-11-05 — Use native provider SDKs behind one contract
+
+The maintainer chose the OpenAI SDK for compatible endpoints and the official Anthropic and
+Google SDKs for native caching and thinking, behind an extensible provider contract for every role.
+OpenAI-compatible only was rejected because it would hide native features and restrict providers;
+LiteLLM remains excluded. M2 replaces the OpenAI-only call rule in AGENTS.md:34 and the Meta-only
+provider scope in AGENTS.md:18 after M0 records the transition; contract changes remain his decisions.
+
+## 2026-11-05 — MCP first, plugins after workflow contracts stabilize
+
+The maintainer chose an MCP client in M6 and a general plugin API in M9 once workflow contracts
+are stable. Servers execute under the same trust or sandbox policy as other commands.
+VS Code extension compatibility through Open VSX was rejected because hosting its extension host
+is too large. This supersedes the unqueued outside-agent hooks/MCP candidate in docs/additions.md:265
+as a plan; the present native tool list in AGENTS.md:48 stands until the corresponding fronts land.
+
+## 2026-11-05 — Choose the sandbox implementation in M3's security plan
+
+The maintainer deferred the choice to an independently reviewed M3 plan comparing a Rust helper
+using Landlock/seccomp with a narrow bubblewrap license exception (LGPL, separate binary), by
+coverage and maintenance. Rejecting bubblewrap now on license grounds would remove an option
+before that comparison. AGENTS.md:26 still applies until any exact exception lands; this advances
+the candidate in docs/additions.md:189, closing current containment gaps first with the existing launcher.
+
+## 2026-11-05 — Linux and Windows first, macOS after its sandbox
+
+The maintainer chose Linux and Windows first, Windows native acceptance in M1, and macOS after
+its M3 sandbox qualifies. Each platform must satisfy the execution policy before features ship.
+Earlier macOS for reach was rejected because qualification and a usable repository flow come first.
+This advances the deferred native qualification in desktop/README.md:5 and the later platform
+scope in ARCHITECTURE.md:60; it does not certify Windows or macOS acceptance today.
+
+## 2026-11-05 — Run independent milestones in parallel after M0
+
+The maintainer chose parallel delivery: M3 starts alongside M0; M1/M2 follow M0's applicable gates.
+The person's terminal follows its security plan, M5 editing runs alongside, actions wait for M1 recovery and approved
+contracts, hosted nodes wait for M2, the agent shell waits for M3, M6 grows progressively and M10
+waits for evidence acceptance. Serial delivery was rejected because independent work can proceed.
+This replaces docs/additions.md:83's queue order and DECISIONS.md:318's terminal-last order when fronts land.
+
+## 2026-11-05 — End hackathon-only restrictions through M0's rules front
+
+The maintainer chose to end the new-since-kickoff requirement (AGENTS.md:16), with third-party code only as licensed dependencies.
+M0's own front rewrites AGENTS.md and PRODUCT.md for broader language/model scope (PRODUCT.md:24, AGENTS.md:18) and phased tool/key/SDK changes (AGENTS.md:48, AGENTS.md:24, AGENTS.md:34); those changes take effect with their named fronts.
+Cross-provider merge review (AGENTS.md:4), the submission freeze until he lifts it, security and authority invariants, maintainer-owned contracts, license controls, hooks and fake-only checks stay.
+README.md's historical "Built during the hackathon" section and the daily DEVLOG also stay (AGENTS.md:17).
+Retaining all hackathon restrictions was rejected because they block the approved broader product; this entry changes neither AGENTS.md nor PRODUCT.md today.
+
+## 2026-11-05 — Build the usage ledger after judging and the freeze
+
+The maintainer chose to build M2's usage and cost ledger as a backend module with tests and fixtures
+after judging ends and the GitHub freeze lifts: log parsers, dated price books, agent-hours and
+unknown never zero. Until then only its specification and hosted-agent capture are built, with
+capture still gated by M2's bounded log and Secrets requirements. Starting the ledger now was rejected
+to preserve the freeze; this defers expansion of docs/additions.md:673, retaining its accounting semantics.
+
+## 2026-11-05 — Allow explicit repository trust before sandbox qualification
+
+The maintainer chose per-repository trust for unsandboxed execution, off by default, with exposure
+disclosed and verified cleanup of processes, ports and temporary state. Shell, network and installs
+reach agents only through the sandbox and policy. Blocking all execution until M3 qualifies was
+rejected so M1/M2 can serve trusted repositories earlier, as native Windows does (docs/isolation.md:221).
+M1 replaces the informational, nonblocking trust prompt in docs/own-repository.md:32 with explicit trust.
