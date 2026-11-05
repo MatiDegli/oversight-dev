@@ -76,9 +76,9 @@ it("inventories event-bearing fixtures and verifies exporter provenance without 
   );
 });
 
-it.each(sources.filter((source) => source.complete))(
+it.for(sources.filter((source) => source.complete))(
   "folds $path through the public player at 1×, every seek and timestamp batch",
-  async ({ events }) => {
+  async ({ events }, { onTestFinished, signal }) => {
     vi.useFakeTimers();
     const store = createStateStore();
     const cursors: number[] = [];
@@ -87,33 +87,42 @@ it.each(sources.filter((source) => source.complete))(
       store,
       source: { text: events.map((event) => JSON.stringify(event)).join("\n") },
     });
-    try {
-      await player.ready;
-      // Advance the real 40 ms schedule on a virtual clock, retaining production timestamp caps.
-      await vi.advanceTimersByTimeAsync(player.getSnapshot().duration + 40);
-      expect(player.getSnapshot().status).toBe("ended");
-      expect(store.getState().state).toEqual(events.reduce(applyEvent, createInitialState()));
-      expect(cursors.at(-1)).toBe(events.at(-1)?.seq);
-      for (const event of events) {
-        player.seekSeq(event.seq);
-        expect(store.getState().state).toEqual(
-          events.slice(0, event.seq).reduce(applyEvent, createInitialState()),
-        );
-      }
-      for (const position of new Set(player.getSnapshot().offsets)) {
-        player.seek(position);
-        const eligible = events.filter(
-          (_, i) => (player.getSnapshot().offsets[i] ?? Infinity) <= position,
-        );
-        expect(store.getState().state).toEqual(eligible.reduce(applyEvent, createInitialState()));
-      }
-      const settled = cursors.length;
-      await vi.advanceTimersByTimeAsync(500);
-      expect(cursors).toHaveLength(settled);
-    } finally {
+    // Vitest runs this before starting the next case, including after a timeout.
+    // A late body must never restore real timers over another case's virtual clock.
+    onTestFinished(() => {
       player.dispose();
       vi.useRealTimers();
+    });
+    await player.ready;
+    signal.throwIfAborted();
+    let expected = createInitialState();
+    const prefixes = new Map<number, typeof expected>();
+    const batches = new Map<number, typeof expected>();
+    const { offsets } = player.getSnapshot();
+    for (const [index, event] of events.entries()) {
+      expected = applyEvent(expected, event);
+      prefixes.set(event.seq, expected);
+      // Equal timestamps share the last prefix in the batch.
+      batches.set(offsets[index] ?? Infinity, expected);
     }
+    // Advance the real 40 ms schedule on a virtual clock, retaining production timestamp caps.
+    await vi.advanceTimersByTimeAsync(player.getSnapshot().duration + 40);
+    signal.throwIfAborted();
+    expect(player.getSnapshot().status).toBe("ended");
+    expect(store.getState().state).toEqual(expected);
+    expect(cursors.at(-1)).toBe(events.at(-1)?.seq);
+    for (const event of events) {
+      player.seekSeq(event.seq);
+      expect(store.getState().state).toEqual(prefixes.get(event.seq));
+    }
+    for (const [position, state] of batches) {
+      player.seek(position);
+      expect(store.getState().state).toEqual(state);
+    }
+    const settled = cursors.length;
+    await vi.advanceTimersByTimeAsync(500);
+    signal.throwIfAborted();
+    expect(cursors).toHaveLength(settled);
   },
 );
 
