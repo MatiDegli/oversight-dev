@@ -28,8 +28,8 @@ PREVIEW_POLICY = (
     "cleanup. On Linux, the verified namespace/allowlisted-root boundary covers only the "
     "reviewed-app preview\u2019s build, startup and descendants. Separate run_tests "
     "and shop-adapter "
-    "launches retain network/PID isolation without filesystem isolation; covering them is a later "
-    "front. Native Windows runs trusted code as the person without credential isolation."
+    "launches retain network/PID isolation without filesystem isolation. Native Windows runs "
+    "trusted code as the person without credential isolation."
 )
 WARNING = (
     "Native Windows: trusted repository code, same-user execution; original credentials and "
@@ -106,13 +106,15 @@ def test_product_settings_do_not_loosen_development_rules():
 @pytest.mark.parametrize(
     "policy",
     [
-        "Rules here describe today's behavior; docs/roadmap.md plans the changes",
-        "a product limit changes only when the front that delivers its setting updates this file",
+        "AGENTS.md holds only durable rules for the current state; exclude milestone identifiers, "
+        "status dates and transition language",
+        "Plans go to docs/roadmap.md, status and inventory to docs/additions.md, decisions and "
+        "their history to DECISIONS.md and CHANGELOG.md",
+        "docs/roadmap.md plans product changes; a front that changes a rule edits it here",
         "Approve has no keyboard shortcut, not even Ctrl+Enter",
         "combined tests run first on the combined result",
         "Agents never widen their own or another agent's authority",
-        "until the settings mechanism lands, an agent proposes a setting change to the maintainer "
-        "in text",
+        "an agent proposes a setting change to the maintainer in text",
         "typing-extensions under PSF-2.0",
         "CPython under PSF-2.0 for the Windows installer only",
         "The public submission repository stays frozen until the maintainer lifts it "
@@ -160,4 +162,9 @@ def test_agent_rules_define_each_role_and_preserve_current_trust_disclosure():
     assert "what changed, what was verified and how" in roles[1]
     assert "reviewers and researchers are read-only" in roles[2].lower()
     assert "path:line or command output" in roles[2]
-    assert "Today's repository trust prompt is informational" in instructions
+    assert "The repository trust prompt is informational" in instructions
+    assert "it grants no execution authority" in instructions
+    assert "The reviewed self application is refused at admission and execution" in instructions
+    assert "Admission requires an explicit no-key entry, distinct ports and final acceptance" in (
+        instructions
+    )

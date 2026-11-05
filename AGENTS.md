@@ -13,10 +13,12 @@ and docs/roadmap.md (approved transitions, not delivered capabilities).
 Every proposal or brief recommending a product option states how it meets each criterion, in this order.
 This governs product settings; this file's development rules (hooks, gates, review, contracts, the freeze,
 fake-only checks) stay fixed.
-Rules here describe today's behavior; docs/roadmap.md plans the changes, and a product limit changes only when the front that delivers its setting updates this file.
+AGENTS.md holds only durable rules for the current state; exclude milestone identifiers, status dates and transition language.
+Plans go to docs/roadmap.md, status and inventory to docs/additions.md, decisions and their history to DECISIONS.md and CHANGELOG.md.
+docs/roadmap.md plans product changes; a front that changes a rule edits it here.
 Only two product rules are fixed: authority comes only from the person; every loosening is visible, recorded in the event log and reversible.
 Every other product limit is a setting with a safe default, so a person accepting more risk can choose it; provider terms, law, licenses and unavailable capabilities still bind, with reasons stated.
-Agents never widen their own or another agent's authority; until the settings mechanism lands, an agent proposes a setting change to the maintainer in text (details: DECISIONS.md "Agents can suggest, prepare and apply settings", docs/roadmap.md).
+Agents never widen their own or another agent's authority; an agent proposes a setting change to the maintainer in text (details: DECISIONS.md "Agents can suggest, prepare and apply settings", docs/roadmap.md).
 
 ## Roles
 The coordinator plans, briefs, integrates and alone merges.
@@ -27,7 +29,7 @@ Reviewers and researchers are read-only; every claim cites evidence (path:line o
 - Third-party code enters only as licensed dependencies.
   No code from the maintainer's other projects; never mention or link them.
 - Keep README.md's "Built during the hackathon" section as history. DEVLOG.md is frozen history; update CHANGELOG.md per release, keeping Unreleased for landed work.
-- Today's product profiles are Muse Spark through the Meta Model API (Contributor mode) and Muse Spark Open through Baseten.
+- Product profiles are Muse Spark through the Meta Model API (Contributor mode) and Muse Spark Open through Baseten.
 - Every provider's API is called only by Oversight itself and by runs started on purpose (the API probe, recording a demo run). Tests and make check use the scripted fake model and spend no credits for every provider.
 - Development agents may use Muse Code with its own stored credential: never the product's .env key, never exported in the shell, never the product's credits.
 - API keys live only in .env (.env and .env.* are gitignored; *.example files are kept). gitleaks runs in pre-commit and CI.
@@ -56,9 +58,9 @@ Reviewers and researchers are read-only; every claim cites evidence (path:line o
 - Tools are list_files, read_file, search, edit_file, run_tests and finish, plus find_symbol (read-only Python navigation) when the harness pack is on, the default. There is no shell tool.
 - Every path is validated inside the agent's worktree; no tool returns the content of an obvious secret file.
 - run_tests uses a fixed startup test specification. Demo and source profiles use Oversight’s prepared demo-venv or an explicitly supplied equivalent; own repositories use their validated environment. Project imports map to the disposable tested tree. Profiles declare their test scope; own repositories retain whole-repository discovery. The person owns own-repository test timeouts; the model never changes the specification or timeout.
-- Preview launch selection is person override, then the original source’s validated declaration, then supported startup detection. The demo shop uses Oversight's trusted adapter. Invalid explicit inputs refuse without fallback. The person sees commands, reason, limits and platform trust before execution. The specification stays fixed; the model can edit code it executes. Preview uses disposable tested inputs, platform-specific ownership and verified cleanup. On Linux, the verified namespace/allowlisted-root boundary covers only the reviewed-app preview’s build, startup and descendants. Separate run_tests and shop-adapter launches retain network/PID isolation without filesystem isolation; covering them is a later front. Native Windows runs trusted code as the person without credential isolation.
-- Today's repository trust prompt is informational (docs/own-repository.md); it has not been replaced by an execution grant.
-- The reviewed self application remains refused at admission and execution until its explicit no-key entry, distinct ports and final acceptance are delivered. Controlled preview fixtures do not certify the self application or Windows browser acceptance.
+- Preview launch selection is person override, then the original source’s validated declaration, then supported startup detection. The demo shop uses Oversight's trusted adapter. Invalid explicit inputs refuse without fallback. The person sees commands, reason, limits and platform trust before execution. The specification stays fixed; the model can edit code it executes. Preview uses disposable tested inputs, platform-specific ownership and verified cleanup. On Linux, the verified namespace/allowlisted-root boundary covers only the reviewed-app preview’s build, startup and descendants. Separate run_tests and shop-adapter launches retain network/PID isolation without filesystem isolation. Native Windows runs trusted code as the person without credential isolation.
+- The repository trust prompt is informational (docs/own-repository.md); it grants no execution authority.
+- The reviewed self application is refused at admission and execution. Admission requires an explicit no-key entry, distinct ports and final acceptance. Controlled preview fixtures do not certify the self application or Windows browser acceptance.
 - An agent's status comes from its tool calls, never from its text. Runs without progress stop.
 
 ## UI invariants
