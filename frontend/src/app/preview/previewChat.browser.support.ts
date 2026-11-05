@@ -519,9 +519,15 @@ class ChatSupport {
       close: async () => {
         initialDetails.resolve(undefined);
         initialDetailsObserved.resolve(undefined);
-        if (await page.locator(".preview-panel button").count())
-          await page.locator(".preview-panel button").click({ timeout: 1000 });
-        await context.close();
+        try {
+          // Teardown can overlap an existing Close. Activate only a still-present control,
+          // in one browser task, without pointer retries against a disappearing panel.
+          await page.evaluate(() => {
+            document.querySelector<HTMLButtonElement>(".preview-panel button")?.click();
+          });
+        } finally {
+          await context.close();
+        }
       },
     };
   }

@@ -113,6 +113,33 @@ it("retains focus and drafts across selection and status, and opens and closes t
   }
 });
 
+it("cleans up when a concurrent close detaches the preview button", async () => {
+  const session = await support.session();
+  const { page } = session;
+  try {
+    await page.getByRole("button", { name: "Preview app", exact: true }).click();
+    await check(page.locator(".preview-panel-provenance summary")).toHaveText("Revision 1");
+    await page.mouse.move(0, 0);
+    await page.locator(".preview-panel button").evaluate((node) => {
+      // Complete a concurrent close after actionability checks, before the pointer click.
+      node.addEventListener(
+        "pointerover",
+        () => {
+          (node as HTMLButtonElement).click();
+          node.closest(".preview-panel")?.remove();
+        },
+        { once: true },
+      );
+    });
+    await expect(session.close()).resolves.toBeUndefined();
+    expect(session.calls.stop).toBe(1);
+    expect(session.context.pages()).toEqual([]);
+    expect(session.pageErrors).toEqual([]);
+  } finally {
+    await session.context.close();
+  }
+});
+
 it("retains scripted provenance for a folded member of a mixed team at 390", async () => {
   const session = await support.session({ width: 390, height: 844 }, "day", "mixed");
   const { page } = session;
