@@ -1,7 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import log from "../../../fixtures/events/recorded-demo.jsonl?raw";
-import { createStateStore } from "../state";
-import { createReplayPlayer } from "./replayPlayer";
+import { applyEvent, createStateStore } from "../state";
+import { createReplayPlayer, type ReplaySnapshot } from "./replayPlayer";
+import { replayPrefix } from "./replayTimeline";
+
+vi.mock("../state", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../state")>();
+  return { ...actual, applyEvent: vi.fn(actual.applyEvent) };
+});
 
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
@@ -200,4 +206,420 @@ it("seeks an exact sequence at an equal timestamp and cancels captured playback"
   control.dispose();
   control.seekSeq(2);
   expect(store.getState().state.lastSeq).toBe(5);
+});
+
+/** Full refolds use the unchanged timeline oracle, independently of the player's cursor. */
+function traceOracle({ store, control }: ReturnType<typeof player>) {
+  const { events, offsets } = control.getSnapshot();
+  let snapshot = control.getSnapshot();
+  let state = store.getState().state;
+  let anchor = performance.now();
+  let disposed = false;
+  type Entry = { listener: string; state: typeof state; snapshot: ReplaySnapshot };
+  const observed: Entry[] = [];
+  let expected: Entry[] = [];
+  const capture = (listener: string) => () => {
+    observed.push({ listener, state: store.getState().state, snapshot: control.getSnapshot() });
+  };
+  const unsubscribe = [
+    store.subscribe(capture("store 1")),
+    store.subscribe(capture("store 2")),
+    control.subscribe(capture("player 1")),
+    control.subscribe(capture("player 2")),
+  ];
+  const emit = (kind: "store" | "player") => {
+    for (const n of [1, 2]) expected.push({ listener: `${kind} ${String(n)}`, state, snapshot });
+  };
+  const publish = (next: Partial<ReplaySnapshot>) => {
+    snapshot = { ...snapshot, ...next };
+    emit("player");
+  };
+  const seek = (position: number, status = snapshot.status, seq = Infinity) => {
+    if (disposed) return;
+    position = Math.max(0, Math.min(snapshot.duration, Number.isNaN(position) ? 0 : position));
+    state = replayPrefix(events, offsets, position, seq);
+    emit("store");
+    anchor = performance.now();
+    publish({
+      position,
+      status: Number.isFinite(seq)
+        ? "paused"
+        : position >= snapshot.duration
+          ? "ended"
+          : status === "ended"
+            ? "paused"
+            : status,
+      revision: snapshot.revision + 1,
+    });
+  };
+  const advance = () => {
+    const position = Math.min(
+      snapshot.duration,
+      snapshot.position + (performance.now() - anchor) * snapshot.speed,
+    );
+    const next = replayPrefix(events, offsets, position);
+    if (next.lastSeq !== state.lastSeq) {
+      state = next;
+      emit("store");
+    }
+    anchor = performance.now();
+    publish({ position, status: position >= snapshot.duration ? "ended" : snapshot.status });
+  };
+  return {
+    seek,
+    seekSeq: (seq: number, position?: number) => {
+      const index = events.findIndex((event) => event.seq === seq);
+      if (index >= 0) seek(position ?? offsets[index] ?? 0, "paused", seq);
+    },
+    tick: advance,
+    pause: () => {
+      if (disposed || snapshot.status !== "playing") return;
+      advance();
+      if (snapshot.position < snapshot.duration) publish({ status: "paused" });
+    },
+    play: () => {
+      if (disposed || snapshot.status === "playing") return;
+      if (snapshot.status === "ended") {
+        seek(0, "playing");
+        return;
+      }
+      anchor = performance.now();
+      publish({ status: "playing" });
+    },
+    restart: () => {
+      seek(0, "playing");
+    },
+    setSpeed: (speed: 1 | 2 | 4) => {
+      if (disposed) return;
+      if (snapshot.status === "playing") advance();
+      publish({ speed });
+    },
+    dispose: () => {
+      disposed = true;
+    },
+    check: async (action: () => unknown, reference: () => void) => {
+      observed.length = 0;
+      expected = [];
+      await action();
+      reference();
+      expect(observed).toEqual(expected);
+      expect(store.getState().state).toEqual(state);
+      expect(control.getSnapshot()).toEqual(snapshot);
+      expect(control.getSnapshot().events).toBe(events);
+      expect(control.getSnapshot().offsets).toBe(offsets);
+    },
+    unsubscribe: () => {
+      unsubscribe.forEach((stop) => {
+        stop();
+      });
+    },
+  };
+}
+
+it.each(["time", "sequence"])(
+  "reduces only newly eligible events in a monotone %s sweep",
+  async (mode) => {
+    const spy = vi.mocked(applyEvent);
+    spy.mockClear();
+    const { store, control } = player();
+    await control.ready;
+    control.pause();
+    control.seekSeq(1);
+    const setup = spy.mock.calls.length;
+    const { events, offsets, duration } = control.getSnapshot();
+    const startSeq = store.getState().state.lastSeq;
+    spy.mockClear();
+    let steps = 0;
+    let oracleSteps = 0;
+    const bounds: { steps: number; newlyEligible: number }[] = [];
+    for (const [index, event] of events.entries()) {
+      const position = offsets[index] ?? duration;
+      for (const repeat of [false, true]) {
+        const before = store.getState().state.lastSeq;
+        if (mode === "time") control.seek(position);
+        else control.seekSeq(event.seq);
+        const count = spy.mock.calls.length;
+        steps += count;
+        spy.mockClear();
+        const expected = replayPrefix(
+          events,
+          offsets,
+          position,
+          mode === "time" ? Infinity : event.seq,
+        );
+        oracleSteps += spy.mock.calls.length;
+        spy.mockClear();
+        expect(store.getState().state).toEqual(expected);
+        bounds.push({ steps: count, newlyEligible: repeat ? 0 : expected.lastSeq - before });
+      }
+    }
+    console.info({ mode, setup, steps, oracleSteps, bound: events.length - startSeq });
+    expect(steps).toBeLessThanOrEqual(events.length - startSeq);
+    for (const bound of bounds) expect(bound.steps).toBeLessThanOrEqual(bound.newlyEligible);
+    control.dispose();
+  },
+);
+
+it.each([0x5eed, 0xc0ffee, 0xdecafbad])("matches full-refold traces for seed %i", async (seed) => {
+  const session = player();
+  const { control } = session;
+  await control.ready;
+  control.pause();
+  const oracle = traceOracle(session);
+  const { events, offsets, duration } = control.getSnapshot();
+  let random = seed;
+  const next = () => (random = (Math.imul(random, 1664525) + 1013904223) >>> 0);
+  for (let i = 0; i < 100; i++) {
+    const event = events[next() % events.length];
+    if (!event) throw new Error("Missing random event");
+    const position =
+      i % 3 ? (offsets[next() % offsets.length] ?? 0) : (next() / 2 ** 32) * duration;
+    if (i % 2)
+      await oracle.check(
+        () => {
+          control.seek(position);
+        },
+        () => {
+          oracle.seek(position);
+        },
+      );
+    else
+      await oracle.check(
+        () => {
+          control.seekSeq(event.seq, position);
+        },
+        () => {
+          oracle.seekSeq(event.seq, position);
+        },
+      );
+  }
+  oracle.unsubscribe();
+  control.dispose();
+});
+
+it("matches full-refold traces at boundaries, equal offsets and explicit sequence positions", async () => {
+  const session = player();
+  const { control } = session;
+  await control.ready;
+  control.pause();
+  const oracle = traceOracle(session);
+  const { events, offsets, duration } = control.getSnapshot();
+  for (const position of [
+    NaN,
+    Infinity,
+    -Infinity,
+    -10,
+    duration + 1,
+    0,
+    duration,
+    duration,
+    8.5,
+    8.5,
+  ]) {
+    await oracle.check(
+      () => {
+        control.seek(position);
+      },
+      () => {
+        oracle.seek(position);
+      },
+    );
+  }
+  for (let index = 0; index < events.length; index++) {
+    const seq = events[index]?.seq ?? 0;
+    const position = offsets[index] ?? 0;
+    // The ceiling can move backward while the explicit position stays at the end.
+    for (const target of [seq, seq - 1, seq, seq]) {
+      await oracle.check(
+        () => {
+          control.seekSeq(target, duration);
+        },
+        () => {
+          oracle.seekSeq(target, duration);
+        },
+      );
+    }
+    await oracle.check(
+      () => {
+        control.seekSeq(seq, position - 0.5);
+      },
+      () => {
+        oracle.seekSeq(seq, position - 0.5);
+      },
+    );
+    await oracle.check(
+      () => {
+        control.seek(position);
+      },
+      () => {
+        oracle.seek(position);
+      },
+    );
+  }
+  for (const position of [NaN, -Infinity, Infinity, -1, duration + 1]) {
+    await oracle.check(
+      () => {
+        control.seekSeq(13, position);
+      },
+      () => {
+        oracle.seekSeq(13, position);
+      },
+    );
+  }
+  await oracle.check(
+    () => {
+      control.seekSeq(99999);
+    },
+    () => {
+      oracle.seekSeq(99999);
+    },
+  );
+  oracle.unsubscribe();
+  control.dispose();
+});
+
+it("keeps full-refold publication traces across playback, partial ticks, restart and disposal", async () => {
+  const session = player();
+  const { control } = session;
+  await control.ready;
+  control.pause();
+  const oracle = traceOracle(session);
+  const timers = vi.spyOn(globalThis, "setTimeout");
+  await oracle.check(control.play, oracle.play);
+  await oracle.check(() => vi.advanceTimersByTimeAsync(40), oracle.tick);
+  await vi.advanceTimersByTimeAsync(17);
+  await oracle.check(
+    () => {
+      control.setSpeed(2);
+    },
+    () => {
+      oracle.setSpeed(2);
+    },
+  );
+  await oracle.check(() => vi.advanceTimersByTimeAsync(40), oracle.tick);
+  await vi.advanceTimersByTimeAsync(13);
+  await oracle.check(control.pause, oracle.pause);
+  await oracle.check(control.pause, oracle.pause);
+  await oracle.check(
+    () => {
+      control.seekSeq(12, 3970);
+    },
+    () => {
+      oracle.seekSeq(12, 3970);
+    },
+  );
+  await oracle.check(
+    () => {
+      control.setSpeed(4);
+    },
+    () => {
+      oracle.setSpeed(4);
+    },
+  );
+  await oracle.check(control.play, oracle.play);
+  await oracle.check(() => vi.advanceTimersByTimeAsync(40), oracle.tick);
+  const stale = timers.mock.calls.at(-1)?.[0];
+  await oracle.check(
+    () => {
+      control.seek(8000);
+    },
+    () => {
+      oracle.seek(8000);
+    },
+  );
+  if (typeof stale !== "function") throw new Error("Missing stale callback");
+  await oracle.check(
+    () => {
+      stale();
+    },
+    () => undefined,
+  );
+  await oracle.check(() => vi.advanceTimersByTimeAsync(40), oracle.tick);
+  await oracle.check(control.pause, oracle.pause);
+  await oracle.check(
+    () => {
+      control.seek(Infinity);
+    },
+    () => {
+      oracle.seek(Infinity);
+    },
+  );
+  await oracle.check(control.play, oracle.play);
+  await oracle.check(() => vi.advanceTimersByTimeAsync(40), oracle.tick);
+  const nearEnd = control.getSnapshot().duration - 20;
+  await oracle.check(
+    () => {
+      control.seek(nearEnd);
+    },
+    () => {
+      oracle.seek(nearEnd);
+    },
+  );
+  await oracle.check(() => vi.advanceTimersByTimeAsync(5), oracle.tick);
+  expect(vi.getTimerCount()).toBe(0);
+  await oracle.check(control.restart, oracle.restart);
+  await oracle.check(() => vi.advanceTimersByTimeAsync(40), oracle.tick);
+  const late = timers.mock.calls.at(-1)?.[0];
+  await oracle.check(control.dispose, oracle.dispose);
+  if (typeof late !== "function") throw new Error("Missing disposed callback");
+  await oracle.check(
+    () => {
+      late();
+    },
+    () => undefined,
+  );
+  await oracle.check(
+    () => vi.advanceTimersByTimeAsync(30000),
+    () => undefined,
+  );
+  for (const method of ["play", "pause", "restart"] as const)
+    await oracle.check(control[method], oracle[method]);
+  await oracle.check(
+    () => {
+      control.seek(0);
+    },
+    () => {
+      oracle.seek(0);
+    },
+  );
+  await oracle.check(
+    () => {
+      control.seekSeq(2);
+    },
+    () => {
+      oracle.seekSeq(2);
+    },
+  );
+  await oracle.check(
+    () => {
+      control.setSpeed(1);
+    },
+    () => {
+      oracle.setSpeed(1);
+    },
+  );
+  oracle.unsubscribe();
+  timers.mockRestore();
+});
+
+it("initializes a fresh recording prefix over an already populated store before notifying the player", async () => {
+  const previous = player();
+  await previous.control.ready;
+  previous.control.seek(Infinity);
+  previous.control.dispose();
+  const { store } = previous;
+  const notifications: string[] = [];
+  store.subscribe(() => notifications.push("store"));
+  // Defer loading so observers can subscribe before initialization publishes.
+  const control = createReplayPlayer({
+    store,
+    source: { url: "/recording" },
+    request: vi.fn().mockResolvedValue(new Response(log)),
+  });
+  control.subscribe(() => notifications.push("player"));
+  await control.ready;
+  const { events, offsets } = control.getSnapshot();
+  expect(store.getState().state).toEqual(replayPrefix(events, offsets, 0));
+  expect(notifications).toEqual(["store", "player"]);
+  control.dispose();
 });

@@ -1,5 +1,5 @@
 import type { ServerEvent } from "@contracts";
-import { applyEvent } from "../state";
+import { applyEvent, createInitialState } from "../state";
 import { parseEvent } from "./events";
 import type { ReplayOptions } from "./replay";
 import { replayOffsets, replayPrefix } from "./replayTimeline";
@@ -51,6 +51,8 @@ export function createReplayPlayer({
   let timer: ReturnType<typeof setTimeout>;
   let generation = 0;
   let anchor = performance.now();
+  let folded = createInitialState();
+  let cursor = 0; // First event not included in folded, independent of the incoming store.
   const publish = (next: Partial<ReplaySnapshot>) => {
     snapshot = { ...snapshot, ...next };
     listeners.forEach((listener) => {
@@ -67,15 +69,33 @@ export function createReplayPlayer({
       snapshot.position +
         (snapshot.status === "playing" ? (performance.now() - anchor) * snapshot.speed : 0),
     );
-  const advance = (position: number) => {
-    let state = store.getState().state;
-    for (const [index, event] of snapshot.events.entries()) {
-      if (event.seq > state.lastSeq && (snapshot.offsets[index] ?? Infinity) <= position) {
-        state = applyEvent(state, event);
-        if (state.gap)
-          throw new Error(`Replay sequence or graph version mismatch at ${String(event.seq)}`);
-      }
+  const fold = (position: number, throughSeq = Infinity) => {
+    let state = folded;
+    let next = cursor;
+    const previous = snapshot.events[next - 1];
+    if (
+      previous &&
+      (previous.seq > throughSeq || (snapshot.offsets[next - 1] ?? Infinity) > position)
+    ) {
+      state = createInitialState();
+      next = 0;
     }
+    while (next < snapshot.events.length) {
+      const event = snapshot.events[next];
+      if (!event || event.seq > throughSeq || (snapshot.offsets[next] ?? Infinity) > position)
+        break;
+      state = applyEvent(state, event);
+      if (state.gap)
+        throw new Error(`Replay sequence or graph version mismatch at ${String(event.seq)}`);
+      next++;
+    }
+    // Commit the cursor only after the entire requested prefix folds successfully.
+    folded = state;
+    cursor = next;
+    return state;
+  };
+  const advance = (position: number) => {
+    const state = fold(position);
     if (state !== store.getState().state) store.setState({ state });
     anchor = performance.now();
     publish({ position, status: position >= snapshot.duration ? "ended" : snapshot.status });
@@ -96,7 +116,7 @@ export function createReplayPlayer({
     if (abort.signal.aborted || !snapshot.events.length) return;
     cancel();
     const clamped = Math.max(0, Math.min(snapshot.duration, Number.isNaN(position) ? 0 : position));
-    const state = replayPrefix(snapshot.events, snapshot.offsets, clamped, throughSeq);
+    const state = fold(clamped, throughSeq);
     store.setState({ state });
     anchor = performance.now();
     publish({
