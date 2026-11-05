@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { CommandError } from "../../transport";
 import { createPreviewController } from "./previewController";
 import { deferred, fakeCandidate, fakeStatus, PreviewFake } from "./previewFake";
 import type { PreviewClock, PreviewPort } from "./previewPort";
@@ -22,6 +23,113 @@ beforeEach(() => {
 });
 afterEach(() => {
   vi.useRealTimers();
+});
+
+it("keeps a start refusal through quarantine, then clears it on release and a new open", async () => {
+  const { port, controller } = setup();
+  const message = "Open Oversight at localhost on the same port, then try again.";
+  const start = vi
+    .spyOn(port, "start")
+    .mockRejectedValueOnce(new CommandError(503, "not_configured", message));
+  await controller.see(() => fakeCandidate);
+  expect(controller.snapshot()).toMatchObject({
+    refusalReason: message,
+    notice: "start_failed",
+    uncertain: true,
+    owned: false,
+  });
+  await controller.see(() => next);
+  expect(start).toHaveBeenCalledTimes(1);
+  expect(controller.snapshot().refusalReason).toBe(message);
+  controller.observe(fakeStatus("stopped", "closed"));
+  expect(controller.snapshot().refusalReason).toBeNull();
+  await controller.see(() => fakeCandidate);
+  expect(controller.snapshot()).toMatchObject({ refusalReason: null, owned: true });
+  controller.dispose();
+});
+it("keeps only the latest stop refusal and clears it during another stop and after release", async () => {
+  const { port, controller } = setup();
+  await controller.see(() => fakeCandidate);
+  const stop = vi
+    .spyOn(port, "stop")
+    .mockRejectedValueOnce(
+      new CommandError(409, "wrong_state", "Closure could not be verified. Try Close again."),
+    );
+  await controller.close();
+  expect(controller.snapshot()).toMatchObject({
+    refusalReason: "Closure could not be verified. Try Close again.",
+    notice: "closure_unconfirmed",
+    uncertain: true,
+    owned: true,
+    frameUrl: null,
+  });
+  stop.mockRejectedValueOnce(new Error("Private output"));
+  await controller.close();
+  expect(controller.snapshot().refusalReason).toBeNull();
+  const pending = deferred<PreviewStatus>();
+  stop.mockReturnValueOnce(pending.promise);
+  const closing = controller.close();
+  expect(controller.snapshot().refusalReason).toBeNull();
+  pending.resolve(fakeStatus("stopped", "closed"));
+  await closing;
+  expect(controller.snapshot()).toMatchObject({
+    refusalReason: null,
+    owned: false,
+    visible: false,
+  });
+});
+it("never retains generic start failures or renewal refusal copy", async () => {
+  const { port, controller } = setup();
+  vi.spyOn(port, "start").mockRejectedValueOnce(new Error("Private network output"));
+  await controller.see(() => fakeCandidate);
+  expect(controller.snapshot().refusalReason).toBeNull();
+  controller.observe(fakeStatus("stopped", "closed"));
+  await controller.see(() => fakeCandidate);
+  vi.spyOn(port, "renew").mockRejectedValue(
+    new CommandError(409, "wrong_state", "Unrelated renewal refusal"),
+  );
+  await vi.advanceTimersByTimeAsync(10_000);
+  expect(controller.snapshot()).toMatchObject({ refusalReason: null, notice: "renewal_failed" });
+  controller.dispose();
+});
+it("clears a retained refusal on disposal", async () => {
+  const { port, controller } = setup();
+  vi.spyOn(port, "start").mockRejectedValue(
+    new CommandError(503, "not_configured", "Open at localhost."),
+  );
+  await controller.see(() => fakeCandidate);
+  expect(controller.snapshot().refusalReason).toBe("Open at localhost.");
+  controller.dispose();
+  expect(controller.snapshot().refusalReason).toBeNull();
+});
+it("ignores a start refusal from an older identity epoch", async () => {
+  const { port, controller } = setup();
+  const pending = deferred<Awaited<ReturnType<PreviewPort["start"]>>>();
+  vi.spyOn(port, "start").mockReturnValueOnce(pending.promise);
+  const opening = controller.see(() => fakeCandidate);
+  const changing = controller.setIdentity({ run: "another-run", source: "live-a" });
+  pending.reject(new CommandError(503, "not_configured", "Stale start refusal."));
+  await Promise.all([opening, changing]);
+  expect(controller.snapshot().refusalReason).toBeNull();
+  controller.dispose();
+});
+it("ignores a stop refusal from an epoch released by authoritative expiry", async () => {
+  const { port, controller } = setup();
+  await controller.see(() => fakeCandidate);
+  const pending = deferred<PreviewStatus>();
+  vi.spyOn(port, "stop").mockReturnValueOnce(pending.promise);
+  const closing = controller.close();
+  await Promise.resolve();
+  port.expire();
+  controller.observe(port.publicStatus() as PreviewStatus);
+  pending.reject(new CommandError(409, "wrong_state", "Stale stop refusal."));
+  await closing;
+  expect(controller.snapshot()).toMatchObject({
+    refusalReason: null,
+    uncertain: false,
+    owned: false,
+  });
+  controller.dispose();
 });
 
 it("owns only its own start, renews serially and exposes no token or persistence", async () => {

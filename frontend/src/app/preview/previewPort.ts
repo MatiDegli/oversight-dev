@@ -45,6 +45,8 @@ export interface PreviewView {
   uncertain: boolean;
   frameUrl: string | null;
   notice: "opening" | "start_failed" | "closure_unconfirmed" | "renewal_failed" | null;
+  /** Validated HTTP refusal for the current failed start or stop, never an event reason. */
+  refusalReason?: string | null;
 }
 export interface PreviewController {
   snapshot: () => PreviewView;
