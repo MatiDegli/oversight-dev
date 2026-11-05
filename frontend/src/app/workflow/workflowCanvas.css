@@ -1,0 +1,46 @@
+.workflow-canvas-help {
+  margin-block-end: var(--spacing-lg);
+  color: var(--muted);
+  font-size: var(--caption-size);
+}
+.workflow-canvas {
+  position: relative;
+}
+.workflow-canvas svg {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.workflow-canvas svg > path {
+  stroke: var(--edge);
+  stroke-width: 1.5;
+  fill: none;
+}
+.workflow-canvas marker path {
+  fill: var(--edge);
+}
+.workflow-panel .workflow-canvas .workflow-steps {
+  display: block;
+}
+.workflow-canvas li {
+  position: absolute;
+  width: calc(50% - var(--spacing-sm));
+  transform: translateX(-50%);
+}
+.workflow-panel .workflow-canvas .workflow-step {
+  height: 144px;
+  padding: var(--spacing-sm);
+  align-content: center;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-xs);
+}
+.workflow-panel .workflow-canvas .workflow-step .workflow-word {
+  grid-column: 1;
+}
+.workflow-panel .workflow-canvas .workflow-step > span:nth-child(2) {
+  font-size: var(--label-size);
+}
+.workflow-panel .workflow-canvas .workflow-step[aria-pressed="true"] {
+  background: var(--raised);
+}
