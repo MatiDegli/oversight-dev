@@ -109,7 +109,7 @@ it.each([1920, 390])(
           provenance:
             "Synthetic flowEvents(gates) plus mergeEvents, production applyEvent and mounted Frame; not a real recording",
           command:
-            "python3 /tmp/run-target.py pnpm -C frontend exec vitest run --maxWorkers 2 --project browser src/app/workflowPanel.browser.test.ts src/app/planFlow.browser.test.ts src/app/mergeQueue.browser.test.ts src/app/workflowCanvas.browser.test.ts",
+            "python3 /tmp/run-target.py pnpm -C frontend exec vitest run --project browser src/app/workflowPanel.browser.test.ts src/app/planFlow.browser.test.ts src/app/mergeQueue.browser.test.ts src/app/workflowCanvas.browser.test.ts",
         });
       }
       await writeFile(

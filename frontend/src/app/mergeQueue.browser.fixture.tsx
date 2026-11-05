@@ -35,3 +35,18 @@ export function mergeEvents(): ServerEvent[] {
 export function mountMergeQueue(layout: "Chat" | "Oversight" = "Chat") {
   return mountWorkflow({ layout, events: mergeEvents() });
 }
+
+export function mountTextCanvas(task: string, layout: "Chat" | "Oversight") {
+  const events = mergeEvents().map((event) =>
+    event.type === "plan.updated"
+      ? {
+          ...event,
+          payload: {
+            ...event.payload,
+            subtasks: event.payload.subtasks?.map((subtask) => ({ ...subtask, task })) ?? null,
+          },
+        }
+      : event,
+  );
+  return mountWorkflow({ layout, events });
+}

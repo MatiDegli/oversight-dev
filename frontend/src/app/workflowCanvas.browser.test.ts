@@ -119,13 +119,110 @@ it("compares streamed and reconstructed evidence and mounted canvas at every pre
         opened = true;
       }
       await check(canvasSteps(page)).toHaveCount(proof.live.nodes.length);
-      expect(await workflow(page).locator(".workflow-canvas svg > path").count()).toBe(proof.live.edges.length);
+      expect(await workflow(page).locator(".workflow-canvas svg > path").count()).toBe(
+        proof.live.edges.length,
+      );
       await canvasSteps(page).first().click();
       const detail = workflow(page).getByRole("region", { name: "Step detail" });
       await check(detail).toContainText(proof.live.details[0]?.model ?? "");
       const team = proof.live.details[0]?.team;
       if (team) await check(detail).toContainText(`Team ${team.letter}`);
     }
+  } finally {
+    await page.close();
+  }
+});
+
+it.each([390, 1280])(
+  "keeps dense multilingual labels inside nodes at double text size at %i",
+  async (width) => {
+    const page = await harness.open(width);
+    try {
+      for (const task of ["数量検証".repeat(16), "تحقق من الكمية 🛒 acción ".repeat(6)]) {
+        await page.evaluate(
+          async ({ task, width }) => {
+            await window.canvasTest.mountTextCanvas(task, width === 390 ? "Chat" : "Oversight");
+            for (const [token, size] of [
+              ["body", 30],
+              ["label", 28],
+              ["caption", 26],
+            ] as const)
+              document.documentElement.style.setProperty(`--${token}-size`, `${String(size)}px`);
+          },
+          { task, width },
+        );
+        if (width === 390)
+          await page.addStyleTag({
+            content:
+              '.workflow-panel[data-phone="true"] .workflow-step > span:nth-child(2) { font-size: 32px; }',
+          });
+        await page.getByRole("button", { name: "Open workflow", exact: true }).first().click();
+        await check(canvasSteps(page)).toHaveCount(4);
+        expect(
+          await canvasSteps(page).evaluateAll((buttons) =>
+            buttons.every((button) => {
+              const bounds = button.getBoundingClientRect();
+              return [...button.children].every((child) => {
+                const text = child.getBoundingClientRect();
+                return (
+                  text.top >= bounds.top &&
+                  text.bottom <= bounds.bottom &&
+                  text.left >= bounds.left &&
+                  text.right <= bounds.right
+                );
+              });
+            }),
+          ),
+        ).toBe(true);
+      }
+    } finally {
+      await page.close();
+    }
+  },
+);
+
+it("reattaches pixel-sized arrowheads after text growth and viewport resizing without moving focus", async () => {
+  const page = await harness.open(390);
+  try {
+    const edge = workflow(page).locator(".workflow-canvas svg > path").first();
+    await check(edge).toHaveAttribute("d", /M .+ L .+/);
+    const initial = await edge.getAttribute("d");
+    await canvasSteps(page).first().focus();
+    await page.evaluate(() => {
+      document.documentElement.style.setProperty("--caption-size", "32px");
+    });
+    await check(edge).not.toHaveAttribute("d", initial ?? "");
+    const grown = await edge.getAttribute("d");
+    await page.setViewportSize({ width: 430, height: 844 });
+    await check(edge).not.toHaveAttribute("d", grown ?? "");
+    await check(canvasSteps(page).first()).toBeFocused();
+    const geometry = await workflow(page).evaluate((panel) => {
+      const svg = panel.querySelector<SVGSVGElement>(".workflow-canvas svg");
+      const path = svg?.querySelector<SVGPathElement>(":scope > path");
+      const from = panel.querySelector("[data-step-key]")?.getBoundingClientRect();
+      const to = panel.querySelectorAll("[data-step-key]")[2]?.getBoundingClientRect();
+      if (!svg || !path || !from || !to) throw new Error("Missing dependency geometry");
+      const bounds = svg.getBoundingClientRect();
+      const start = path.getPointAtLength(0);
+      const end = path.getPointAtLength(path.getTotalLength());
+      return {
+        width: svg.viewBox.baseVal.width,
+        renderedWidth: bounds.width,
+        start: [start.x + bounds.left, start.y + bounds.top],
+        end: [end.x + bounds.left, end.y + bounds.top],
+        expectedStart: [(from.left + from.right) / 2, from.bottom],
+        expectedEnd: [(to.left + to.right) / 2, to.top - 8],
+        markerWidth: svg.querySelector("marker")?.getAttribute("markerWidth"),
+      };
+    });
+    expect(geometry.width).toBeCloseTo(geometry.renderedWidth, 1);
+    geometry.start.forEach((value, index) => {
+      expect(value).toBeCloseTo(geometry.expectedStart[index] ?? 0, 1);
+    });
+    geometry.end.forEach((value, index) => {
+      expect(value).toBeCloseTo(geometry.expectedEnd[index] ?? 0, 1);
+    });
+    expect(geometry.markerWidth).toBe("8");
   } finally {
     await page.close();
   }

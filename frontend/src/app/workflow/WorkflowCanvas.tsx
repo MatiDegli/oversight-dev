@@ -1,6 +1,7 @@
-import { useId } from "react";
+import { useId, useMemo } from "react";
 import type { PlanFlowRow } from "../../state";
 import { truncateTask } from "./truncateTask";
+import { useCanvasEdges } from "./useCanvasEdges";
 import "./workflowCanvas.css";
 
 export const stepKey = (row: Pick<PlanFlowRow, "planId" | "index">) =>
@@ -18,8 +19,8 @@ export function workflowCanvas(rows: PlanFlowRow[]) {
       return layer.map((row, index) => ({
         key: stepKey(row),
         row,
-        x: layer.length === 1 ? 50 : index % 2 === 0 ? 25 : 75,
-        y: (start + Math.floor(index / 2)) * 192,
+        column: layer.length === 1 ? "1 / -1" : String((index % 2) + 1),
+        line: start + Math.floor(index / 2) + 1,
       }));
     });
   const edges = nodes.flatMap((node) =>
@@ -31,13 +32,12 @@ export function workflowCanvas(rows: PlanFlowRow[]) {
               from: from.key,
               to: node.key,
               label: `Step ${String(node.row.index + 1)} waits for step ${String(index + 1)} to merge`,
-              path: `M ${String(from.x * 10)} ${String(from.y + 144)} L ${String(node.x * 10)} ${String(node.y - 8)}`,
             },
           ]
         : [];
     }),
   );
-  return { nodes, edges, height: Math.max(0, line * 192 - 48) };
+  return { nodes, edges };
 }
 
 export function WorkflowCanvas({
@@ -52,34 +52,29 @@ export function WorkflowCanvas({
   onSelect: (key: string) => void;
 }) {
   const arrow = useId();
-  const canvas = workflowCanvas(rows);
+  const canvas = useMemo(() => workflowCanvas(rows), [rows]);
+  const host = useCanvasEdges(canvas.edges);
   return (
     <section aria-label="Dependency canvas">
       <p className="workflow-canvas-help">Read-only · Arrows point to steps waiting for a merge.</p>
-      <div className="workflow-canvas" style={{ height: canvas.height }}>
-        <svg
-          viewBox={`0 0 1000 ${String(canvas.height)}`}
-          preserveAspectRatio="none"
-          role="img"
-          aria-label="Merge dependencies"
-        >
+      <div ref={host} className="workflow-canvas">
+        <svg role="img" aria-label="Merge dependencies">
           <defs>
             <marker
               id={arrow}
-              markerWidth="6"
-              markerHeight="6"
-              refX="5"
-              refY="3"
+              markerWidth="8"
+              markerHeight="8"
+              refX="8"
+              refY="4"
               orient="auto"
               markerUnits="userSpaceOnUse"
             >
-              <path d="M 0 0 L 5 3 L 0 6" />
+              <path d="M 0 0 L 8 4 L 0 8 Z" />
             </marker>
           </defs>
           {canvas.edges.map((edge) => (
             <path
               key={`${edge.from}:${edge.to}`}
-              d={edge.path}
               vectorEffect="non-scaling-stroke"
               markerEnd={`url(#${arrow})`}
             >
@@ -88,8 +83,8 @@ export function WorkflowCanvas({
           ))}
         </svg>
         <ol className="workflow-steps" aria-label="Workflow steps">
-          {canvas.nodes.map(({ key, row, x, y }) => (
-            <li key={key} style={{ left: `${String(x)}%`, top: y }}>
+          {canvas.nodes.map(({ key, row, column, line }) => (
+            <li key={key} style={{ gridColumn: column, gridRow: line }} data-step-key={key}>
               <button
                 type="button"
                 className="workflow-step"

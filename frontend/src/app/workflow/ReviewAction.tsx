@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ArrowRight } from "lucide-react";
 
 /** Withdraw navigation immediately while keeping a focused control in the tab sequence. */
 export function ReviewAction({
@@ -13,6 +14,7 @@ export function ReviewAction({
   return (
     <button
       type="button"
+      className="workflow-review"
       aria-disabled={!id || undefined}
       onFocus={() => {
         setFocused(true);
@@ -24,7 +26,7 @@ export function ReviewAction({
         if (id) onReview?.(id);
       }}
     >
-      Review change →
+      Review change <ArrowRight size={16} aria-hidden="true" />
     </button>
   );
 }

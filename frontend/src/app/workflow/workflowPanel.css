@@ -35,7 +35,8 @@
   font-size: var(--label-size);
   font-weight: 600;
 }
-.workflow-header button {
+.workflow-header button,
+.workflow-review {
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
