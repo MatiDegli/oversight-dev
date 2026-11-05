@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pytest
+
 SOURCE_POLICY = (
     "Product agents use disposable worktrees under .runtime/worktrees/; nested agents use "
     ".runtime/previews/<id>/state/worktrees/. Sources are demo-repo, a pinned profile or the "
@@ -99,3 +101,63 @@ def test_product_settings_do_not_loosen_development_rules():
         "contracts, the freeze, fake-only checks) stay fixed."
     ) in settings
     assert len(instructions.splitlines()) < 120
+
+
+@pytest.mark.parametrize(
+    "policy",
+    [
+        "Rules here describe today's behavior; docs/roadmap.md plans the changes",
+        "a product limit changes only when the front that delivers its setting updates this file",
+        "Approve has no keyboard shortcut, not even Ctrl+Enter",
+        "combined tests run first on the combined result",
+        "Agents never widen their own or another agent's authority",
+        "until the settings mechanism lands, an agent proposes a setting change to the maintainer "
+        "in text",
+        "typing-extensions under PSF-2.0",
+        "CPython under PSF-2.0 for the Windows installer only",
+        "The public submission repository stays frozen until the maintainer lifts it "
+        "(no pushes or activity there); development pushes go to the development mirror",
+        "never the product's credits",
+        "Hooks always run, never --no-verify",
+        "only the coordinator's landing step may skip the pre-push make check, and only for the "
+        "exact tree whose full verification just passed",
+        "One front per agent: one cohesive change, one worktree and branch, small PRs with tests",
+        "Only the reviewer may defer a SHOULD-FIX outside security, authority, lifecycle, gates, "
+        "contracts and the event log, saying why it is harmless; it becomes a follow-up",
+        "How the maintainer and their agents actually work, or better",
+        "Platform status and acceptance: docs/additions.md",
+    ],
+)
+def test_current_agent_rules_record_coordinator_ruling(policy: str):
+    instructions = (Path(__file__).resolve().parents[2] / "AGENTS.md").read_text()
+    assert policy in " ".join(instructions.split())
+
+
+def test_agent_rules_are_compact_and_contain_no_milestone_transitions():
+    instructions = (Path(__file__).resolve().parents[2] / "AGENTS.md").read_text()
+    assert len(instructions.splitlines()) <= 90
+    for obsolete in (
+        *(f"M{number}" for number in range(1, 10)),
+        "The new-since-kickoff requirement ends",
+        "demo path",
+        "harmless before submission",
+        "docs/proposal.md, section 7",
+        "maintainer and his",
+    ):
+        assert obsolete not in instructions
+    assert instructions.count("cross-provider review") == 1
+    mechanism = [line for line in instructions.splitlines() if line.startswith("Agents never")]
+    assert len(mechanism) == 1
+    assert 'DECISIONS.md "Agents can suggest, prepare and apply settings"' in mechanism[0]
+
+
+def test_agent_rules_define_each_role_and_preserve_current_trust_disclosure():
+    instructions = (Path(__file__).resolve().parents[2] / "AGENTS.md").read_text()
+    roles = instructions.split("## Roles\n", 1)[1].split("\n\n", 1)[0].splitlines()
+    assert len(roles) == 3
+    assert "coordinator plans, briefs, integrates and alone merges" in roles[0]
+    assert "worker changes one front in its own worktree" in roles[1]
+    assert "what changed, what was verified and how" in roles[1]
+    assert "reviewers and researchers are read-only" in roles[2].lower()
+    assert "path:line or command output" in roles[2]
+    assert "Today's repository trust prompt is informational" in instructions
