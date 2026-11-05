@@ -5,7 +5,7 @@ import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { createInterface } from "node:readline";
 import { createServer, type ViteDevServer, type Plugin } from "vite";
-import { expect as check, type Browser, type Page } from "@playwright/test";
+import { expect as check, type Browser, type BrowserContext, type Page } from "@playwright/test";
 import { afterAll, beforeAll, expect } from "vitest";
 import type { ReplayPlayer } from "../../transport";
 import type { State } from "../../state";
@@ -181,6 +181,164 @@ export function previewChatSupport(real = false, enabled = true, lifecycle?: Cha
   afterAll(() => support.dispose());
   return support;
 }
+function sessionFixture(candidate?: StartPreview) {
+  return {
+    pageErrors: [] as string[],
+    diagnostics: [] as { type: string; text: string; expected: boolean }[],
+    calls: { start: 0, renew: 0, stop: 0, details: 0, form: 0 },
+    serial: 0,
+    status: null as PreviewStatus | null,
+    started: 0,
+    readyAt: null as number | null,
+    loadedAt: null as number | null,
+    expectedError: false,
+    requests: [] as StartPreview[],
+    initialDetails: deferred<undefined>(),
+    initialDetailsObserved: deferred<undefined>(),
+    base: candidate ?? {
+      run_id: "run-20261027-140312",
+      agent_id: "agent-1",
+      revision: 1,
+      head_commit: "head",
+    },
+  };
+}
+type SessionFixture = ReturnType<typeof sessionFixture>;
+async function prepareSession(context: BrowserContext, input?: ServerEvent[]) {
+  if (input)
+    await context.addInitScript(() => {
+      window.coldStartAlerts = [];
+      new MutationObserver(() => {
+        for (const node of document.querySelectorAll(
+          '[role="alert"], [aria-label="Status line"]',
+        )) {
+          const text = node.textContent;
+          if (
+            /Maximum update depth|Connection lost|Transport failed/i.test(text) &&
+            !window.coldStartAlerts?.includes(text)
+          )
+            window.coldStartAlerts?.push(text);
+        }
+      }).observe(document, { childList: true, subtree: true, characterData: true });
+    });
+  if (input)
+    await context.addInitScript(
+      (text) => {
+        window.coldStartInput = text;
+      },
+      input.map((event) => JSON.stringify(event)).join("\n"),
+    );
+}
+async function sessionRoutes(
+  context: BrowserContext,
+  extra: string,
+  fixture: SessionFixture,
+  lifecycle: boolean,
+  send: (status: PreviewStatus) => void,
+) {
+  if (!lifecycle)
+    await context.route("**/previews**", async (route) => {
+      const request = route.request(),
+        path = new URL(request.url()).pathname;
+      let body: unknown;
+      if (path === "/previews") {
+        fixture.calls.start++;
+        fixture.requests.push(request.postDataJSON() as StartPreview);
+        fixture.status = {
+          ...fixture.base,
+          change_id: "change-1",
+          preview_id: `preview-${(++fixture.serial).toString(16).padStart(32, "0")}`,
+          state: "starting",
+          reason: null,
+        };
+        body = { preview_id: fixture.status.preview_id, lease_token: "F".repeat(43) };
+      } else if (path.endsWith("/stop")) {
+        fixture.calls.stop++;
+        if (fixture.status) {
+          fixture.status = { ...fixture.status, state: "stopped", reason: "closed" };
+          send(fixture.status);
+        }
+        body = fixture.status;
+      } else if (path.endsWith("/lease")) {
+        fixture.calls.renew++;
+        body = fixture.status;
+      } else {
+        fixture.calls.details++;
+        if (extra.includes("lateInitialDetails") && fixture.calls.details > 1)
+          await fixture.initialDetailsObserved.promise;
+        body = {
+          status: fixture.status,
+          url: fixture.status?.state === "ready" ? "http://localhost:19800/" : null,
+        };
+        if (extra.includes("lateInitialDetails") && fixture.calls.details === 1)
+          await fixture.initialDetails.promise;
+      }
+      await route.fulfill({
+        status: path === "/previews" ? 202 : 200,
+        headers: { "Cache-Control": "no-store" },
+        json: body,
+      });
+    });
+  await context.route("http://localhost:19800/**", (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: '<html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="font:16px sans-serif;margin:24px"><p>Fixture shop</p><h1>Candidate shop</h1><form><label>Quantity <input value="1" type="number" style="max-width:100%"></label><p><label>Coupon <input value="" style="max-width:100%"></label></p><button>Update cart</button></form><p>Total: <output data-total-cents="1500">1500 cents</output></p></body></html>',
+    }),
+  );
+}
+function observeSession(page: Page, fixture: SessionFixture, real: boolean) {
+  page.on("pageerror", (error) => fixture.pageErrors.push(error.message));
+  page.on("console", (message) =>
+    fixture.diagnostics.push({
+      type: message.type(),
+      text: message.text(),
+      expected: fixture.expectedError && message.type() === "error",
+    }),
+  );
+  page.on("request", (request) => {
+    const path = new URL(request.url()).pathname;
+    if (request.method() === "POST" && path === "/previews") fixture.started = Date.now();
+    if (real) {
+      if (path.endsWith("/lease")) fixture.calls.renew++;
+      if (path.endsWith("/stop")) fixture.calls.stop++;
+      if (path.endsWith("/cart")) fixture.calls.form++;
+    }
+  });
+  page.on("response", (response) => {
+    if (response.url().includes("/previews/") && response.request().method() === "GET") {
+      void response
+        .json()
+        .then((value: { status?: PreviewStatus }) => {
+          // Fixture handlers own fake status; a delayed HTTP read can describe an older state.
+          if (real && value.status) fixture.status = value.status;
+          if (value.status?.state === "starting") fixture.initialDetailsObserved.resolve(undefined);
+          if (value.status?.state === "ready" && fixture.readyAt === null)
+            fixture.readyAt = Date.now();
+        })
+        .catch(() => {});
+    }
+  });
+  page.on("framenavigated", (frame) => {
+    if (frame.parentFrame() && frame.url() !== "about:blank") fixture.loadedAt = Date.now();
+  });
+}
+async function stopSessionPanel(page: Page, fixture?: SessionFixture) {
+  // A pending Stop can dismiss the panel between protocol calls. Resolve and click atomically.
+  const title = await page.evaluate(() => {
+    const button = document.querySelector<HTMLButtonElement>(".preview-panel button");
+    const title = button?.title ?? null;
+    button?.click();
+    return title;
+  });
+  if (
+    fixture &&
+    !new URL(page.url()).searchParams.has("panelFixture") &&
+    title === "Stop app and close preview"
+  ) {
+    await check.poll(() => fixture.calls.stop, { timeout: 1000 }).toBeGreaterThan(0);
+    await check(page.locator(".preview-panel")).toHaveCount(0, { timeout: 1000 });
+  }
+}
 class ChatSupport {
   server?: ViteDevServer;
   browser?: Browser;
@@ -348,130 +506,15 @@ class ChatSupport {
     this.deliveries = [];
     const context = await this.browser.newContext({ viewport, reducedMotion: "reduce" });
     context.setDefaultTimeout(7_000);
-    if (input)
-      await context.addInitScript(() => {
-        window.coldStartAlerts = [];
-        new MutationObserver(() => {
-          for (const node of document.querySelectorAll(
-            '[role="alert"], [aria-label="Status line"]',
-          )) {
-            const text = node.textContent;
-            if (
-              /Maximum update depth|Connection lost|Transport failed/i.test(text) &&
-              !window.coldStartAlerts?.includes(text)
-            )
-              window.coldStartAlerts?.push(text);
-          }
-        }).observe(document, { childList: true, subtree: true, characterData: true });
+    await prepareSession(context, input);
+    const fixture = sessionFixture(this.candidate);
+    if (!this.real)
+      await sessionRoutes(context, extra, fixture, !!this.lifecycle, (status) => {
+        this.send(status);
       });
-    if (input)
-      await context.addInitScript(
-        (text) => {
-          window.coldStartInput = text;
-        },
-        input.map((event) => JSON.stringify(event)).join("\n"),
-      );
-    const pageErrors: string[] = [],
-      diagnostics: { type: string; text: string; expected: boolean }[] = [];
-    const calls = { start: 0, renew: 0, stop: 0, details: 0, form: 0 };
-    let serial = 0;
-    let status: PreviewStatus | null = null;
-    let started = 0,
-      readyAt: number | null = null,
-      loadedAt: number | null = null;
-    let expectedError = false;
-    const requests: StartPreview[] = [];
-    const initialDetails = deferred<undefined>();
-    const initialDetailsObserved = deferred<undefined>();
-    const base = this.candidate ?? {
-      run_id: "run-20261027-140312",
-      agent_id: "agent-1",
-      revision: 1,
-      head_commit: "head",
-    };
-    if (!this.real) {
-      if (!this.lifecycle)
-        await context.route("**/previews**", async (route) => {
-          const request = route.request(),
-            path = new URL(request.url()).pathname;
-          let body: unknown;
-          if (path === "/previews") {
-            calls.start++;
-            requests.push(request.postDataJSON() as StartPreview);
-            status = {
-              ...base,
-              change_id: "change-1",
-              preview_id: `preview-${(++serial).toString(16).padStart(32, "0")}`,
-              state: "starting",
-              reason: null,
-            };
-            body = { preview_id: status.preview_id, lease_token: "F".repeat(43) };
-          } else if (path.endsWith("/stop")) {
-            calls.stop++;
-            if (status) {
-              status = { ...status, state: "stopped", reason: "closed" };
-              this.send(status);
-            }
-            body = status;
-          } else if (path.endsWith("/lease")) {
-            calls.renew++;
-            body = status;
-          } else {
-            calls.details++;
-            if (extra.includes("lateInitialDetails") && calls.details > 1)
-              await initialDetailsObserved.promise;
-            body = { status, url: status?.state === "ready" ? "http://localhost:19800/" : null };
-            if (extra.includes("lateInitialDetails") && calls.details === 1)
-              await initialDetails.promise;
-          }
-          await route.fulfill({
-            status: path === "/previews" ? 202 : 200,
-            headers: { "Cache-Control": "no-store" },
-            json: body,
-          });
-        });
-      await context.route("http://localhost:19800/**", (route) =>
-        route.fulfill({
-          contentType: "text/html",
-          body: '<html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="font:16px sans-serif;margin:24px"><p>Fixture shop</p><h1>Candidate shop</h1><form><label>Quantity <input value="1" type="number" style="max-width:100%"></label><p><label>Coupon <input value="" style="max-width:100%"></label></p><button>Update cart</button></form><p>Total: <output data-total-cents="1500">1500 cents</output></p></body></html>',
-        }),
-      );
-    }
     const page = await context.newPage();
     if (input && extra.includes("replay=true")) await page.clock.install();
-    page.on("pageerror", (error) => pageErrors.push(error.message));
-    page.on("console", (message) =>
-      diagnostics.push({
-        type: message.type(),
-        text: message.text(),
-        expected: expectedError && message.type() === "error",
-      }),
-    );
-    page.on("request", (request) => {
-      const path = new URL(request.url()).pathname;
-      if (request.method() === "POST" && path === "/previews") started = Date.now();
-      if (this.real) {
-        if (path.endsWith("/lease")) calls.renew++;
-        if (path.endsWith("/stop")) calls.stop++;
-        if (path.endsWith("/cart")) calls.form++;
-      }
-    });
-    page.on("response", (response) => {
-      if (response.url().includes("/previews/") && response.request().method() === "GET") {
-        void response
-          .json()
-          .then((value: { status?: PreviewStatus }) => {
-            // Fixture handlers own fake status; a delayed HTTP read can describe an older state.
-            if (this.real && value.status) status = value.status;
-            if (value.status?.state === "starting") initialDetailsObserved.resolve(undefined);
-            if (value.status?.state === "ready" && readyAt === null) readyAt = Date.now();
-          })
-          .catch(() => {});
-      }
-    });
-    page.on("framenavigated", (frame) => {
-      if (frame.parentFrame() && frame.url() !== "about:blank") loadedAt = Date.now();
-    });
+    observeSession(page, fixture, this.real);
     await this.lifecycle?.beforeNavigate(page);
     await page.goto(`${this.url}preview-chat?theme=${theme}&real=${String(this.real)}&${extra}`, {
       timeout: 30_000,
@@ -484,19 +527,19 @@ class ChatSupport {
       await check(page.getByRole("button", { name: "Preview app", exact: true })).toBeVisible();
     }
     const publish = (state: PreviewStatus["state"], reason: PreviewStatus["reason"] = null) => {
-      if (!status) throw new Error("Click Preview app first");
-      status = { ...status, state, reason };
-      if (state === "ready") readyAt = Date.now();
-      this.send(status);
-      initialDetails.resolve(undefined);
+      if (!fixture.status) throw new Error("Click Preview app first");
+      fixture.status = { ...fixture.status, state, reason };
+      if (state === "ready") fixture.readyAt = Date.now();
+      this.send(fixture.status);
+      fixture.initialDetails.resolve(undefined);
     };
     return {
       page,
       context,
-      calls,
-      requests,
-      pageErrors,
-      diagnostics,
+      calls: fixture.calls,
+      requests: fixture.requests,
+      pageErrors: fixture.pageErrors,
+      diagnostics: fixture.diagnostics,
       viewport,
       theme,
       publish,
@@ -509,23 +552,20 @@ class ChatSupport {
         if (event) this.append(event);
       },
       expectedError: () => {
-        expectedError = true;
+        fixture.expectedError = true;
       },
-      identity: () => status,
+      identity: () => fixture.status,
       timing: () => ({
-        timeToReadyMs: readyAt === null ? null : readyAt - started,
-        timeToInteractiveMs: loadedAt === null ? null : loadedAt - started,
+        timeToReadyMs: fixture.readyAt === null ? null : fixture.readyAt - fixture.started,
+        timeToInteractiveMs: fixture.loadedAt === null ? null : fixture.loadedAt - fixture.started,
       }),
       close: async () => {
-        initialDetails.resolve(undefined);
-        initialDetailsObserved.resolve(undefined);
         try {
-          // Teardown can overlap an existing Close. Activate only a still-present control,
-          // in one browser task, without pointer retries against a disappearing panel.
-          await page.evaluate(() => {
-            document.querySelector<HTMLButtonElement>(".preview-panel button")?.click();
-          });
+          fixture.initialDetails.resolve(undefined);
+          fixture.initialDetailsObserved.resolve(undefined);
+          await stopSessionPanel(page, this.real || this.lifecycle ? undefined : fixture);
         } finally {
+          // Failed Stop cleanup must not leave an old SSE client in the next test.
           await context.close();
         }
       },
