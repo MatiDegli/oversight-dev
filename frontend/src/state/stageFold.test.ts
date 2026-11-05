@@ -242,7 +242,7 @@ it("counts confirmed revision resolutions only and never retains a rejected enve
   const end = fixture[18];
   if (!end) throw new Error("Missing envelope");
   const gap = applyEvent(state, { ...end, seq: end.seq + 1 });
-  expect(gap.stageEvents).toBe(state.stageEvents);
+  expect(gap.stageAcc).toBe(state.stageAcc);
   expect(gap.changes).toBe(state.changes);
-  expect(applyEvent(gap, end).stageEvents).toHaveLength(19);
+  expect(applyEvent(gap, end).stageHorizon?.seq).toBe(19);
 });

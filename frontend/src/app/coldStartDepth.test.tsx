@@ -229,7 +229,8 @@ it("keeps App's displayed state stable while preview envelopes advance open stag
       const accepted = stateStore.getState().state;
       expect(accepted.gap).toBe(false);
       expect(accepted.lastSeq).toBe(status.seq);
-      expect(accepted.stageEvents.at(-1)).toBe(status);
+      expect(accepted.lastEventType).toBe(status.type);
+      expect(accepted.stageHorizon?.seq).toBe(status.seq);
       expect(accepted.changeStages).not.toBe(before.changeStages);
       expect(accepted.changeStages["change-1"]?.agent_work).toMatchObject({
         open: true,
@@ -245,7 +246,7 @@ it("keeps App's displayed state stable while preview envelopes advance open stag
         { ...agent, seq: stateStore.getState().state.lastSeq + 1, ts: "2026-11-03T00:00:04.000Z" },
       ]);
     expect(reconcileAppPass().state).toBe(stateStore.getState().state);
-    expect(reconcileAppPass().state.stageEvents).toHaveLength(source.events.length + 4);
+    expect(reconcileAppPass().state.stageHorizon?.seq).toBe(source.events.length + 4);
     stateStore.getState().applyEvents([{ ...agent, seq: stateStore.getState().state.lastSeq + 2 }]);
     expect(reconcileAppPass().state.gap).toBe(true);
     const start = source.events[0];
