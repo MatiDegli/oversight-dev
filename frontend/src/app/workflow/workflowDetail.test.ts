@@ -11,6 +11,8 @@ import { agent, event, proposal, run } from "../../state/state.support";
 import { workflowDetail } from "./workflowDetail";
 
 const row: PlanFlowRow = {
+  planId: "plan-1",
+  planRevision: 1,
   index: 4,
   wave: 2,
   task: {
@@ -53,9 +55,11 @@ it("maps only the projected fields, local wave/dependencies and shared gate labe
     progress: row.progress,
     note: row.note,
     agent: row.agentId,
-    role: "Not known",
-    model: "Not known",
-    mode: "Not known",
+    team: undefined,
+    role: "Not known · no agent status recorded",
+    model: "Not known · no agent status recorded",
+    mode: "Not known · workflow control mode is not recorded",
+    reasoning: "Not known · model profile not recorded",
     gates: row.steps.map((step, i) => ({ label: flowSteps[i], ...step })),
     reviewId: proposal.change_id,
   });
@@ -77,9 +81,11 @@ it("leaves absent evidence unknown and empty dependencies exact", () => {
     progress: "Not known",
     note: "Not known",
     agent: "Not known",
-    role: "Not known",
-    model: "Not known",
-    mode: "Not known",
+    team: undefined,
+    role: "Not known · no agent status recorded",
+    model: "Not known · no agent status recorded",
+    mode: "Not known · workflow control mode is not recorded",
+    reasoning: "Not known · model profile not recorded",
     dependencies: [],
     reviewId: null,
   });
