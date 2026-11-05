@@ -39,6 +39,12 @@ def test_1428_ms_backward_step_preserves_monotonic_durations() -> None:
     ]
 
 
+def test_backward_monotonic_and_wall_steps_preserve_previous_time() -> None:
+    clock = scripted([NOW, NOW - timedelta(seconds=2)], [10, 9])
+    assert clock() == NOW
+    assert clock() == NOW
+
+
 def test_forward_jump_and_sleep_catch_up_to_wall_clock() -> None:
     # The monotonic source may exclude suspend time; wall time still wins on wake.
     wall = [NOW, NOW + timedelta(hours=4), NOW + timedelta(hours=4, seconds=1)]

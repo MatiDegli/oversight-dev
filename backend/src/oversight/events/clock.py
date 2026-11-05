@@ -32,7 +32,7 @@ class EventClock:
             raise ValueError("the clock must return a timezone-aware datetime")
         moment = wall_now.astimezone(UTC)
         if self._previous is not None:
-            elapsed = timedelta(seconds=monotonic_now - self._previous_monotonic)
+            elapsed = timedelta(seconds=max(0.0, monotonic_now - self._previous_monotonic))
             moment = max(self._previous + elapsed, moment)
         self._previous = moment
         self._previous_monotonic = monotonic_now
