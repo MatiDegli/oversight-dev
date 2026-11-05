@@ -17,6 +17,7 @@ vi.mock("react", () => ({
           ? initial[0]
           : Object.assign(new EventTarget(), {
               getBoundingClientRect: () => ({ left: 0, top: 0 }),
+              closest: () => null,
             }),
     });
   },

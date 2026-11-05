@@ -17,6 +17,7 @@ vi.mock("react", () => ({
           ? initial[0]
           : Object.assign(new EventTarget(), {
               getBoundingClientRect: () => ({ left: 0, top: 0 }),
+              closest: () => null,
             }),
     });
   },
@@ -331,3 +332,28 @@ it.each([false, true])(
     expect(cy.nodes().map((node) => ({ ...node.position() }))).toEqual(openingPositions);
   },
 );
+
+it("pauses document-hidden updates, catches up on show, and forces ref operations current", async () => {
+  setLabel("Initial");
+  const apiRef = { current: null as import("./GraphView").GraphApi | null };
+  const { settle } = mount({ apiRef });
+  await settle("resolved");
+  const cy = mocks.instances[0];
+  if (!cy) throw new Error("Missing graph");
+  paint();
+  const batch = vi.spyOn(cy, "batch");
+  Object.assign(document, { visibilityState: "hidden" });
+  document.dispatchEvent(new Event("visibilitychange"));
+  for (let i = 0; i < 100; i++) setLabel(`Hidden ${String(i)}`);
+  paint();
+  expect(batch).not.toHaveBeenCalled();
+  expect(cy.getElementById("billing:fee").data("label")).toBe("Initial");
+  apiRef.current?.zoomIn();
+  expect(cy.getElementById("billing:fee").data("label")).toBe("Hidden 99");
+  setLabel("Last");
+  const resize = vi.spyOn(cy, "resize");
+  Object.assign(document, { visibilityState: "visible" });
+  document.dispatchEvent(new Event("visibilitychange"));
+  expect(resize).toHaveBeenCalledOnce();
+  expect(cy.getElementById("billing:fee").data("label")).toBe("Last");
+});

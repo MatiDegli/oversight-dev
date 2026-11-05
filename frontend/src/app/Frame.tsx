@@ -417,6 +417,7 @@ export function Frame(input: FrameProps) {
               )}
               <div
                 className="oversight-stage"
+                data-graph-hidden={shell.layout === "Chat"}
                 hidden={shell.layout === "Chat"}
                 inert={shell.layout === "Chat"}
               >
