@@ -190,6 +190,41 @@ it.each(["Mars/Olympus", '{"zone":"UTC"}'])("falls back from invalid stored %s",
   }
 });
 
+it.each(["", "   ", "東京/🕒"])(
+  "explains an invalid override %j on blur without changing the last valid choice",
+  async (draft) => {
+    const page = await preferencePage("UTC", "Asia/Kolkata");
+    try {
+      const field = page.getByRole("textbox", { name: "IANA time zone override" });
+      await field.fill(draft);
+      await field.press("Tab");
+      await check(page.getByRole("button", { name: "Apply time zone" })).toBeFocused();
+      await check(field).toHaveValue(draft);
+      await check(field).toHaveAttribute("aria-invalid", "true");
+      await check(
+        page.getByRole("status").filter({ hasText: "Time zone not recognized" }),
+      ).toContainText("Enter an IANA name such as Europe/London, or choose Automatic.");
+      await check(page.getByText("Effective time zone:", { exact: false })).toContainText(
+        "Asia/Kolkata · Override",
+      );
+      await check(page.locator('[data-clock="activity"] time').first()).toHaveText(
+        "19:33:16 GMT+5:30",
+      );
+      expect(await page.evaluate(() => localStorage.getItem("oversight.timeZone"))).toBe(
+        "Asia/Kolkata",
+      );
+      await field.fill("Europe/London");
+      await check(field).toBeFocused();
+      await check(field).toHaveAttribute("aria-invalid", "false");
+      await check(page.getByText("Effective time zone:", { exact: false })).toContainText(
+        "Europe/London · Override",
+      );
+    } finally {
+      await page.close();
+    }
+  },
+);
+
 it.each(["read", "write"] as const)(
   "applies a session override when storage refuses %s",
   async (blocked) => {
@@ -241,6 +276,7 @@ it.each([390, 1280])(
       await page.getByRole("button", { name: "Settings", exact: true }).click();
       const section = page.getByRole("region", { name: "Time zone", exact: true });
       const field = section.getByRole("textbox");
+      await check(field).toHaveCSS("font-size", "15px");
       await field.fill("America/Argentina/ComodRivadavia");
       await check(field).toBeFocused();
       await check(section).toContainText("America/Argentina/ComodRivadavia · Override");
