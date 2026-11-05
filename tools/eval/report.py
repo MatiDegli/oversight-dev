@@ -2,6 +2,7 @@
 
 import json
 from collections import defaultdict
+from pathlib import Path
 
 from tools.eval.grade import Count
 from tools.eval.ledger import Ledger, Record
@@ -28,9 +29,43 @@ def metrics(records: list[Record]) -> dict:
     }
 
 
+def evidence_path(ledger: Ledger, record: Record) -> Path | None:
+    """Match owned-session evidence first; retain unambiguous legacy references."""
+    directory = ledger.out.parent
+    manifest = directory / "manifest.json"
+    runs = json.loads(manifest.read_text())["runs"] if manifest.is_file() else {}
+    matches = [
+        run
+        for run in runs.values()
+        if run.get("run_started", {}).get("run_id") == record.run_id
+        and all(
+            (run.get("experiment") or {}).get(key) == getattr(record, key)
+            for key in ("arm_id", "repetition", "config_hash")
+        )
+        and run.get("task_hashes", {}).get(record.task_id) == record.task_hash
+    ]
+    if matches:
+        if len(matches) != 1:
+            return None
+        name = matches[0].get("raw_events")
+    else:
+        name = runs.get(record.run_id, {}).get("raw_events", f"events-{record.run_id}.jsonl")
+    if not isinstance(name, str) or Path(name).name != name:
+        return None
+    # Old files have no session identity. Reused run and agent ids cannot be separated,
+    # even if the old manifest's last advertisement happens to match this attempt.
+    if (not matches or name == f"events-{record.run_id}.jsonl") and any(
+        other.attempt_id != record.attempt_id
+        and (other.run_id, other.agent_id) == (record.run_id, record.agent_id)
+        for other in ledger.state.records
+    ):
+        return None
+    return directory / name
+
+
 def failure_counts(ledger: Ledger, record: Record) -> dict:
-    path = ledger.out.parent / f"events-{record.run_id}.jsonl"
-    if not path.is_file() or record.agent_id is None:
+    path = evidence_path(ledger, record)
+    if path is None or not path.is_file() or record.agent_id is None:
         return {"evidence": "not available"}
     counts: dict = {
         "tool_calls": {},

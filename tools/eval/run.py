@@ -9,6 +9,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+from uuid import UUID
 
 # Also support `python tools/eval/run.py` from any working directory.
 if __package__ in {None, ""}:
@@ -291,6 +292,7 @@ async def execute(
     repetition: int = 1,
     shared_ledger: Ledger | None = None,
     pilot: bool = False,
+    evidence_session: UUID | None = None,
 ) -> None:
     if not math.isfinite(cap) or cap <= 0:
         raise BenchError("--cap-usd must be finite and positive")
@@ -320,7 +322,9 @@ async def execute(
         api = API(server)
         api.trace_enabled = trace
         health = await api.health()
-        events = Events(api, health.run_id, out.parent / f"events-{health.run_id}.jsonl")
+        # Owned children have separate runtimes, so their second-resolution run ids can collide.
+        suffix = f"-{evidence_session}" if evidence_session is not None else ""
+        events = Events(api, health.run_id, out.parent / f"events-{health.run_id}{suffix}.jsonl")
         session = Session(api, events)
         await session.preflight(model, arm.reasoning)
         if arm.config_hash(session.run) != arm.config_hash():
