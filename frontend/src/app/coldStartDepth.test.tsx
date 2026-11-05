@@ -98,6 +98,7 @@ it.for(sources.filter((source) => source.complete))(
     let expected = createInitialState();
     const prefixes = new Map<number, typeof expected>();
     const batches = new Map<number, typeof expected>();
+    // replayOffsets fixes a non-decreasing axis; the final prefix at each offset is its batch.
     const { offsets } = player.getSnapshot();
     for (const [index, event] of events.entries()) {
       expected = applyEvent(expected, event);

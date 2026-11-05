@@ -68,12 +68,7 @@ export function chatEvents(): ServerEvent[] {
         cut: null,
       },
     },
-    {
-      type: "lead.status",
-      seq: 11,
-      ts: stamp,
-      payload: { ...status, revision: 2, state: "idle" },
-    },
+    { type: "lead.status", seq: 11, ts: stamp, payload: { ...status, revision: 2, state: "idle" } },
   );
   return events;
 }
@@ -327,16 +322,21 @@ function observeSession(page: Page, fixture: SessionFixture, real: boolean) {
     if (frame.parentFrame() && frame.url() !== "about:blank") fixture.loadedAt = Date.now();
   });
 }
-async function stopSessionPanel(page: Page) {
-  const button = page.locator(".preview-panel button");
-  if (await button.count()) {
-    // Dispatch on the currently resolved button without waiting across animation frames.
-    // The real React handler still owns Stop and its asynchronous settlement.
-    const owned =
-      !new URL(page.url()).searchParams.has("panelFixture") &&
-      (await button.getAttribute("title")) === "Stop app and close preview";
-    await button.dispatchEvent("click", { timeout: 1000 });
-    if (owned) await check(page.locator(".preview-panel")).toHaveCount(0, { timeout: 1000 });
+async function stopSessionPanel(page: Page, fixture?: SessionFixture) {
+  // A pending Stop can dismiss the panel between protocol calls. Resolve and click atomically.
+  const title = await page.evaluate(() => {
+    const button = document.querySelector<HTMLButtonElement>(".preview-panel button");
+    const title = button?.title ?? null;
+    button?.click();
+    return title;
+  });
+  if (
+    fixture &&
+    !new URL(page.url()).searchParams.has("panelFixture") &&
+    title === "Stop app and close preview"
+  ) {
+    await check.poll(() => fixture.calls.stop, { timeout: 1000 }).toBeGreaterThan(0);
+    await check(page.locator(".preview-panel")).toHaveCount(0, { timeout: 1000 });
   }
 }
 class ChatSupport {
@@ -563,7 +563,7 @@ class ChatSupport {
         try {
           fixture.initialDetails.resolve(undefined);
           fixture.initialDetailsObserved.resolve(undefined);
-          await stopSessionPanel(page);
+          await stopSessionPanel(page, this.real || this.lifecycle ? undefined : fixture);
         } finally {
           // Failed Stop cleanup must not leave an old SSE client in the next test.
           await context.close();

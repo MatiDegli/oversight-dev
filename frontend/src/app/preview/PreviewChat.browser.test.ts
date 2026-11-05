@@ -505,28 +505,133 @@ it("measures the first failing synthetic cold-start prefix without masking trans
   expect(smallest).toBeNull(); // Before the fix, 42 insertions failed at applied 53 / DOM 52.
 }, 180_000);
 
-it("closes a failed teardown's SSE context before the next session", async () => {
+it.each(["count", "getAttribute"] as const)(
+  "closes safely when a delayed Stop unmounts the panel after %s",
+  async (boundary) => {
+    const session = await support.session();
+    const { page, context } = session;
+    let releaseStop = () => {};
+    const stopped = new Promise<void>((resolve) => {
+      releaseStop = resolve;
+    });
+    await context.route("**/previews/*/stop", async (route) => {
+      await stopped;
+      await route.fallback();
+    });
+    try {
+      await page.getByRole("button", { name: "Preview app", exact: true }).click();
+      session.publish("ready");
+      await check(page.locator("iframe")).toBeVisible();
+      await page.locator(".preview-panel button").click();
+      await check(page.locator("iframe")).toHaveCount(0);
+      await check(page.locator(".preview-panel")).toHaveCount(1);
+      const settleStop = async () => {
+        releaseStop();
+        await check(page.locator(".preview-panel")).toHaveCount(0);
+        expect(session.calls.stop).toBe(1);
+      };
+      const locate = page.locator.bind(page);
+      const lookup = vi.spyOn(page, "locator").mockImplementation((selector, options) => {
+        const button = locate(selector, options);
+        if (selector === ".preview-panel button") {
+          if (boundary === "count") {
+            const count = button.count.bind(button);
+            vi.spyOn(button, "count").mockImplementationOnce(async () => {
+              const found = await count();
+              await settleStop();
+              return found;
+            });
+          } else {
+            const title = button.getAttribute.bind(button);
+            vi.spyOn(button, "getAttribute").mockImplementationOnce(async (name, options) => {
+              const found = await title(name, options);
+              await settleStop();
+              return found;
+            });
+          }
+        }
+        return button;
+      });
+      const evaluate = page.evaluate.bind(page);
+      const evaluation = vi.spyOn(page, "evaluate").mockImplementationOnce(async (fn, arg) => {
+        await settleStop();
+        return evaluate(fn, arg);
+      });
+      try {
+        await session.close();
+        expect(session.calls.stop).toBe(1);
+        expect(context.pages()).toEqual([]);
+      } finally {
+        lookup.mockRestore();
+        evaluation.mockRestore();
+      }
+    } finally {
+      releaseStop();
+      await context.close();
+    }
+  },
+);
+
+it("keeps the fixture Stop deadline out of real-mode cleanup", async () => {
   const session = await support.session();
-  const failure = new Error("Stop teardown probe");
-  const locator = vi.spyOn(session.page, "locator").mockImplementationOnce(() => {
-    throw failure;
+  const { page, context } = session;
+  let releaseStop = () => {};
+  const stopped = new Promise<void>((resolve) => {
+    releaseStop = resolve;
+  });
+  context.once("close", () => {
+    releaseStop();
+  });
+  await context.route("**/previews/*/stop", async (route) => {
+    await stopped;
+    if (!page.isClosed()) await route.fallback();
   });
   try {
-    await expect(session.close()).rejects.toBe(failure);
-    expect(session.context.pages()).toEqual([]);
-    await check.poll(() => support.streams.size).toBe(0);
-    const next = await support.session();
-    try {
-      expect(support.browser?.contexts()).toEqual([next.context]);
-      expect(support.deliveries.map(({ after }) => after)).toEqual([0]);
-    } finally {
-      await next.close();
-    }
+    await page.getByRole("button", { name: "Preview app", exact: true }).click();
+    session.publish("ready");
+    await check(page.locator("iframe")).toBeVisible();
+    const request = page.waitForRequest((request) =>
+      new URL(request.url()).pathname.endsWith("/stop"),
+    );
+    // Exercise the cleanup policy with fixture HTTP routes, without starting real C.
+    Object.defineProperty(support, "real", { value: true });
+    await session.close();
+    await request;
+    expect(context.pages()).toEqual([]);
   } finally {
-    locator.mockRestore();
-    await session.context.close();
+    Object.defineProperty(support, "real", { value: false });
+    releaseStop();
+    await context.close();
   }
 });
+
+it.each([false, true])(
+  "closes a failed teardown's SSE context with unrelated context=%s",
+  async (keepOther) => {
+    const session = await support.session();
+    const other = keepOther ? await session.context.browser()?.newContext() : undefined;
+    const failure = new Error("Stop teardown probe");
+    const evaluation = vi.spyOn(session.page, "evaluate").mockImplementationOnce(() => {
+      throw failure;
+    });
+    try {
+      await expect(session.close()).rejects.toBe(failure);
+      expect(session.context.pages()).toEqual([]);
+      await check.poll(() => support.streams.size).toBe(0);
+      const next = await support.session();
+      try {
+        expect(support.browser?.contexts().includes(session.context)).toBe(false);
+        expect(support.deliveries.map(({ after }) => after)).toEqual([0]);
+      } finally {
+        await next.close();
+      }
+    } finally {
+      evaluation.mockRestore();
+      await session.context.close();
+      await other?.close();
+    }
+  },
+);
 
 it("measures real SSE Last-Event-ID precedence and the browser's after-based reconnect on a scripted-fake run", async () => {
   const api = await coldStartApi();
