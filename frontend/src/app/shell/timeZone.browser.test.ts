@@ -1,5 +1,5 @@
 import { fileURLToPath } from "node:url";
-import { expect as check, type Browser } from "@playwright/test";
+import { expect as check, type Browser, type Page } from "@playwright/test";
 import { createServer, type ViteDevServer } from "vite";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { launchBrowser } from "../../browserLaunch.support";
@@ -81,6 +81,7 @@ async function preferencePage(zone: string, stored?: string, blocked?: "read" | 
   );
   await page.goto(url);
   await check(page.getByRole("region", { name: "Time zone", exact: true })).toBeVisible();
+  await check(page.locator('[data-clock="lead-conversation"] .lead-view-card')).toHaveCount(4);
   return page;
 }
 
@@ -94,6 +95,44 @@ it.each([
       page.getByText(`Effective time zone: ${zone} · Automatic`, { exact: true }),
     ).toBeVisible();
     await check(page.locator('[data-clock="activity"] time').first()).toHaveText(expected);
+  } finally {
+    await page.close();
+  }
+});
+
+async function assertLeadClocks(page: Page, expected: string) {
+  const lead = page.locator('[data-clock="lead-conversation"]');
+  const reply = lead.getByRole("listitem").filter({ hasText: "Later reply:" }).locator("time");
+  const moment = lead.getByRole("article", { name: "Run moment", exact: true });
+  for (const clock of [reply, moment.locator("header time"), moment.locator("dd time")]) {
+    expect(await clock.count()).toBe(1);
+    await check(clock).toHaveText(expected);
+  }
+}
+
+it("tabs through the empty automatic override without an error, but validates explicit submission", async () => {
+  const page = await preferencePage("UTC");
+  try {
+    const automatic = page.getByRole("button", { name: "Automatic", exact: true });
+    const field = page.getByRole("textbox", { name: "IANA time zone override" });
+    await automatic.focus();
+    await page.keyboard.press("Tab");
+    await check(field).toBeFocused();
+    await page.keyboard.press("Tab");
+    const apply = page.getByRole("button", { name: "Apply time zone" });
+    await check(apply).toBeFocused();
+    await check(field).toHaveValue("");
+    await check(field).toHaveAttribute("aria-invalid", "false");
+    await check(
+      page.getByRole("status").filter({ hasText: "Time zone not recognized" }),
+    ).toHaveCount(0);
+    expect(await page.evaluate(() => localStorage.getItem("oversight.timeZone"))).toBeNull();
+    await page.keyboard.press("Enter");
+    await check(apply).toBeFocused();
+    await check(field).toHaveAttribute("aria-invalid", "true");
+    await check(page.getByText("Effective time zone:", { exact: false })).toHaveText(
+      "Effective time zone: UTC · Automatic",
+    );
   } finally {
     await page.close();
   }
@@ -118,6 +157,7 @@ it("updates every mounted clock without events, persists, validates and returns 
     await check(page.locator('[data-clock="activity"] time').first()).toHaveText("11:03:16 ART");
     await check(page.locator('[data-clock="inbox"] time').first()).toHaveText("15:04 ART");
     await check(page.locator('[data-clock="plans"] time').first()).toHaveText("15:00 ART");
+    await assertLeadClocks(page, "21:00");
     for (const surface of ["grants", "card", "review"]) {
       await check(page.locator(`[data-clock="${surface}"]`)).toContainText(
         surface === "grants" ? "15:03 ART" : "given 15:03 ART",
@@ -138,6 +178,7 @@ it("updates every mounted clock without events, persists, validates and returns 
     );
     await check(page.locator('[data-clock="inbox"] time').first()).toHaveText("23:34 GMT+5:30");
     await check(page.locator('[data-clock="plans"] time').first()).toHaveText("23:30 GMT+5:30");
+    await assertLeadClocks(page, "05:30");
     for (const surface of ["grants", "card", "review"])
       await check(page.locator(`[data-clock="${surface}"]`)).toContainText("23:33 GMT+5:30");
     for (const surface of ["conversation", "chat-proposal", "chat-merge"]) {
@@ -327,7 +368,7 @@ it("keeps separate browser contexts isolated and gives a stored override precede
     await check(second.getByText("Effective time zone:", { exact: false })).toContainText(
       "Asia/Tokyo · Automatic",
     );
-    await first.getByRole("textbox").fill("Europe/London");
+    await first.getByRole("textbox", { name: "IANA time zone override" }).fill("Europe/London");
     await check(second.getByText("Effective time zone:", { exact: false })).toContainText(
       "Asia/Tokyo · Automatic",
     );

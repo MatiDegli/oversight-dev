@@ -5,6 +5,7 @@ import { parseEvent } from "../../transport";
 import grantsLog from "../../../../fixtures/events/handwritten-inbox-grants.jsonl?raw";
 import planLog from "../../../../fixtures/events/handwritten-lead-plans.jsonl?raw";
 import activityLog from "../../../../fixtures/events/handwritten-level1.jsonl?raw";
+import { viewScenario } from "../leadViews.browser.fixture";
 import { TimeZoneSettings } from "./TimeZoneSettings";
 import { Activity } from "./dock/Activity";
 
@@ -22,18 +23,21 @@ import { applyTimeZone } from "../../timeZone";
 
 const { DecisionInbox } = await loadDecisionInbox();
 const { ReviewBody } = await loadReviewBody();
-const { ConversationPanel } = await loadConversationPanel();
+const { ConversationPanel, selectLeadConversation, LeadViewCard } = await loadConversationPanel();
 
 const fold = (log: string) =>
   log.trim().split("\n").map(parseEvent).reduce(applyEvent, createInitialState());
 const grants = fold(grantsLog);
 const plans = fold(planLog);
 const activity = fold(activityLog);
+const leadState = viewScenario().reduce(applyEvent, createInitialState());
+const lead = selectLeadConversation(leadState, "agent-9");
 const card = selectChangeCard(grants, "change-1");
 const conversation = selectConversation(activity, "agent-1", []);
 const resolution = grants.changes["change-1"]?.resolution;
 const proposal = activity.decisionEvents.find((event) => event.type === "change.proposed");
-if (!card || !conversation || !resolution || !proposal) throw new Error("Missing clock fixture");
+if (!card || !conversation || !resolution || !proposal || !lead)
+  throw new Error("Missing clock fixture");
 const host = document.getElementById("root");
 if (!host) throw new Error("Missing root");
 // The states and this parent remain fixed; only subscribed clock leaves can update.
@@ -61,6 +65,14 @@ createRoot(host).render(
     <section data-clock="conversation">
       <ConversationPanel conversation={conversation} />
     </section>
+    <section data-clock="lead-conversation">
+      <ConversationPanel
+        conversation={lead}
+        renderView={(entry) => (
+          <LeadViewCard state={leadState} event={entry.event} header={lead.header} />
+        )}
+      />
+    </section>
     <section data-clock="chat-proposal">
       <ChatChangeCard
         state={activity}
@@ -76,7 +88,7 @@ createRoot(host).render(
 );
 window.timeZoneFixture = {
   apply: applyTimeZone,
-  sequences: [activity.lastSeq, grants.lastSeq, plans.lastSeq],
+  sequences: [activity.lastSeq, grants.lastSeq, plans.lastSeq, leadState.lastSeq],
 };
 declare global {
   interface Window {

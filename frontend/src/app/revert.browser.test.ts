@@ -1,7 +1,7 @@
 import { openOversight } from "../workspaceView.browser.support";
 import { mkdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import { expect as check, type Browser, type Page } from "@playwright/test";
+import { expect as check, type Browser, type Page, type Route } from "@playwright/test";
 import { createServer, type ViteDevServer } from "vite";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { launchBrowser } from "../browserLaunch.support";
@@ -84,20 +84,25 @@ async function open(replay = false, width = 1920, height = 1080, theme = "dark")
       body: entry.html.replace("<html>", `<html data-theme="${theme}">`),
     }),
   );
-  await page.route("**/files?**", async (route) => {
-    const content = await page.evaluate(
-      () =>
-        window.appStore.getState().state.changes["change-1"]?.files["shop/pricing.py"]?.file
-          .modified ?? "",
-    );
-    await route.fulfill({
-      json: { path: "shop/pricing.py", agent_id: "agent-1", content, hash: "f".repeat(64) },
-    });
-  });
+  await page.route("**/files?**", (route) => fulfillFile(page, route));
   await page.goto(entry.server.resolvedUrls?.local[0] ?? "");
   await openOversight(page);
   await page.getByRole("button", { name: "Review change", exact: true }).first().click();
   return page;
+}
+async function fulfillFile(page: Page, route: Route) {
+  const content = await page.evaluate(
+    () =>
+      window.appStore.getState().state.changes["change-1"]?.files["shop/pricing.py"]?.file
+        .modified ?? "",
+  );
+  await route.fulfill({
+    json: { path: "shop/pricing.py", agent_id: "agent-1", content, hash: "f".repeat(64) },
+  });
+}
+async function closePage(page: Page) {
+  await page.unrouteAll({ behavior: "wait" });
+  await page.close();
 }
 async function shot(page: Page, name: string, suffix: string) {
   const status = page.getByLabel("Status line");
@@ -206,7 +211,7 @@ async function exerciseLiveRevert(width: number, height: number, theme: string) 
     await exerciseRevertRetry(page, suffix, requests, () => release?.());
     await exerciseRevertOutcomes(page, suffix, requests);
   } finally {
-    await page.close();
+    await closePage(page);
   }
 }
 
@@ -228,7 +233,7 @@ async function exerciseReplayRevert(width: number, height: number, theme: string
     expect(sent).toEqual([]);
     await shot(replay, "revert-replay", suffix);
   } finally {
-    await replay.close();
+    await closePage(replay);
   }
 }
 
@@ -254,6 +259,40 @@ it("offers no Revert after a person-approved merge", async () => {
     await check(page.getByText("Approved and merged", { exact: false })).toBeVisible();
     await check(revert(page)).toHaveCount(0);
   } finally {
-    await page.close();
+    await closePage(page);
   }
+});
+
+it("keeps the page alive until in-flight file routes have finished reading it", async () => {
+  const page = await open();
+  let release!: () => void;
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let entered!: () => void;
+  const started = new Promise<void>((resolve) => {
+    entered = resolve;
+  });
+  const path = "**/files?teardown-regression";
+  let completed = false;
+  await page.route(path, async (route) => {
+    entered();
+    await pending;
+    await fulfillFile(page, route);
+    completed = true;
+  });
+  await page.evaluate(() => {
+    // eslint-disable-next-line no-restricted-globals -- Trigger the real test route during teardown.
+    void fetch("/files?teardown-regression");
+  });
+  await started;
+  const closing = closePage(page);
+  try {
+    // The route still needs this execution context for its existing page.evaluate.
+    expect(await page.evaluate(() => document.readyState)).toBe("complete");
+  } finally {
+    release();
+    await closing;
+  }
+  expect(completed).toBe(true);
 });

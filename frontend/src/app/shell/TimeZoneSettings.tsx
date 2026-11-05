@@ -54,6 +54,9 @@ export function TimeZoneSettings() {
         draft={draft}
         invalid={invalid}
         onApply={applyOverride}
+        onBlur={() => {
+          if (preference !== AUTOMATIC || draft.trim()) applyOverride();
+        }}
         onEdit={(value) => {
           setDraft(value);
           // Partial input stays editable; submit or blur explains an invalid name.
@@ -79,12 +82,14 @@ function TimeZoneOverrideField({
   invalid,
   onEdit,
   onApply,
+  onBlur,
 }: {
   id: string;
   draft: string;
   invalid: boolean;
   onEdit: (value: string) => void;
   onApply: () => void;
+  onBlur: () => void;
 }) {
   return (
     <form
@@ -112,7 +117,7 @@ function TimeZoneOverrideField({
         onChange={(event) => {
           onEdit(event.target.value);
         }}
-        onBlur={onApply}
+        onBlur={onBlur}
         className={`mt-2 min-h-11 w-full min-w-0 rounded-card border border-control-edge bg-field px-3 py-2 text-(length:--body-size) text-text placeholder:text-faint ${focusRing}`}
       />
       <button

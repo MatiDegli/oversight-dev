@@ -16,6 +16,7 @@ import {
 afterEach(() => {
   applyTimeZone(AUTOMATIC);
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 const storage = (value: string | null = null) => ({
   getItem: vi.fn(() => value),
@@ -95,4 +96,26 @@ it.each([
   expect(formatClock(ts, zone)).toBe(minutes);
   expect(formatClock(ts, zone, { seconds: true, label: true })).toBe(seconds);
   expect(formatClock(ts, zone, { label: true })).toBe(seconds.replace(/:\d{2} /u, " "));
+});
+
+it("reuses clock formatters by zone and options across rows and DST changes", () => {
+  const constructor = vi.spyOn(Intl, "DateTimeFormat");
+  const winter = "2026-01-15T16:58:09Z";
+  const summer = "2026-07-15T16:58:09Z";
+  const variants = [
+    [{}, "06:43", "05:43"],
+    [{ seconds: true }, "06:43:09", "05:43:09"],
+    [{ label: true }, "06:43 GMT+13:45", "05:43 GMT+12:45"],
+    [{ seconds: true, label: true }, "06:43:09 GMT+13:45", "05:43:09 GMT+12:45"],
+  ] as const;
+  for (let row = 0; row < 300; row++)
+    for (const [options, january, july] of variants) {
+      expect(formatClock(winter, "Pacific/Chatham", options)).toBe(january);
+      expect(formatClock(summer, "Pacific/Chatham", options)).toBe(july);
+    }
+  expect(constructor).toHaveBeenCalledTimes(4);
+  expect(formatClock(winter, "Australia/Eucla")).toBe("01:43");
+  expect(constructor).toHaveBeenCalledTimes(5);
+  expect(formatClock(winter, "Pacific/Chatham", { seconds: false, label: false })).toBe("06:43");
+  expect(constructor).toHaveBeenCalledTimes(5);
 });

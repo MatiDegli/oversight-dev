@@ -102,6 +102,8 @@ export function useTimeZone() {
   return { preference, effectiveZone };
 }
 
+const clockFormatters = new Map<string, Intl.DateTimeFormat>();
+
 /** All instant clocks use en-GB and 24 hours; labels describe the offset at this instant. */
 export function formatClock(
   ts: string,
@@ -109,14 +111,19 @@ export function formatClock(
   { seconds = false, label = false }: { seconds?: boolean; label?: boolean } = {},
 ): string {
   const date = new Date(ts);
-  const formatter = new Intl.DateTimeFormat("en-GB", {
-    timeZone: zone,
-    hour: "2-digit",
-    minute: "2-digit",
-    ...(seconds ? { second: "2-digit" } : {}),
-    hour12: false,
-    ...(label ? { timeZoneName: "shortOffset" } : {}),
-  });
+  const key = `${zone}|${String(seconds)}|${String(label)}`;
+  let formatter = clockFormatters.get(key);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat("en-GB", {
+      timeZone: zone,
+      hour: "2-digit",
+      minute: "2-digit",
+      ...(seconds ? { second: "2-digit" } : {}),
+      hour12: false,
+      ...(label ? { timeZoneName: "shortOffset" } : {}),
+    });
+    clockFormatters.set(key, formatter);
+  }
   return formatter
     .formatToParts(date)
     .map((part) => {
