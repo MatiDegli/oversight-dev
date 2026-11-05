@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import log from "../../../fixtures/events/recorded-demo.jsonl?raw";
-import { applyEvent, createStateStore } from "../state";
+import { applyEvent, createInitialState, createStateStore, type State } from "../state";
 import { createReplayPlayer, type ReplaySnapshot } from "./replayPlayer";
 import { replayPrefix } from "./replayTimeline";
 
@@ -208,9 +208,26 @@ it("seeks an exact sequence at an equal timestamp and cancels captured playback"
   expect(store.getState().state.lastSeq).toBe(5);
 });
 
+/** Cache fresh full refolds once per prefix; eligibility still scans the original bounds. */
+function prefixOracle({ events, offsets }: ReplaySnapshot) {
+  const states = [
+    createInitialState(),
+    ...events.map((event) => replayPrefix(events, offsets, Infinity, event.seq)),
+  ];
+  return (position: number, seq = Infinity) => {
+    const count = events.filter(
+      (event, index) => event.seq <= seq && (offsets[index] ?? Infinity) <= position,
+    ).length;
+    const state = states[count];
+    if (!state) throw new Error("Missing oracle prefix");
+    return state;
+  };
+}
+
 /** Full refolds use the unchanged timeline oracle, independently of the player's cursor. */
 function traceOracle({ store, control }: ReturnType<typeof player>) {
   const { events, offsets } = control.getSnapshot();
+  const prefix = prefixOracle(control.getSnapshot());
   let snapshot = control.getSnapshot();
   let state = store.getState().state;
   let anchor = performance.now();
@@ -237,7 +254,7 @@ function traceOracle({ store, control }: ReturnType<typeof player>) {
   const seek = (position: number, status = snapshot.status, seq = Infinity) => {
     if (disposed) return;
     position = Math.max(0, Math.min(snapshot.duration, Number.isNaN(position) ? 0 : position));
-    state = replayPrefix(events, offsets, position, seq);
+    state = prefix(position, seq);
     emit("store");
     anchor = performance.now();
     publish({
@@ -257,8 +274,15 @@ function traceOracle({ store, control }: ReturnType<typeof player>) {
       snapshot.duration,
       snapshot.position + (performance.now() - anchor) * snapshot.speed,
     );
-    const next = replayPrefix(events, offsets, position);
-    if (next.lastSeq !== state.lastSeq) {
+    // The original timed path starts from the store and never rewinds on a clock jump.
+    const next = events.reduce(
+      (current, event, index) =>
+        event.seq > current.lastSeq && (offsets[index] ?? Infinity) <= position
+          ? applyEvent(current, event)
+          : current,
+      state,
+    );
+    if (next !== state) {
       state = next;
       emit("store");
     }
@@ -267,6 +291,10 @@ function traceOracle({ store, control }: ReturnType<typeof player>) {
   };
   return {
     seek,
+    replace: (next: State) => {
+      state = next;
+      emit("store");
+    },
     seekSeq: (seq: number, position?: number) => {
       const index = events.findIndex((event) => event.seq === seq);
       if (index >= 0) seek(position ?? offsets[index] ?? 0, "paused", seq);
@@ -353,8 +381,10 @@ it.each(["time", "sequence"])(
         bounds.push({ steps: count, newlyEligible: repeat ? 0 : expected.lastSeq - before });
       }
     }
-    console.info({ mode, setup, steps, oracleSteps, bound: events.length - startSeq });
-    expect(steps).toBeLessThanOrEqual(events.length - startSeq);
+    expect(
+      steps,
+      `${mode}: setup=${String(setup)}, oracle=${String(oracleSteps)}`,
+    ).toBeLessThanOrEqual(events.length - startSeq);
     for (const bound of bounds) expect(bound.steps).toBeLessThanOrEqual(bound.newlyEligible);
     control.dispose();
   },
@@ -622,4 +652,91 @@ it("initializes a fresh recording prefix over an already populated store before 
   expect(store.getState().state).toEqual(replayPrefix(events, offsets, 0));
   expect(notifications).toEqual(["store", "player"]);
   control.dispose();
+});
+
+it("retains the current store on playback and rebuilds recording state on the next seek", async () => {
+  const session = player();
+  const { control, store } = session;
+  await control.ready;
+  control.pause();
+  const oracle = traceOracle(session);
+  const { events, offsets } = control.getSnapshot();
+  for (const seq of [69, 3, 3]) {
+    const original = replayPrefix(events, offsets, Infinity, seq);
+    const replacement = { ...original, clock: "2026-11-05T00:00:00Z" };
+    await oracle.check(
+      () => {
+        store.setState({ state: replacement });
+      },
+      () => {
+        oracle.replace(replacement);
+      },
+    );
+    await oracle.check(control.play, oracle.play);
+    await oracle.check(() => vi.advanceTimersByTimeAsync(40), oracle.tick);
+    await oracle.check(
+      () => {
+        control.setSpeed(2);
+      },
+      () => {
+        oracle.setSpeed(2);
+      },
+    );
+    await oracle.check(control.pause, oracle.pause);
+    await oracle.check(
+      () => {
+        control.seekSeq(3);
+      },
+      () => {
+        oracle.seekSeq(3);
+      },
+    );
+  }
+  const frozen = replayPrefix(events, offsets, Infinity, 63);
+  await oracle.check(control.dispose, oracle.dispose);
+  await oracle.check(
+    () => {
+      store.setState({ state: frozen });
+    },
+    () => {
+      oracle.replace(frozen);
+    },
+  );
+  await oracle.check(
+    () => vi.advanceTimersByTimeAsync(30000),
+    () => undefined,
+  );
+  oracle.unsubscribe();
+});
+
+it("retains the published prefix when the playback clock moves backward", async () => {
+  const session = player();
+  const { control } = session;
+  await control.ready;
+  control.seek(8000);
+  const oracle = traceOracle(session);
+  const now = vi.spyOn(performance, "now").mockReturnValue(-10000);
+  try {
+    await oracle.check(
+      () => {
+        control.setSpeed(2);
+      },
+      () => {
+        oracle.setSpeed(2);
+      },
+    );
+    await oracle.check(control.pause, oracle.pause);
+    await oracle.check(
+      () => {
+        control.seek(0);
+      },
+      () => {
+        oracle.seek(0);
+      },
+    );
+  } finally {
+    now.mockRestore();
+    oracle.unsubscribe();
+    control.dispose();
+  }
 });

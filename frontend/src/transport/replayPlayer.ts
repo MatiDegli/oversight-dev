@@ -53,6 +53,7 @@ export function createReplayPlayer({
   let anchor = performance.now();
   let folded = createInitialState();
   let cursor = 0; // First event not included in folded, independent of the incoming store.
+  let recordingPrefix = true;
   const publish = (next: Partial<ReplaySnapshot>) => {
     snapshot = { ...snapshot, ...next };
     listeners.forEach((listener) => {
@@ -69,16 +70,34 @@ export function createReplayPlayer({
       snapshot.position +
         (snapshot.status === "playing" ? (performance.now() - anchor) * snapshot.speed : 0),
     );
-  const fold = (position: number, throughSeq = Infinity) => {
-    let state = folded;
+  const fold = (position: number, throughSeq = Infinity, advancing = false) => {
+    let state = advancing ? store.getState().state : folded;
     let next = cursor;
+    let prefix = recordingPrefix;
+    if (advancing && state !== folded) {
+      // Another writer replaced the store. Resume its sequence, but never cache it as a refold.
+      prefix = false;
+      next = 0;
+      let end = snapshot.events.length;
+      while (next < end) {
+        const middle = Math.floor((next + end) / 2);
+        if ((snapshot.events[middle]?.seq ?? Infinity) <= state.lastSeq) next = middle + 1;
+        else end = middle;
+      }
+    }
     const previous = snapshot.events[next - 1];
+    // Nondecreasing offsets and strictly increasing sequences make this equivalent to replayPrefix.
+    // Backward seeks refold from zero: one current fold needs no checkpoint ownership or cache.
+    // Timed advancement retains applied events even when its clock moves backward.
     if (
-      previous &&
-      (previous.seq > throughSeq || (snapshot.offsets[next - 1] ?? Infinity) > position)
+      !advancing &&
+      (!prefix ||
+        (previous &&
+          (previous.seq > throughSeq || (snapshot.offsets[next - 1] ?? Infinity) > position)))
     ) {
       state = createInitialState();
       next = 0;
+      prefix = true;
     }
     while (next < snapshot.events.length) {
       const event = snapshot.events[next];
@@ -92,10 +111,11 @@ export function createReplayPlayer({
     // Commit the cursor only after the entire requested prefix folds successfully.
     folded = state;
     cursor = next;
+    recordingPrefix = prefix;
     return state;
   };
   const advance = (position: number) => {
-    const state = fold(position);
+    const state = fold(position, Infinity, true);
     if (state !== store.getState().state) store.setState({ state });
     anchor = performance.now();
     publish({ position, status: position >= snapshot.duration ? "ended" : snapshot.status });
