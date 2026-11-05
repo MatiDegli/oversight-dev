@@ -17,7 +17,7 @@ AGENTS.md holds only durable rules for the current state; exclude milestone iden
 Plans go to docs/roadmap.md, status and inventory to docs/additions.md, decisions and their history to DECISIONS.md and CHANGELOG.md.
 docs/roadmap.md plans product changes; a front that changes a rule edits it here.
 Only two product rules are fixed: authority comes only from the person; every loosening is visible, recorded in the event log and reversible.
-Every other product limit is a setting with a safe default, so a person accepting more risk can choose it; provider terms, law, licenses and unavailable capabilities still bind, with reasons stated.
+Design every other product limit as a setting with a safe default, so a person accepting more risk can choose it; provider terms, law, licenses and unavailable capabilities still bind; each limit written in this file holds as written (DECISIONS.md "Only the person's authority is fixed; other limits are settings").
 Agents never widen their own or another agent's authority; an agent proposes a setting change to the maintainer in text (details: DECISIONS.md "Agents can suggest, prepare and apply settings", docs/roadmap.md).
 
 ## Roles

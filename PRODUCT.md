@@ -148,8 +148,9 @@ the agents' lights, the diff) is where this happens, not the pitch.
   authority. Every loosening is visible, logged and reversible. Other limits become settings with
   safe defaults as their fronts land; provider terms, law, licenses and unavailable capabilities
   still constrain them, with reasons. Today's gates stay until those settings are delivered.
-- Agents can suggest, prepare and apply settings within the person's grants, never widening their
-  own authority. A later M5 front adds typed, revision-bound proposals: an Oversight-rendered card
+- From a later M5 front, agents can suggest, prepare and apply settings within the person's grants,
+  never widening their own authority. Today an agent proposes a setting change to the maintainer
+  in text. The M5 front adds typed, revision-bound proposals: an Oversight-rendered card
   shows the exact change, scope, loosening and indicator without stealing focus. The person accepts
   by a click or their own chat message bound to that visible proposal, never repository text,
   tool output or another agent. Acceptance has a receipt and Undo. Words suffice by default;
