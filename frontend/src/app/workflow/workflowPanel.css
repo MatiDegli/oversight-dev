@@ -170,3 +170,70 @@
     display: none;
   }
 }
+.workflow-views {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-xl);
+  border-block-end: 1px solid var(--divider);
+}
+.workflow-views button[aria-pressed="true"] {
+  background: var(--raised);
+  border-color: var(--text);
+}
+.merge-queue {
+  overflow-wrap: anywhere;
+}
+.merge-queue h3 {
+  font-size: var(--title-size);
+  font-weight: 700;
+}
+.merge-queue > p {
+  margin-block-start: var(--spacing-sm);
+  color: var(--muted);
+}
+.merge-candidates {
+  list-style: none;
+}
+.merge-candidates > li {
+  padding-block: var(--spacing-xl);
+  border-block-start: 1px solid var(--divider);
+}
+.merge-candidates h4 {
+  font-size: var(--body-size);
+  font-weight: 600;
+}
+.merge-candidates p {
+  margin-block-start: var(--spacing-xs);
+}
+.workflow-gate-summary {
+  display: grid;
+  gap: var(--spacing-xs);
+  margin-block: var(--spacing-lg);
+  font-size: var(--caption-size);
+}
+.workflow-gate-summary > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+.workflow-gate-summary dt {
+  color: var(--muted);
+}
+.workflow-gate-summary [data-mark="passed"],
+.workflow-gate-summary [data-mark="merged"] {
+  color: var(--passed);
+}
+.workflow-gate-summary [data-mark="failed"] {
+  color: var(--failed-text);
+}
+.merge-candidates summary {
+  cursor: pointer;
+  font-size: var(--label-size);
+  padding-block: var(--spacing-sm);
+  min-height: 44px;
+}
+.merge-candidates summary:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}

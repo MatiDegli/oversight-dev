@@ -13,6 +13,7 @@ import { selectPlanEvidence } from "../../review";
 import { projectPlanFlow, type PlanFlowRow, type State } from "../../state";
 import { presentationStyle } from "../../teams/presentation";
 import { WorkflowCanvas, stepKey } from "./WorkflowCanvas";
+import { MergeQueueView } from "./MergeQueueView";
 import { ReviewAction } from "./ReviewAction";
 import { workflowDetail } from "./workflowDetail";
 import "./workflowPanel.css";
@@ -55,6 +56,7 @@ export function WorkflowPanel({
   const host = useRef<HTMLElement>(null);
   const scope = JSON.stringify([state.run?.run_id, planId, plan?.revision]);
   const { selection, selected, setSelection, close } = useStepSelection(rows, host, scope);
+  const [queue, setQueue] = useState(false);
   const phone = useSyncExternalStore(subscribePhone, phoneSnapshot, () => false) && chat;
   const detailId = useId();
   usePhoneBoundary(phone, host, close);
@@ -78,8 +80,30 @@ export function WorkflowPanel({
           {phone ? "Back" : "Close"}
         </button>
       </header>
+      <div className="workflow-views" aria-label="Workflow views">
+        <button
+          type="button"
+          aria-pressed={!queue}
+          onClick={() => {
+            setQueue(false);
+          }}
+        >
+          Dependency canvas
+        </button>
+        <button
+          type="button"
+          aria-pressed={queue}
+          onClick={() => {
+            setQueue(true);
+          }}
+        >
+          Merge queue
+        </button>
+      </div>
       <WorkflowBody
+        queue={queue}
         state={state}
+        planId={planId}
         onReview={onReview}
         rows={rows}
         selection={selection}
@@ -92,7 +116,9 @@ export function WorkflowPanel({
 }
 
 function WorkflowBody({
+  queue,
   state,
+  planId,
   onReview,
   rows,
   selection,
@@ -100,7 +126,9 @@ function WorkflowBody({
   detailId,
   onSelect,
 }: {
+  queue: boolean;
   state: State;
+  planId: string;
   onReview?: (id: string) => void;
   rows: PlanFlowRow[];
   selection: string | null;
@@ -110,7 +138,9 @@ function WorkflowBody({
 }) {
   return (
     <div className="workflow-body">
-      {rows.length ? (
+      {queue ? (
+        <MergeQueueView state={state} planId={planId} onReview={onReview} />
+      ) : rows.length ? (
         <>
           <WorkflowCanvas
             rows={rows}
