@@ -11,7 +11,7 @@ import {
 import { ArrowLeft, X } from "lucide-react";
 import { selectPlanEvidence } from "../../review";
 import { projectPlanFlow, type PlanFlowRow, type State } from "../../state";
-import { presentationFor, presentationStyle } from "../../teams/presentation";
+import { presentationStyle } from "../../teams/presentation";
 import { truncateTask } from "./truncateTask";
 import { workflowDetail } from "./workflowDetail";
 import "./workflowPanel.css";
@@ -239,7 +239,7 @@ function StepDetail({
   onReview?: (id: string) => void;
 }) {
   const detail = workflowDetail(row, state, !!onReview);
-  const identity = presentationFor(state, row.agentId);
+  const identity = detail.team;
   return (
     <>
       <h3>{detail.task}</h3>
@@ -291,7 +291,7 @@ function DetailFacts({
   identity,
 }: {
   detail: ReturnType<typeof workflowDetail>;
-  identity: ReturnType<typeof presentationFor>;
+  identity: ReturnType<typeof workflowDetail>["team"];
 }) {
   const fields = [
     ["Agent", detail.agent],
@@ -302,6 +302,7 @@ function DetailFacts({
     ["Role", detail.role],
     ["Model", detail.model],
     ["Mode", detail.mode],
+    ["Reasoning", detail.reasoning],
   ] as const;
   return (
     <dl className="workflow-facts">

@@ -3,7 +3,7 @@ import { expect, it } from "vitest";
 import log from "../../../fixtures/events/handwritten-level1.jsonl?raw";
 import { applyEvent, createInitialState } from "../state";
 import { parseEvent } from "../transport";
-import { compareAgentPresentation, selectPresentation } from "./presentation";
+import { compareAgentPresentation, selectPresentation, presentationForPlan } from "./presentation";
 
 const opening = parseEvent(log.trim().split("\n")[0] ?? "");
 const ts = "2026-11-02T15:00:00Z";
@@ -372,3 +372,22 @@ it("sorts team members by reserved ordinal across reversed plan IDs and delayed 
   ).toEqual(["A", "A·1", "A·2", "A·3", "A·4"]);
   expect([byAgent.two?.subtask, byAgent.three?.subtask]).toEqual([2, 1]);
 });
+
+it.each(["lead", null])(
+  "reserves shared plan presentation before agent status with owner %s",
+  (owner) => {
+    const state = fold(plan("waiting", owner, [null, null]));
+    const before = presentationForPlan(state, "waiting");
+    expect(before).toMatchObject({ team: owner ?? "waiting", letter: "A", hue: "A" });
+    const later = applyEvent(state, {
+      ...agent("assigned", { plan_id: "waiting" }),
+      seq: state.lastSeq + 1,
+    });
+    expect(selectPresentation(later).byAgent.assigned).toMatchObject({
+      team: before?.team,
+      hue: before?.hue,
+      letter: before?.letter,
+    });
+    expect(presentationForPlan(state, "waiting")).toBe(before);
+  },
+);

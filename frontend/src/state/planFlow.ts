@@ -12,6 +12,8 @@ export type FlowMark =
   "passed" | "merged" | "working" | "waiting" | "failed" | "not needed" | "not known";
 export type FlowStep = { mark: FlowMark; detail: string };
 export interface PlanFlowRow {
+  planId: string;
+  planRevision: number;
   index: number;
   wave: number;
   task: PlanSubtask;
@@ -42,7 +44,11 @@ export function projectPlanFlow(state: State, plan: Plan): PlanFlowRow[] {
     depths.set(index, value);
     return value;
   };
-  return tasks.map((task, index) => projectRow(state, task, index, depth(index)));
+  return tasks.map((task, index) => ({
+    ...projectRow(state, task, index, depth(index)),
+    planId: plan.plan_id,
+    planRevision: plan.revision,
+  }));
 }
 
 function rowChange(state: State, agentId: string | null): ChangeState | undefined {
@@ -136,7 +142,12 @@ function combinedTestStep(
         );
 }
 
-function projectRow(state: State, task: PlanSubtask, index: number, wave: number): PlanFlowRow {
+function projectRow(
+  state: State,
+  task: PlanSubtask,
+  index: number,
+  wave: number,
+): Omit<PlanFlowRow, "planId" | "planRevision"> {
   const agent = task.agent_id ? state.agents[task.agent_id] : undefined;
   const change = rowChange(state, task.agent_id);
   const proposal = change?.proposal;
