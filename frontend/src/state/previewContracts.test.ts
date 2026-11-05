@@ -74,7 +74,8 @@ describe("preview contract readers", () => {
       lastSeq: status.seq,
       clock: status.ts,
       gap: false,
-      stageEvents: [...before.stageEvents, status],
+      stageHorizon: { seq: status.seq, ms: Date.parse(status.ts), contiguous: true },
+      lastEventType: status.type,
       changeStages: {
         ...before.changeStages,
         "change-1": {
@@ -85,7 +86,9 @@ describe("preview contract readers", () => {
       },
     });
     for (const key of Object.keys(before)) {
-      if (!["lastSeq", "clock", "gap", "stageEvents", "changeStages"].includes(key))
+      if (
+        !["lastSeq", "clock", "gap", "stageHorizon", "lastEventType", "changeStages"].includes(key)
+      )
         expect(after[key as keyof typeof after]).toBe(before[key as keyof typeof before]);
     }
     expect(resolveViewReferences(after, request)).toEqual([]);

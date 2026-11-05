@@ -35,7 +35,8 @@ it("parses grant event lines and retains their envelopes without changing agents
     }).not.toThrow();
     expect(next).toEqual({
       ...state,
-      stageEvents: events.slice(0, event.seq),
+      stageHorizon: { seq: event.seq, ms: Date.parse(event.ts), contiguous: true },
+      lastEventType: event.type,
       eventFacts: Object.fromEntries(
         events
           .slice(0, event.seq)
