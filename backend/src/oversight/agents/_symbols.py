@@ -3,7 +3,10 @@
 import asyncio
 import keyword
 import sys
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Literal
@@ -11,7 +14,14 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from oversight.agents._harness import ToolError
-from oversight.workspace import Tree, WorkspaceError, is_secret_path, run_process, secret_refusal
+from oversight.workspace import (
+    Tree,
+    WorkspaceError,
+    is_secret_path,
+    offload,
+    run_process,
+    secret_refusal,
+)
 
 TIMEOUT_S = 20.0
 _Kind = Literal[
@@ -55,6 +65,29 @@ def valid_name(name: str) -> bool:
     return all(part.isidentifier() and not keyword.iskeyword(part) for part in name.split("."))
 
 
+@asynccontextmanager
+async def _temporary_directory() -> AsyncGenerator[str]:
+    temporary: TemporaryDirectory[str] | None = None
+
+    def create() -> None:
+        nonlocal temporary
+        temporary = TemporaryDirectory(prefix="oversight-symbols-")
+
+    try:
+        # Keep ownership even if cancellation arrives while creation is in flight.
+        await offload(create)
+        assert temporary is not None
+        yield temporary.name
+    finally:
+        if temporary is not None:
+            await offload(temporary.cleanup)
+
+
+def _write_source(destination: Path, content: str) -> None:
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(content, encoding="utf-8")
+
+
 async def find_symbol(tree: Tree, name: str, under: str | None, cap: int) -> SymbolResult:
     if not valid_name(name):
         raise ToolError("name must be a Python identifier or dotted name")
@@ -62,12 +95,12 @@ async def find_symbol(tree: Tree, name: str, under: str | None, cap: int) -> Sym
         target = await asyncio.to_thread(tree.resolve, under)
         if is_secret_path(under):
             raise ToolError(secret_refusal(under))
-        if not target.is_dir() and target.suffix not in {".py", ".pyi"}:
+        if not await asyncio.to_thread(target.is_dir) and target.suffix not in {".py", ".pyi"}:
             raise ToolError("find_symbol covers Python; use search")
-    with TemporaryDirectory(prefix="oversight-symbols-") as directory:
+    async with _temporary_directory() as directory:
         temporary = Path(directory)
         snapshot = temporary / "source"
-        snapshot.mkdir()
+        await offload(snapshot.mkdir)
         for path in await tree.list_files():
             if is_secret_path(path) or Path(path).suffix not in {".py", ".pyi"}:
                 continue
@@ -75,9 +108,7 @@ async def find_symbol(tree: Tree, name: str, under: str | None, cap: int) -> Sym
                 file = await tree.read_text(path)
             except (OSError, WorkspaceError):
                 continue
-            destination = snapshot / path
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            destination.write_text(file.content, encoding="utf-8")
+            await offload(partial(_write_source, snapshot / path, file.content))
         result = await run_process(
             [
                 sys.executable,
