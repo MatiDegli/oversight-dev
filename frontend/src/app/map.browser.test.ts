@@ -73,7 +73,11 @@ async function withMap(
   theme = "dark",
   baseline = false,
 ) {
-  const page = await browser.newPage({ viewport: { width, height }, reducedMotion: "reduce" });
+  const page = await browser.newPage({
+    timezoneId: "UTC",
+    viewport: { width, height },
+    reducedMotion: "reduce",
+  });
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   try {

@@ -77,7 +77,7 @@ afterAll(async () => {
 async function open(replay = false, width = 1920, height = 1080, theme = "dark") {
   const entry = entries[replay ? 1 : 0];
   if (!entry) throw new Error("Missing server");
-  const page = await browser.newPage({ viewport: { width, height } });
+  const page = await browser.newPage({ timezoneId: "UTC", viewport: { width, height } });
   await page.route("**/", (route) =>
     route.fulfill({
       contentType: "text/html",

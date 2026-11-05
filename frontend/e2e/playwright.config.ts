@@ -22,6 +22,7 @@ export default defineConfig({
   reporter: process.env.CI === "true" ? [["list"], ["html", { open: "never" }]] : [["list"]],
   outputDir: "../test-results",
   use: {
+    timezoneId: "America/Argentina/Buenos_Aires",
     baseURL: origin,
     viewport: { width: 1920, height: 1080 },
     trace: "retain-on-failure",

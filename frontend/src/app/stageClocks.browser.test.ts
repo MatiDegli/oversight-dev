@@ -32,6 +32,7 @@ it.each([390, 1280, 1920])(
     await mkdir(directory, { recursive: true });
     for (const theme of ["dark", "day"]) {
       const page = await browser.newPage({
+        timezoneId: "UTC",
         viewport: { width, height: width === 390 ? 844 : 1080 },
         reducedMotion: "reduce",
       });

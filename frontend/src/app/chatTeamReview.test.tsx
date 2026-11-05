@@ -1,3 +1,11 @@
+import { applyTimeZone, AUTOMATIC } from "../timeZone";
+import { beforeEach as beforeZone, afterEach as afterZone } from "vitest";
+beforeZone(() => {
+  applyTimeZone("UTC");
+});
+afterZone(() => {
+  applyTimeZone(AUTOMATIC);
+});
 import { renderToStaticMarkup as html } from "react-dom/server";
 import { afterEach, expect, it, vi } from "vitest";
 import log from "../../../fixtures/events/handwritten-team-colors.jsonl?raw";

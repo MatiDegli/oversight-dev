@@ -91,7 +91,11 @@ export class StartupChatBrowser {
   async open(scenario: Scenario, viewport = chatSizes[0], theme = "dark") {
     if (!this.browser || !viewport) throw new Error("Missing fixture browser");
     this.events = chatEvents();
-    const context = await this.browser.newContext({ viewport, reducedMotion: "reduce" });
+    const context = await this.browser.newContext({
+      timezoneId: "UTC",
+      viewport,
+      reducedMotion: "reduce",
+    });
     context.setDefaultTimeout(7_000);
     const page = await context.newPage();
     const pageErrors: string[] = [],

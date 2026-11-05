@@ -35,6 +35,7 @@ afterAll(async () => {
 
 it.each(["dark", "day"])("lists three lead plans without stealing focus in %s", async (theme) => {
   const page = await browser.newPage({
+    timezoneId: "UTC",
     viewport: { width: 1920, height: 1080 },
     reducedMotion: "reduce",
   });

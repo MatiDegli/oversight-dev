@@ -37,6 +37,7 @@ afterAll(async () => {
 
 async function withPage(width: number, theme: string, test: (page: Page) => Promise<void>) {
   const page = await browser.newPage({
+    timezoneId: "UTC",
     viewport: { width, height: width === 1920 ? 1080 : 800 },
     reducedMotion: "reduce",
   });

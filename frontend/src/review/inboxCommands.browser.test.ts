@@ -41,6 +41,7 @@ it.each(["dark", "day"])(
   "sends decisions and revokes in %s, retaining event-owned rows",
   async (theme) => {
     const page = await browser.newPage({
+      timezoneId: "America/Argentina/Buenos_Aires",
       viewport: { width: 1920, height: 1080 },
       reducedMotion: "reduce",
     });

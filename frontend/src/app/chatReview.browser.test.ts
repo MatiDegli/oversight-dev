@@ -58,6 +58,7 @@ const approve = (page: Page) =>
   panel(page).getByRole("button", { name: "Approve and merge", exact: true });
 async function open({ width = 1920, theme = "dark", app = false, replay = false } = {}) {
   const page = await browser.newPage({
+    timezoneId: "UTC",
     viewport: { width, height: width === 1920 ? 1080 : 800 },
     reducedMotion: "reduce",
   });

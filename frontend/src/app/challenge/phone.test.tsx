@@ -1,3 +1,11 @@
+import { applyTimeZone, AUTOMATIC } from "../../timeZone";
+import { beforeEach as beforeZone, afterEach as afterZone } from "vitest";
+beforeZone(() => {
+  applyTimeZone("UTC");
+});
+afterZone(() => {
+  applyTimeZone(AUTOMATIC);
+});
 import { renderToReadableStream, renderToStaticMarkup } from "react-dom/server";
 import { beforeAll, expect, it, vi } from "vitest";
 import { PhonePractice } from "./PhonePractice";

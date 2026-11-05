@@ -1,3 +1,11 @@
+import { applyTimeZone, AUTOMATIC } from "../timeZone";
+import { beforeEach as beforeZone, afterEach as afterZone } from "vitest";
+beforeZone(() => {
+  applyTimeZone("America/Argentina/Buenos_Aires");
+});
+afterZone(() => {
+  applyTimeZone(AUTOMATIC);
+});
 import { expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import log from "../../../fixtures/events/handwritten-team-colors.jsonl?raw";
