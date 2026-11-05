@@ -560,10 +560,14 @@ class ChatSupport {
         timeToInteractiveMs: fixture.loadedAt === null ? null : fixture.loadedAt - fixture.started,
       }),
       close: async () => {
-        fixture.initialDetails.resolve(undefined);
-        fixture.initialDetailsObserved.resolve(undefined);
-        await stopSessionPanel(page);
-        await context.close();
+        try {
+          fixture.initialDetails.resolve(undefined);
+          fixture.initialDetailsObserved.resolve(undefined);
+          await stopSessionPanel(page);
+        } finally {
+          // Failed Stop cleanup must not leave an old SSE client in the next test.
+          await context.close();
+        }
       },
     };
   }

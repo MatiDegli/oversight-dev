@@ -2,7 +2,7 @@ import type { ServerEvent } from "@contracts";
 import type { GraphProbeHost } from "../../graph";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { expect as check } from "@playwright/test";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { applyEvent, createInitialState } from "../../state";
 import {
   readSsePrefix,
@@ -504,6 +504,29 @@ it("measures the first failing synthetic cold-start prefix without masking trans
   );
   expect(smallest).toBeNull(); // Before the fix, 42 insertions failed at applied 53 / DOM 52.
 }, 180_000);
+
+it("closes a failed teardown's SSE context before the next session", async () => {
+  const session = await support.session();
+  const failure = new Error("Stop teardown probe");
+  const locator = vi.spyOn(session.page, "locator").mockImplementationOnce(() => {
+    throw failure;
+  });
+  try {
+    await expect(session.close()).rejects.toBe(failure);
+    expect(session.context.pages()).toEqual([]);
+    await check.poll(() => support.streams.size).toBe(0);
+    const next = await support.session();
+    try {
+      expect(support.browser?.contexts()).toEqual([next.context]);
+      expect(support.deliveries.map(({ after }) => after)).toEqual([0]);
+    } finally {
+      await next.close();
+    }
+  } finally {
+    locator.mockRestore();
+    await session.context.close();
+  }
+});
 
 it("measures real SSE Last-Event-ID precedence and the browser's after-based reconnect on a scripted-fake run", async () => {
   const api = await coldStartApi();
