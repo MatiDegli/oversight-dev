@@ -258,7 +258,7 @@ allows trusted-demo eligibility. No inferred enablement or unisolated fallback e
 | `OVERSIGHT_PREVIEW_ENABLED` | `false` | Only literal `true` or `false`; other values, including empty, raise |
 | `OVERSIGHT_PREVIEW_ADAPTER` | `None` | Nonempty `Path`, otherwise `None` |
 | `OVERSIGHT_PREVIEW_PYTHON` | `None` | Nonempty `Path`, otherwise `None` |
-| `OVERSIGHT_PREVIEW_PORTS` | `()` | Comma-separated integers; empty/unset gives `()` |
+| `OVERSIGHT_PREVIEW_PORTS` | `()` | Comma-separated integers; empty/unset gives `()`. The dev launcher passes the resolved pool to Vite. |
 | `OVERSIGHT_PREVIEW_ORIGINS` | `()` | Comma-separated strings without trimming; empty/unset gives `()` |
 | `OVERSIGHT_PREVIEW_HEARTBEAT_S` | `10` | Float seconds; watcher interval |
 | `OVERSIGHT_PREVIEW_LEASE_S` | `600` | Float seconds |
