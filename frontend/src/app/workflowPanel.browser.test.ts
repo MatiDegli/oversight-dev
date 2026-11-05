@@ -222,7 +222,15 @@ it("traverses Close, all numbered steps and eligible detail actions with native 
     await launcher.click();
     const close = panel(page).getByRole("button", { name: "Close", exact: true });
     await close.press("Tab");
+    await check(panel(page).getByRole("button", { name: "Dependency canvas" })).toBeFocused();
+    await check(panel(page).getByRole("button", { name: "Dependency canvas" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     await page.keyboard.press("Tab");
+    await check(
+      panel(page).getByRole("button", { name: "Merge queue", exact: true }),
+    ).toBeFocused();
     await page.keyboard.press("Tab");
     await check(steps(page).nth(0)).toBeFocused();
     await page.keyboard.press("Enter");
@@ -300,7 +308,9 @@ it("never opens, replaces, scrolls or focuses on arrival; missing selection fall
     await check(steps(page)).toHaveCount(2);
     await check(panel(page).getByText("Select a step to see its evidence.")).toBeVisible();
     await check(panel(page).getByRole("button", { name: "Close", exact: true })).toBeFocused();
-    await check(steps(page).and(panel(page).getByRole("button", { pressed: true }))).toHaveCount(0);
+    await check(panel(page).getByRole("button", { pressed: true })).toHaveText([
+      "Dependency canvas",
+    ]);
   } finally {
     await page.close();
   }
@@ -358,7 +368,11 @@ it.each(["dark", "day"])(
       );
       expect(await chat.evaluate((node) => node.scrollTop)).toBe(before);
       await back.press("Tab");
+      await check(panel(page).getByRole("button", { name: "Dependency canvas" })).toBeFocused();
       await page.keyboard.press("Tab");
+      await check(
+        panel(page).getByRole("button", { name: "Merge queue", exact: true }),
+      ).toBeFocused();
       await page.keyboard.press("Tab");
       await check(steps(page).first()).toBeFocused();
       await page.keyboard.press("Enter");

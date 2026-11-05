@@ -13,6 +13,7 @@ import { selectPlanEvidence } from "../../review";
 import { projectPlanFlow, type PlanFlowRow, type State } from "../../state";
 import { presentationStyle } from "../../teams/presentation";
 import { WorkflowCanvas, stepKey } from "./WorkflowCanvas";
+import { WorkflowFocusBoundary } from "./WorkflowFocusBoundary";
 import { MergeQueueView } from "./MergeQueueView";
 import { ReviewAction } from "./ReviewAction";
 import { workflowDetail } from "./workflowDetail";
@@ -73,44 +74,46 @@ export function WorkflowPanel({
         workflowKeys(event, phone, onClose);
       }}
     >
-      <header className="workflow-header">
-        <h2>Workflow</h2>
-        <button ref={close} type="button" onClick={onClose}>
-          <Icon size={16} aria-hidden="true" />
-          {phone ? "Back" : "Close"}
-        </button>
-      </header>
-      <div className="workflow-views" aria-label="Workflow views">
-        <button
-          type="button"
-          aria-pressed={!queue}
-          onClick={() => {
-            setQueue(false);
-          }}
-        >
-          Dependency canvas
-        </button>
-        <button
-          type="button"
-          aria-pressed={queue}
-          onClick={() => {
-            setQueue(true);
-          }}
-        >
-          Merge queue
-        </button>
-      </div>
-      <WorkflowBody
-        queue={queue}
-        state={state}
-        planId={planId}
-        onReview={onReview}
-        rows={rows}
-        selection={selection}
-        selected={selected}
-        detailId={detailId}
-        onSelect={setSelection}
-      />
+      <WorkflowFocusBoundary host={host} fallback={close}>
+        <header className="workflow-header">
+          <h2>Workflow</h2>
+          <button ref={close} type="button" onClick={onClose}>
+            <Icon size={16} aria-hidden="true" />
+            {phone ? "Back" : "Close"}
+          </button>
+        </header>
+        <div className="workflow-views" aria-label="Workflow views">
+          <button
+            type="button"
+            aria-pressed={!queue}
+            onClick={() => {
+              setQueue(false);
+            }}
+          >
+            Dependency canvas
+          </button>
+          <button
+            type="button"
+            aria-pressed={queue}
+            onClick={() => {
+              setQueue(true);
+            }}
+          >
+            Merge queue
+          </button>
+        </div>
+        <WorkflowBody
+          queue={queue}
+          state={state}
+          planId={planId}
+          onReview={onReview}
+          rows={rows}
+          selection={selection}
+          selected={selected}
+          detailId={detailId}
+          onSelect={setSelection}
+        />
+      </WorkflowFocusBoundary>
     </section>
   );
 }
@@ -174,30 +177,17 @@ function useStepSelection(rows: PlanFlowRow[], host: RefObject<HTMLElement | nul
     previousScope === scope ? rows.find((row) => stepKey(row) === selection) : undefined;
   const close = useRef<HTMLButtonElement>(null);
   const previousSelection = useRef<string | null>(null);
-  const focused = useRef<Element | null>(null);
   // Clear removed local indices before committing the new evidence. The layout effect
   // still observes the removal and returns keyboard focus after that commit.
   if (selection !== null && !selected) setSelection(null);
   useLayoutEffect(() => {
-    const rememberFocus = () => {
-      focused.current = host.current?.contains(document.activeElement)
-        ? document.activeElement
-        : null;
-    };
-    document.addEventListener("focusin", rememberFocus);
     close.current?.focus({ preventScroll: true });
-    return () => {
-      document.removeEventListener("focusin", rememberFocus);
-    };
-  }, [host]);
+  }, []);
   useLayoutEffect(() => {
     if (
-      (previousSelection.current !== null &&
-        !rows.some((row) => stepKey(row) === previousSelection.current) &&
-        host.current?.contains(document.activeElement)) ||
-      (document.activeElement === document.body &&
-        focused.current !== null &&
-        !focused.current.isConnected)
+      previousSelection.current !== null &&
+      !rows.some((row) => stepKey(row) === previousSelection.current) &&
+      host.current?.contains(document.activeElement)
     ) {
       close.current?.focus({ preventScroll: true });
     }

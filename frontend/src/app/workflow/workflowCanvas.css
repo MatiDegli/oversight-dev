@@ -27,6 +27,7 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   column-gap: var(--spacing-sm);
   row-gap: calc(var(--spacing-overlay) * 2);
+  padding-inline: var(--spacing-overlay);
 }
 .workflow-canvas li {
   min-width: 0;

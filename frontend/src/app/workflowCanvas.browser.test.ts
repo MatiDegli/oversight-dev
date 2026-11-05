@@ -56,6 +56,42 @@ it("restores removed detail action focus within the workflow on a revision reset
     await page.close();
   }
 });
+it.each(["blur", "graph click", "blur with immediate arrival"])(
+  "does not restore a detail action after %s moves focus to the body",
+  async (action) => {
+    const page = await harness.open();
+    try {
+      await canvasSteps(page).nth(1).click();
+      const review = workflow(page).getByRole("button", { name: "Review change" });
+      await review.focus();
+      await check(review).toBeFocused();
+      if (action === "graph click")
+        await page
+          .getByLabel("Repository graph", { exact: true })
+          .click({ position: { x: 2, y: 2 } });
+      else
+        await review.evaluate((button: HTMLButtonElement, immediate) => {
+          button.blur();
+          if (immediate) window.canvasTest.reviseWorkflow();
+        }, action === "blur with immediate arrival");
+      expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);
+      if (action !== "blur with immediate arrival")
+        await page.evaluate(() => {
+          window.canvasTest.reviseWorkflow();
+        });
+      await check(workflow(page).getByText("Select a step to see its evidence.")).toBeVisible();
+      await check(review).toHaveCount(0);
+      await check(
+        workflow(page).getByRole("button", { name: "Close", exact: true }),
+      ).not.toBeFocused();
+      expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);
+      await page.keyboard.press("Space");
+      await check(workflow(page)).toBeVisible();
+    } finally {
+      await page.close();
+    }
+  },
+);
 it.each(["composer", "replay"])(
   "leaves external %s focus untouched by surviving-index revision changes",
   async (control) => {
