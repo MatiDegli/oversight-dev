@@ -19,6 +19,16 @@ describe("the top bar", () => {
     expect(markup).toContain("lucide-git-branch");
   });
 
+  it("opens Settings from the repository name, and keeps it plain without Settings", () => {
+    const open = vi.fn();
+    const markup = renderToStaticMarkup(<TopBar state={through(14)} onOpenSettings={open} />);
+    const button = /<button type="button" title="Repository settings"[^>]*>/.exec(markup)?.[0];
+    expect(button).toContain('aria-label="Repository demo-repo. Open repository settings"');
+    expect(button).toContain("rounded-control");
+    expect(render(14)).not.toContain("Repository settings");
+    expect(render(14)).toContain(">demo-repo<");
+  });
+
   it("puts the decisions chip on the control radius with its count in the label's type", () => {
     const markup = render(20, vi.fn());
     const button = /<button type="button" title="Open decisions inbox[^>]*>/.exec(markup)?.[0];
@@ -26,7 +36,7 @@ describe("the top bar", () => {
     expect(button).not.toContain("rounded-full");
     expect(button).not.toContain("disabled");
     expect(markup).toContain("Decisions ·");
-    expect(markup).toContain('class="font-mono tabular-nums">1</span>');
+    expect(markup).toContain('class="decisions-chip-count font-mono tabular-nums">1</span>');
     expect(markup).toContain('aria-label="Decisions: 1 pending. Open decisions inbox"');
     expect(render(14)).toContain("Nothing needs you");
     expect(render(14)).toContain("text-muted");
@@ -36,7 +46,8 @@ describe("the top bar", () => {
 
   it("keeps the decisions chip label in one inline run with a single space before the count", () => {
     expect(render(20, vi.fn())).toContain(
-      '<span>Decisions · <span class="font-mono tabular-nums">1</span></span>',
+      '<span><span class="decisions-chip-label">Decisions · </span>' +
+        '<span class="decisions-chip-count font-mono tabular-nums">1</span></span>',
     );
     expect(render(14, vi.fn())).toContain("<span>Nothing needs you</span>");
   });

@@ -76,7 +76,7 @@ const kindsState = kinds
 it("uses singular labels for 1 agent and 1 step", () => {
   const firstStep = leadEvents.slice(0, 4).reduce(applyEvent, createInitialState());
   const html = renderToStaticMarkup(<DecisionInbox state={firstStep} />);
-  expect(html).toContain("1 agent took 1 step in 0 min.");
+  expect(html).toContain("1 agent took 1 step in under a minute.");
   expect(html).not.toContain("1 agents");
   expect(html).not.toContain("1 steps");
 });
@@ -90,7 +90,7 @@ it("keeps the exact inbox header after a highest-revision lead resend", () => {
     seq: before.lastSeq + 1,
     payload: { ...current.payload, step: 99 },
   });
-  const sentence = "1 agent took 4 steps in 0 min. These 1 need a person.";
+  const sentence = "1 agent took 4 steps in under a minute. This one needs a person.";
   for (const value of [before, after]) {
     const html = renderToStaticMarkup(<DecisionInbox state={value} />);
     const header = html.match(/<header class="inbox-heading">.*?<\/header>/s)?.[0];
@@ -265,14 +265,39 @@ it("ships the inbox headline before any lazy plan and removes the obsolete hero 
   ]) {
     expect(inbox).toContain("<h2>Decisions waiting for you</h2>");
     expect(inbox).not.toContain("<style>");
-    expect(inbox).not.toContain('style="');
+    // Plan geometry uses --flow-gutter; the obsolete headline count must stay in CSS.
+    expect(inbox).not.toContain('class="inbox-count" style=');
   }
+  // Preserve the original blanket guard for the eager heading itself. The whole-card
+  // replacement below permits custom properties only, including the lazy flow gutter.
+  expect(
+    renderToStaticMarkup(<InboxHeading count={3} agents={1} steps={3} minutes={0} />),
+  ).not.toContain('style="');
   expect(eager).toMatch(
     /\.inbox-heading h2\s*\{[^}]*font-size: 20px;[^}]*font-weight: 700;[^}]*line-height: 1\.3;/s,
   );
   expect(eager).toMatch(/\.inbox-count\s*\{\s*display: none;\s*\}/);
   expect(eager).not.toContain("font-size: 64px");
   expect(lazy).not.toContain(".inbox-heading");
+});
+
+it("allows only CSS custom properties throughout inbox and plan markup", () => {
+  const event = leadEvents[7];
+  if (event?.type !== "plan.updated") throw new Error("Missing plan");
+  const markup = [
+    ...[state, leadState, kindsState].map((value) =>
+      renderToStaticMarkup(<DecisionInbox state={value} />),
+    ),
+    renderToStaticMarkup(<InboxHeading count={3} agents={1} steps={3} minutes={0} />),
+    renderToStaticMarkup(<PlanActions state={leadState} plan={event.payload} slots={null} />),
+  ];
+  expect(markup.join("")).toContain('style="--flow-gutter:');
+  for (const html of markup) {
+    expect(html).not.toContain("<style>");
+    for (const [, declarations] of html.matchAll(/\sstyle="([^"]*)"/g)) {
+      expect(declarations).toMatch(/^(?:--[\w-]+:[^;]+;?)+$/);
+    }
+  }
 });
 
 it("records the ratified eager stylesheet and separates the next decision entry", () => {
@@ -287,7 +312,7 @@ it("records the ratified eager stylesheet and separates the next decision entry"
   expect(entry).toMatch(/\n\n$/);
 });
 
-it("attributes the plan only to its author while tracking remains pending", () => {
+it("attributes the plan to its author alongside read-only progress", () => {
   const event = leadEvents[7];
   if (event?.type !== "plan.updated") throw new Error("Missing plan");
   const html = renderToStaticMarkup(
@@ -312,11 +337,11 @@ it("gives failed plans without detail a readable neutral explanation", () => {
 
 it("documents the visible plan groups using the Group type", () => {
   const design = readFileSync(new URL("../../../DESIGN.md", import.meta.url), "utf8")
-    .split("### Lead plan actions — first slice built")[1]
+    .split("### Lead plan actions and progress")[1]
     ?.split("### Settings tab")[0];
   expect(design).toContain("Queued, waiting for slots");
   expect(design).toContain("Ended without running");
-  expect(design).toContain("Group type");
+  expect(design).toContain("Group typography");
   expect(design).not.toContain("Queued plans");
 });
 

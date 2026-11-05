@@ -297,7 +297,7 @@ spend and each agent's cost from these events.
 
 The app records Meta costs before publishing their ticks. The durable ledger survives resets.
 Unknown costs block further Meta starts and revisions until settled. A ledger write failure
-halts the affected run and blocks Meta starts. Warnings begin at 50% and 80%; spend above 90%
+halts the affected run and blocks Meta starts. Warnings at 50% and 80% apply only below the brake; spend above the person's configured share of the credits, 90% by default,
 refuses new Meta runs and revisions. It does not cancel other runs already working.
 Baseten and fake calls do not debit Meta's credit ledger.
 
@@ -314,7 +314,8 @@ including dynamic imports. Only transport may use `fetch` or `EventSource`. Only
 Cytoscape/fcose; only editor imports Monaco. State cannot import React or React DOM.
 
 - [State](frontend/src/state/index.ts) exports the pure reducer, Zustand store, selectors and
-  spend helpers. Main's graph and pending change graphs stay separate.
+  spend helpers. Main's graph and pending change graphs stay separate. Accepted main-head
+  observations retain event order for pure plan-flow projection and terminal gate inference.
 - [Transport](frontend/src/transport/index.ts) owns live SSE, replay and command requests.
   It checks event envelopes; generated TypeScript types do not validate payloads at runtime.
 - [App](frontend/src/app/index.ts) composes panels, owns transport lifetime and local view
@@ -324,6 +325,9 @@ Cytoscape/fcose; only editor imports Monaco. State cannot import React or React 
 - [Review](frontend/src/review/index.ts) presents proposals, impact and the three decisions.
   Accepted decisions stay pending until an event or error settles them. Unsaved review edits
   block Approve and Request changes until saved or discarded. Approve has no keyboard shortcut.
+  One lazy read-only plan card serves inbox and lead-thread callbacks in both layouts. It joins
+  subtasks to changes by assigned agent ID, projects waves and current-revision gate evidence,
+  and shares app-owned Queue/Reject/cancel attempts. Running plans do not count as decisions.
 - [Editor](frontend/src/editor/index.ts) exports `LiveDiff`, `EditorDiff`, `ReviewEditor`,
   `FileView` and file helpers. Monaco and its worker are bundled locally. Fonts load before
   creation. The live diff and original side stay read-only; the modified side is editable
@@ -331,6 +335,8 @@ Cytoscape/fcose; only editor imports Monaco. State cannot import React or React 
 - [Theme](frontend/src/theme/index.ts) and [theme CSS](frontend/src/theme/index.css) supply
   fonts, Tailwind and tokens selected through root `data-theme`. Graph, editor and dot field
   receive their colors through the shared theme interface.
+  [Appearance](frontend/src/appearance.ts) stores the Dark, Day or System choice in the browser
+  and sets `data-theme` before the app mounts; dark is the default.
 
 ### Graph folding and camera
 
@@ -510,6 +516,8 @@ within 20,000 characters and report the exact number omitted.
 status folds one committed prefix, fences escaped fields at 200 characters and omits whole entries
 within 20,000 characters; through_seq is the maximum committed status or server-digest horizon
 observed this turn, or null.
+The shared plan card now renders ordered lead-plan entries in Chat and Oversight, resolving
+winning revisions from the displayed thread state. Read-only progress owns no commands or scroll.
 L3 owns Chat/composer, freshness/cut/withheld UI, plan links, graph/focus, fixture exclusion,
 approval keyboard protection, the 50-turn cost fixture and separate Playwright coverage.
 
@@ -603,7 +611,7 @@ replays, practice, Files, editor startup/prefetch, subpath serving and third-par
 
 ## Level 3 wiring and remaining private cores
 
-Contracts are at 1.21.0 (`contracts/src/oversight_contracts/__init__.py`). Policy assessments,
+Contracts are at 1.24.0 (`contracts/src/oversight_contracts/__init__.py`). Policy assessments,
 run-rule findings, before/after test evidence and optional cross-review are wired into the live
 flow. Behavior diff and measured caller evidence are built and opt-in, off by default.
 Merge-mode controls, standing grants, follow-main for idle rules waits and Revert are wired,

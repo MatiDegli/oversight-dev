@@ -17,7 +17,13 @@ import { selectPlanEvidence, selectRetainedPlans } from "./planSelectors";
 import "./inbox.css";
 
 const PlanActions = lazy(() => import("./PlanActions"));
-const planPiece = (state: State, plan: Plan) => (
+type OpenWorkflow = (id: string, launcher: HTMLButtonElement) => void;
+const planPiece = (
+  state: State,
+  plan: Plan,
+  onReview?: (id: string) => void,
+  onOpenWorkflow?: OpenWorkflow,
+) => (
   <Suspense
     fallback={
       <div className="plan-content">
@@ -30,6 +36,8 @@ const planPiece = (state: State, plan: Plan) => (
       state={state}
       plan={plan}
       slots={slotUsage(state)}
+      onReview={onReview}
+      onOpenWorkflow={onOpenWorkflow}
     />
   </Suspense>
 );
@@ -39,11 +47,13 @@ function InboxRow({
   entry,
   plan,
   onReview,
+  onOpenWorkflow,
 }: {
   state: State;
   entry: DecisionInboxEntry;
   plan: Plan | undefined;
   onReview?: (id: string) => void;
+  onOpenWorkflow?: OpenWorkflow;
 }) {
   const change = entry.changeId ? state.changes[entry.changeId] : undefined;
   const wait = entry.changeId ? selectPossibleCallersWait(state, entry.changeId) : null;
@@ -95,7 +105,7 @@ function InboxRow({
           ))}
         </ul>
       )}
-      {plan?.subtasks && planPiece(state, plan)}
+      {plan?.subtasks && planPiece(state, plan, onReview, onOpenWorkflow)}
       {example && <Example row={example} identity={identity} />}
       <InboxAnswer state={state} entry={entry} />
       {change && onReview && (
@@ -171,9 +181,11 @@ function InboxAnswer({ state, entry }: { state: State; entry: DecisionInboxEntry
 export function DecisionInbox({
   state,
   onReview,
+  onOpenWorkflow,
 }: {
   state: State;
   onReview?: (id: string) => void;
+  onOpenWorkflow?: OpenWorkflow;
 }) {
   const [view, setView] = useState<"decisions" | "grants">("decisions");
   const entries = selectDecisionInbox(state);
@@ -200,10 +212,13 @@ export function DecisionInbox({
                     entry={entry}
                     plan={lead?.planId ? plans.get(lead.planId)?.payload : undefined}
                     onReview={onReview}
+                    onOpenWorkflow={onOpenWorkflow}
                   />
                 );
               })
-            ) : retained.queued.length || retained.failed.length ? null : (
+            ) : retained.queued.length ||
+              retained.running.length ||
+              retained.failed.length ? null : (
               <div className="inbox-empty">
                 <Inbox aria-hidden="true" size={28} />
                 <h3>You can keep watching</h3>
@@ -213,18 +228,26 @@ export function DecisionInbox({
                 </p>
               </div>
             )}
-            {(["queued", "failed"] as const).map(
+            {(["queued", "running", "failed"] as const).map(
               (group) =>
                 retained[group].length > 0 && (
                   <section
                     className="plan-group"
                     aria-label={
-                      group === "queued" ? "Queued, waiting for slots" : "Ended without running"
+                      group === "queued"
+                        ? "Queued, waiting for slots"
+                        : group === "running"
+                          ? "Running plans"
+                          : "Ended without running"
                     }
                     key={group}
                   >
                     <h3 className="group-label">
-                      {group === "queued" ? "Queued, waiting for slots" : "Ended without running"}
+                      {group === "queued"
+                        ? "Queued, waiting for slots"
+                        : group === "running"
+                          ? "Running plans"
+                          : "Ended without running"}
                     </h3>
                     {retained[group].map(({ payload: plan, firstTs }) => (
                       <article className="inbox-row" key={plan.plan_id}>
@@ -237,7 +260,7 @@ export function DecisionInbox({
                         {group === "queued" && plan.detail && plan.detail !== plan.task && (
                           <p>{plan.detail}</p>
                         )}
-                        {planPiece(state, plan)}
+                        {planPiece(state, plan, onReview, onOpenWorkflow)}
                       </article>
                     ))}
                   </section>

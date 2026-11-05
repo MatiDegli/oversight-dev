@@ -83,11 +83,11 @@ async def proposed_run(
 @pytest.mark.parametrize(
     ("overrides", "names"),
     [
-        ({"budget_usd": None}, ["OVERSIGHT_BUDGET_USD"]),
+        ({"budget_usd": 0}, ["OVERSIGHT_BUDGET_USD"]),
         ({"input_usd_per_m": None}, ["MUSE_SPARK_INPUT_USD_PER_M"]),
         ({"output_usd_per_m": None}, ["MUSE_SPARK_OUTPUT_USD_PER_M"]),
         (
-            {"meta_api_key": None, "budget_usd": None, "input_usd_per_m": None},
+            {"meta_api_key": None, "budget_usd": 0, "input_usd_per_m": None},
             ["META_API_KEY", "OVERSIGHT_BUDGET_USD", "MUSE_SPARK_INPUT_USD_PER_M"],
         ),
     ],
@@ -109,7 +109,14 @@ async def test_metered_revision_lists_setup_problems_and_starts_no_run(
         assert response.json()["error"] == {
             "code": "not_configured",
             "message": "Server setup is incomplete.",
-            "missing": [{"name": name, "problem": "missing", "slots": ["B"]} for name in names],
+            "missing": [
+                {
+                    "name": name,
+                    "problem": "invalid" if name == "OVERSIGHT_BUDGET_USD" else "missing",
+                    "slots": ["B"],
+                }
+                for name in names
+            ],
         }
         cast(Mock, manager.request_changes).assert_not_called()
         assert live._runs == {} and live._decisions == {}  # pyright: ignore[reportPrivateUsage]
@@ -127,6 +134,7 @@ async def test_unmetered_revision_ignores_missing_meta_setup(
         baseten_api_key="test-baseten",
         meta_api_key=None,
         budget_usd=None,
+        spend_brake_percent=None,
         input_usd_per_m=None,
         output_usd_per_m=None,
     )
@@ -167,11 +175,52 @@ async def test_rules_merged_revision_names_revert_without_kept_run(tmp_path: Pat
         assert live.store.last_seq == before
 
 
-@pytest.mark.parametrize("attribute", ["budget_usd", "input_usd_per_m", "output_usd_per_m"])
+@pytest.mark.parametrize(
+    "attribute", ["input_usd_per_m", "output_usd_per_m", "spend_brake_percent"]
+)
 def test_brake_itself_fails_closed_without_budget_or_prices(tmp_path: Path, attribute: str) -> None:
     live = LiveRun(meta_settings(tmp_path, **{attribute: None}))
     live.ledger.state = LedgerState(0.0, ())
     assert live.brake_reason() is not None
+
+
+@pytest.mark.parametrize("value", ["0", "101", "abc", "9.5", "-5", "\uff11\uff10", "1000"])
+async def test_invalid_spend_brake_refuses_meta_start(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, value: str
+) -> None:
+    name = "OVERSIGHT_SPEND_BRAKE_PERCENT"
+    monkeypatch.setenv(name, value)
+    loaded = Settings.load(tmp_path / "no-config")
+    settings = meta_settings(
+        tmp_path,
+        spend_brake_percent=loaded.spend_brake_percent,
+        setting_problems=loaded.setting_problems,
+    )
+    clients = Scripts()
+    expected = {
+        "code": "spend_brake",
+        "message": f"{name} must be a whole number from 1 to 100",
+    }
+    async with asyncio.timeout(DEADLINE_S), client_for(settings, clients) as client:
+        response = await start(client, slot="B")
+        assert response.status_code == 403, response.text
+        error = ErrorResponse.model_validate(response.json()).error
+        assert error.code == "spend_brake"
+        assert response.json()["error"] == expected
+        health = Health.model_validate((await client.get("/health")).json())
+        assert health.missing_settings == []
+    async with asyncio.timeout(DEADLINE_S), proposed_run(settings, MUSE_SPARK) as (client, live):
+        before = live.store.last_seq
+        response = await client.post(
+            "/changes/change-1/request-changes",
+            json={"comment": "Revise, please.", "revision": 1, "head_commit": "seeded-head"},
+        )
+        assert response.status_code == 403, response.text
+        assert response.json()["error"] == expected
+        manager = cast(Mock, live._manager)  # pyright: ignore[reportPrivateUsage]
+        manager.request_changes.assert_not_called()
+        assert live.store.last_seq == before
+    assert clients.calls == 0
 
 
 @pytest.mark.parametrize(
@@ -179,7 +228,6 @@ def test_brake_itself_fails_closed_without_budget_or_prices(tmp_path: Path, attr
     [
         ("META_API_KEY", "meta_api_key", None, "missing"),
         ("META_API_KEY", "meta_api_key", "invalid key", "invalid"),
-        ("OVERSIGHT_BUDGET_USD", "budget_usd", None, "missing"),
         ("MUSE_SPARK_INPUT_USD_PER_M", "input_usd_per_m", None, "missing"),
         ("MUSE_SPARK_OUTPUT_USD_PER_M", "output_usd_per_m", None, "missing"),
         ("OVERSIGHT_BUDGET_USD", "budget_usd", 0.0, "invalid"),
@@ -222,9 +270,9 @@ async def test_health_lists_both_providers_and_start_returns_all_unmet_requireme
     async with asyncio.timeout(DEADLINE_S), client_for(settings, clients) as client:
         health = Health.model_validate((await client.get("/health")).json())
         assert health.missing_settings == missing_settings(settings, offered_profiles(settings))
-        assert len(health.missing_settings) == 5
+        assert len(health.missing_settings) == 4
         a = ErrorResponse.model_validate((await start(client, slot="A")).json()).error
-        assert a.missing is not None and len(a.missing) == 4
+        assert a.missing is not None and len(a.missing) == 3
         for body in ({"slot": "B"}, {"slot": "A", "model": "muse-spark-open"}):
             response = await start(client, **body)
             assert response.status_code == 503
@@ -238,7 +286,11 @@ async def test_health_distinguishes_ready_from_missing_and_omitted_slot_can_use_
     tmp_path: Path,
 ) -> None:
     settings = meta_settings(
-        tmp_path, budget_usd=None, agent_model_b="fake", fake_script_b=FAKE_SCRIPT_B
+        tmp_path,
+        meta_api_key=None,
+        budget_usd=None,
+        agent_model_b="fake",
+        fake_script_b=FAKE_SCRIPT_B,
     )
     clients = Scripts()
     async with asyncio.timeout(DEADLINE_S), client_for(settings, clients) as client:

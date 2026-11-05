@@ -1,7 +1,7 @@
 import { presentationFor, presentationStyle } from "../../teams/presentation";
 import { agentSlotStyle } from "../../theme";
 import { Maximize2, Minimize2, Settings, Timer, X } from "lucide-react";
-import { lazy, useLayoutEffect, useRef, type ReactNode } from "react";
+import { Suspense, lazy, useLayoutEffect, useRef, type ReactNode } from "react";
 import { FileView } from "../../editor";
 // eslint-disable-next-line no-restricted-imports -- K2a shares the Chat team identity without extending the agents barrel.
 import { selectChatLeads } from "../../agents/chatLeadSelectors";
@@ -9,7 +9,8 @@ import { selectConversation, loadConversationPanel } from "../../agents";
 import { InboxFrame, ConversationFrame, FileFrame, SettingsFrame } from "./PanelFallbacks";
 import { LazyPanel } from "./LazyPanel";
 
-import { loadDecisionInbox } from "../../review";
+import { loadDecisionInbox, loadPlanActions, selectPlanEvidence } from "../../review";
+import { slotUsage } from "../../agents";
 import type { FrameProps } from "../Frame";
 import { UsageMount } from "../usage/UsageMount";
 import { LivePanel } from "./LivePanel";
@@ -29,6 +30,13 @@ const ConversationPanel = lazy(() =>
   })),
 );
 
+const PlanActions = lazy(loadPlanActions);
+
+type WorkflowNavigation = {
+  onOpenWorkflow?: (id: string, launcher: HTMLButtonElement) => void;
+  workflowCovered?: boolean;
+};
+
 const LeadConversationFocus = lazy(() =>
   loadConversationPanel().then((module) => ({
     default: ({
@@ -44,6 +52,8 @@ const LeadConversationFocus = lazy(() =>
       onViewHighlight,
       onViewFile,
       replay,
+      onReview,
+      onOpenWorkflow,
     }: Pick<
       FrameProps,
       | "state"
@@ -55,16 +65,38 @@ const LeadConversationFocus = lazy(() =>
       | "onViewHighlight"
       | "onViewFile"
       | "replay"
-    > & {
-      agentId: string;
-      chat?: boolean;
-      composerDisclosure?: ReactNode;
-    }) => {
-      const conversation = module.selectLeadConversation(chatState ?? state, agentId);
+      | "onReview"
+    > &
+      WorkflowNavigation & {
+        agentId: string;
+        chat?: boolean;
+        composerDisclosure?: ReactNode;
+      }) => {
+      const threadState = chatState ?? state;
+      const conversation = module.selectLeadConversation(threadState, agentId);
+      const { plans } = selectPlanEvidence(threadState);
       if (!conversation) return null;
       return (
         <module.ConversationPanel
           conversation={conversation}
+          renderPlan={(planId) => {
+            const plan = plans.get(planId)?.payload;
+            if (!plan) return null;
+            return (
+              <Suspense fallback={<p role="status">Loading plan…</p>}>
+                <article className="thread-plan-card" aria-label={`Plan ${plan.plan_id}`}>
+                  <h3>{plan.task}</h3>
+                  <PlanActions
+                    state={threadState}
+                    plan={plan}
+                    slots={slotUsage(threadState)}
+                    onReview={onReview}
+                    onOpenWorkflow={onOpenWorkflow}
+                  />
+                </article>
+              </Suspense>
+            );
+          }}
           renderView={(entry) => (
             <module.LeadViewCard
               state={state}
@@ -115,15 +147,16 @@ function LeadConversationFrame({
 }
 
 export function FocusPanel(
-  props: FrameProps & {
-    startAgentAction: ReactNode;
-    chat?: boolean;
-    composerDisclosure?: ReactNode;
-    onGraph?: (changeId: string) => void;
-    practiceOnly?: boolean;
-    maximized: boolean;
-    onMaximize: () => void;
-  },
+  props: FrameProps &
+    WorkflowNavigation & {
+      startAgentAction: ReactNode;
+      chat?: boolean;
+      composerDisclosure?: ReactNode;
+      onGraph?: (changeId: string) => void;
+      practiceOnly?: boolean;
+      maximized: boolean;
+      onMaximize: () => void;
+    },
 ) {
   const { view, state, onClosePanel, onTabAction } = props;
   const tabs = view.tabs ?? [];
@@ -143,7 +176,12 @@ export function FocusPanel(
     );
   const Icon = props.maximized ? Minimize2 : Maximize2;
   return (
-    <section className="focus-panel" aria-label="Focus panel">
+    <section
+      className="focus-panel"
+      aria-label="Focus panel"
+      hidden={props.workflowCovered}
+      inert={props.workflowCovered}
+    >
       <div
         className="focus-tabs"
         hidden={
@@ -248,7 +286,11 @@ export function FocusPanel(
           </LazyPanel>
         ) : view.activeTab === "inbox" ? (
           <LazyPanel key="inbox" frame={<InboxFrame state={state} />}>
-            <DecisionInbox state={state} onReview={props.onReview} />
+            <DecisionInbox
+              state={state}
+              onReview={props.onReview}
+              onOpenWorkflow={props.onOpenWorkflow}
+            />
           </LazyPanel>
         ) : view.activeTab === "practice" && props.practice?.active ? (
           props.practice.content
@@ -259,7 +301,7 @@ export function FocusPanel(
             conversation={owner ? <ConversationFocus {...props} agentId={owner} /> : null}
           />
         ) : view.diff ? (
-          <LivePanel state={state} view={view} onClose={onClosePanel} />
+          <LivePanel state={state} view={view} onClose={onClosePanel} onReview={props.onReview} />
         ) : view.file && props.files ? (
           <FileView
             loadingFallback={
@@ -310,12 +352,14 @@ function ConversationFocus({
   canReview,
   onReview,
   onGraph,
-}: FrameProps & {
-  agentId: string;
-  chat?: boolean;
-  composerDisclosure?: ReactNode;
-  onGraph?: (id: string) => void;
-}) {
+  onOpenWorkflow,
+}: FrameProps &
+  WorkflowNavigation & {
+    agentId: string;
+    chat?: boolean;
+    composerDisclosure?: ReactNode;
+    onGraph?: (id: string) => void;
+  }) {
   const threadState = chatState ?? state;
   const conversation = selectConversation(
     threadState,
@@ -334,6 +378,8 @@ function ConversationFocus({
             onViewHighlight={onViewHighlight}
             onViewFile={onViewFile}
             replay={replay}
+            onReview={onReview}
+            onOpenWorkflow={onOpenWorkflow}
             agentId={agentId}
             onMessageLead={onMessageLead}
             onStopLead={onStopLead}

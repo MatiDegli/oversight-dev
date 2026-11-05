@@ -2,64 +2,64 @@
 name: Oversight
 description: A web IDE where one person supervises coding agents on a live graph of a Python repository.
 colors:
-  ground: "#070707"
-  shell: "#09090a"
-  panel: "#0d0d0f"
-  field: "#0b0b0b"
-  page: "#101012"
-  card: "#151518"
-  raised: "#1b1b1f"
-  page-raised: "#131313"
+  ground: "#121214"
+  shell: "#161619"
+  panel: "#1a1a1e"
+  field: "#141417"
+  page: "#1c1c20"
+  card: "#242428"
+  raised: "#2c2c31"
+  page-raised: "#202023"
   text: "#ededea"
   text-hover: "#ffffff"
   muted: "#a3a39e"
-  faint: "#85857f"
-  code-dim: "#7d7d78"
+  faint: "#94948e"
+  code-dim: "#84847f"
   module-label: "#d2d2cd"
-  divider: "rgba(255, 255, 255, 0.06)"
-  border: "rgba(255, 255, 255, 0.1)"
-  page-border: "#262626"
-  card-border: "#242424"
-  node-border: "#2e2e2e"
-  outline: "#3a3a3a"
-  control-edge: "#62625e"
-  node-hover: "#6b6e77"
-  edge: "#6a6a65"
-  edge-possible: "#5f5f5b"
-  edge-faint: "#29292c"
+  divider: "rgba(255, 255, 255, 0.07)"
+  border: "rgba(255, 255, 255, 0.12)"
+  page-border: "#34343a"
+  card-border: "#323237"
+  node-border: "#3c3c42"
+  outline: "#4a4a50"
+  control-edge: "#767672"
+  node-hover: "#72757e"
+  edge: "#767671"
+  edge-possible: "#6b6b67"
+  edge-faint: "#36363b"
   edge-hover: "#f0f0eb"
   lit-edge: "#d6d3cb"
   work-light: "#8c8c88"
   agent-a: "#ff5c1f"
   agent-a-text: "#ff7a45"
   agent-a-tint: "rgba(255, 92, 31, 0.14)"
-  agent-a-node: "rgba(30, 12, 4, 0.95)"
-  agent-a-node-new: "rgba(20, 10, 4, 0.95)"
+  agent-a-node: "rgba(45, 27, 19, 0.95)"
+  agent-a-node-new: "rgba(35, 25, 19, 0.95)"
   agent-b: "#4f7dff"
   agent-b-text: "#86a3ff"
   agent-b-tint: "rgba(79, 125, 255, 0.16)"
-  agent-b-node: "rgba(6, 12, 30, 0.95)"
-  agent-b-node-new: "rgba(4, 8, 20, 0.95)"
+  agent-b-node: "rgba(21, 27, 45, 0.95)"
+  agent-b-node-new: "rgba(19, 23, 35, 0.95)"
   agent-c: "#a392d6"
   agent-c-text: "#a392d6"
-  agent-c-tint: "rgba(163, 146, 214, 0.14)"
-  agent-c-node: "rgba(23, 20, 30, 0.95)"
-  agent-c-node-new: "rgba(15, 14, 20, 0.95)"
+  agent-c-tint: "rgba(163, 146, 214, 0.12)"
+  agent-c-node: "rgba(38, 35, 45, 0.95)"
+  agent-c-node-new: "rgba(30, 29, 35, 0.95)"
   agent-d: "#dba4c8"
   agent-d-text: "#dba4c8"
   agent-d-tint: "rgba(219, 164, 200, 0.14)"
-  agent-d-node: "rgba(30, 22, 27, 0.95)"
-  agent-d-node-new: "rgba(20, 15, 18, 0.95)"
+  agent-d-node: "rgba(45, 37, 42, 0.95)"
+  agent-d-node-new: "rgba(35, 30, 33, 0.95)"
   agent-e: "#a1c7f8"
   agent-e-text: "#a1c7f8"
   agent-e-tint: "rgba(161, 199, 248, 0.14)"
-  agent-e-node: "rgba(19, 24, 30, 0.95)"
-  agent-e-node-new: "rgba(13, 16, 20, 0.95)"
+  agent-e-node: "rgba(34, 39, 45, 0.95)"
+  agent-e-node-new: "rgba(28, 31, 35, 0.95)"
   agent-f: "#ab6e9e"
-  agent-f-text: "#b27ba7"
-  agent-f-tint: "rgba(171, 110, 158, 0.14)"
-  agent-f-node: "rgba(30, 19, 28, 0.95)"
-  agent-f-node-new: "rgba(20, 13, 18, 0.95)"
+  agent-f-text: "#b982ae"
+  agent-f-tint: "rgba(171, 110, 158, 0.09)"
+  agent-f-node: "rgba(45, 34, 43, 0.95)"
+  agent-f-node-new: "rgba(35, 28, 33, 0.95)"
   on-agent: "#17110b"
   passed: "#6fd08a"
   failed: "#ff6464"
@@ -74,9 +74,9 @@ colors:
   syntax-definition: "#f2f1ea"
   span-highlight: "rgba(255, 255, 255, 0.04)"
   fold-tint: "rgba(255, 255, 255, 0.035)"
-  matte-top: "#151515"
-  matte-bottom: "#0f0f0f"
-  lamp-off: "#070707"
+  matte-top: "#222225"
+  matte-bottom: "#1a1a1d"
+  lamp-off: "#121214"
   guide-dot: "rgba(237, 237, 234, 0.10)"
   contour-line: "rgba(237, 237, 234, 0.09)"
   day-ground: "#f4f3ef"
@@ -317,7 +317,7 @@ and code.
 The product is a tool someone operates for long stretches while agents work, and the demo is
 recorded on video. So the screen is dense but calm, every color means something, and nothing moves
 without a cause. Everything is dark by default, the review panel included,
-with a dark Monaco theme. A day mode exists for the submission gallery only (see Colors).
+with a dark Monaco theme. Settings > Appearance also offers Day and System (see Colors).
 
 **Precedence.** AGENTS.md wins over this file. The maintainer approved the v4 shell sketches on
 2026-10-27: [watch](docs/sketches/v4/watch.png), [focus](docs/sketches/v4/focus.png),
@@ -339,7 +339,7 @@ frame, the size the demo is recorded at. Panels scale with the window; type size
 
 **Key Characteristics:**
 
-- Near-black ground (#070707), warm white text, six team hues and two state colors, nothing else.
+- Near-black ground (#121214), warm white text, six team hues and two state colors, nothing else.
 - One family, Atkinson Hyperlegible, in sentence case.
 - Layered dark surfaces with hairline borders; light lives only on the graph.
 - Every state is told in words or signs as well as color.
@@ -364,15 +364,15 @@ frame, the size the demo is recorded at. Panels scale with the window; type size
 | First switch to Oversight | the whole demo in view | the whole graph when it fits at the legibility floor or above (the demo at 1920x1080: 83%); otherwise the floor on the module of the hub | names and state words stay at least 11 CSS px (**Opening a change**); a larger graph is a canvas to pan and zoom |
 | State word and letter badge on a frame | on the name's row | right end of the header row, in the count's place (the count is left out while it shows) | a frame's header holds the title and the count; a touched frame says its state before its size |
 | Read nodes in review | lit in the agent's team hue | dimmed unless in the cone | the agent's team hue stays on the change only (Components, impact cone) |
-| Code-dim (line numbers, comments) | `#6d6d68` | `#7d7d78`; v4 ratios below | quality floor: text at 4.5:1 |
-| Text-box placeholder | `#6d6d68` | faint `#85857f`; v4 ratios below | same |
+| Code-dim (line numbers, comments) | `#6d6d68` | `#84847f`; v4 ratios below | quality floor: text at 4.5:1 |
+| Text-box placeholder | `#6d6d68` | faint `#94948e`; v4 ratios below | same |
 | Exact call edge | `#4a4a46`, 2.4:1 on black | edge; v4 ratios below | quality floor: meaningful graphics at 3:1 |
 | Possible call edge | `#3a3a37`, 1.8:1 | edge-possible; v4 ratios below | it stays thinner and grey; a surface below 3:1 needs a maintainer decision |
 | Call edge no agent is at (watch) | full strength | quiet-edge, 0.45 opacity, until an agent reads, edits or changes a node it touches, or the person selects one | the demo graph has 47 edges across its frames; stepping back the ones nobody is at lets the others read. Context, like the dimmed nodes of review: the full edge returns on selection |
 | Edge draw order | Modules lines can cross text | faint lines below opaque cards and graph text plates; routed calls above frames and below rows, hovered paths lifted | our lines never cross titles, counts, headers or legend text |
-| Task box keyboard hint | none | "Ctrl+Enter to start" under the box | the hint is how the keyboard starts an agent; a hint belongs next to what it starts |
+| Task box keyboard hint | none | "Enter to start · Ctrl+Enter to queue · Shift+Enter for a new line" under the box; the queue key appears only while a run accepts queued tasks | the hint is how the keyboard starts or queues an agent; a hint belongs next to what it starts |
 | Search and history in the top bar | drawn | search and Settings are built; target, not built yet: history | a control that looks present and does nothing is worse than no control |
-| Input border | `#222222` to `#262626` | control-edge `#62625e`, 3.25:1 on field | quality floor: a control's boundary at 3:1 |
+| Input border | `#222222` to `#262626` | control-edge `#767672`, 4.03:1 on field | quality floor: a control's boundary at 3:1 |
 | Task box fill | varies in the earlier sketches | field, the inset token | one fill for every input |
 | Review facts in v4 | every fact in one row | four decision chips and a provenance caption | the critique ranks facts by harm to the decision; provenance must not compete with tests and reach |
 | Review body order in the brief | comparison summary before diff | diff before "What was compared"; choices start with a closed file row below Details | the approved review baseline preserves room for the decision and code |
@@ -405,19 +405,20 @@ A black field with warm near-whites. Hue identifies a team; the label identifies
 **Team palette:** orange (`agent-a`), blue (`agent-b`), violet (`agent-c`), pink (`agent-d`), sky (`agent-e`) and plum (`agent-f`). These existing token names are palette families, not runtime seats. Borders, rings and light use the team’s graphic token; text uses its `-text` token. Tints and node fills use the same family. Every agent label remains visible when teams share a hue.
 
 C–F follow the A/B fill recipe: dark tints use graphic RGB at 14% alpha (A 14%, B 16%
-remain unchanged); dark node RGB scales the graphic channels so the maximum channel is 30,
-and new-node RGB scales to 20, rounded to the nearest integer, both at 95% alpha. Day tints
+remain unchanged), except C at 12% and F at 9%, which keep their text at 4.5:1 on the tint over
+the lighter dark card; dark node RGB scales the graphic channels so the maximum channel is 30,
+and new-node RGB scales to 20, rounded to the nearest integer, then adds 15 to every channel so
+the fills keep their hue and step up with the lighter dark card, both at 95% alpha. Day tints
 use graphic RGB at 12% alpha; day node and new-node fills mix 12% and 7% graphic RGB over
 `day-card` in sRGB, rounded to the nearest integer. Existing A/B day fills stay unchanged.
-The maintainer approved distinct text values on 2026-10-28 at 22:30 ART: dark F text
-`#b27ba7` keeps graphic `#ab6e9e`; day D text `#894674` keeps graphic `#a2568a`;
+The maintainer approved distinct text values on 2026-10-28 at 22:30 ART, and the lighter
+dark palette on 2026-11-04: dark F text `#b982ae` keeps graphic `#ab6e9e`; day D text `#894674` keeps graphic `#a2568a`;
 day E text `#255ea1` keeps graphic `#3475c4`. These text variants meet 4.5:1 on
 raised surfaces and on the agent tints used by cards, rail avatars and review pills.
-F text reaches 5.14:1 on dark raised and 4.65:1 on its tint over card. Day D/E reach
+F text reaches 4.54:1 on dark raised and 4.52:1 on its tint over card. Day D/E reach
 5.08:1 / 5.07:1 on raised and 4.63:1 / 4.65:1 on their tints over shell.
-All palette families retain the same translucent tint recipe and original node fills. Tints are
-used over shell, card, card-end and matte-top; tint over raised is not an intended pair
-(D 4.42:1 and E 4.44:1). Approval changes text only, including on the existing node fills;
+All palette families retain the same translucent tint recipe and node fill recipe. Tints are
+used over shell, card, card-end and matte-top; tint over raised is not an intended pair. Approval changes text only, including on the existing node fills;
 graphics and filled-badge letters retain their values.
 
 ### Secondary
@@ -429,22 +430,22 @@ graphics and filled-badge letters retain their values.
 
 ### Neutral
 
-The frontmatter matches the implemented dark colors. Cards end at `card-end` (`#111113`),
-called card-bottom below. Field is `#0b0b0b`; target, not built yet: field matches inset at
-`#09090b`. The roles below and the v4 contrast tables use that target field value.
+The frontmatter matches the implemented dark colors. Cards end at `card-end` (`#202024`),
+called card-bottom below. Field matches inset at `#141417`. The 2026-11-04 lighter dark palette
+lifts every dark surface, from ground L* 1.9 to 5.5 up to raised L* 9.9 to 18.2.
 
 | Token | v4 target |
 | --- | --- |
-| `shell` | `#09090a` |
-| `panel` | `#0d0d0f` |
-| `field` | `#09090b` |
-| `inset` | `#09090b` |
-| `page` | `#101012` |
-| `card` | `#151518` |
-| `card-bottom` | `#111113` |
-| `raised` | `#1b1b1f` |
-| `divider` | `rgba(255, 255, 255, 0.06)` |
-| `border` | `rgba(255, 255, 255, 0.10)` |
+| `shell` | `#161619` |
+| `panel` | `#1a1a1e` |
+| `field` | `#141417` |
+| `inset` | `#141417` |
+| `page` | `#1c1c20` |
+| `card` | `#242428` |
+| `card-bottom` | `#202024` |
+| `raised` | `#2c2c31` |
+| `divider` | `rgba(255, 255, 255, 0.07)` |
+| `border` | `rgba(255, 255, 255, 0.12)` |
 | `top-highlight` | `rgba(255, 255, 255, 0.045)` |
 | `card-shadow` | `0 8px 24px rgba(0, 0, 0, 0.22)` |
 
@@ -494,13 +495,14 @@ The v4 dark surfaces leave the day token set unchanged; day cards keep day-card 
 
 Day mode exists for the submission gallery, which shows both modes. **The video and the demo are
 dark.** Building day mode is a bounded front for Mon Nov 2, started only once level 2 is closed;
-otherwise it is cut like level 3. `make shots` exists; its day captures are disabled. There is no
-theme switch in the UI.
+otherwise it is cut like level 3. `make shots` exists; its day captures are disabled. Since
+2026-11-04, Settings > Appearance offers Dark (the default), Day or System, stored in the browser.
 Target, not built yet: gallery captures in both modes.
 
 - **Every color comes from a token**, including the colors Cytoscape, Monaco and the dot-field
   canvas receive. The token sets hang off `data-theme` on the root element (`dark` or `day`); no
-  component picks a color itself, and switching the attribute repaints everything.
+  component picks a color itself. A switch repaints the CSS at once; the graph, the dot field and
+  open code views take the new colors when Oversight reloads, and Settings says so.
 - **The light set** is the frontmatter's `day-` tokens, for the paired roles:
   `day-agent-{a..f}-text` replace the agents' text variants, `day-failed-text`
   replaces failed-text (so Reject is `#b8262b`, not the dark `#ff7b7b`, which is 2.34:1 on
@@ -563,7 +565,7 @@ Contrast of the day set (WCAG ratio; text needs 4.5:1, graphics and controls 3:1
 
 **The Team or State Rule.** A hue identifies a team or a state (green passed or added, red failed, removed or destructive). Team = lead, else plan, else agent, through the shared team selector. Nothing else gets a hue: no brand color, accent or decorative gradient. Counters across teams are neutral.
 
-**The Never Alone Rule.** Every team hue comes with a team letter or agent label. An agent label is letter·n, where n is its plan subtask index plus one; a person-started lone agent uses its letter alone. Append " · plan k" only when labels collide across plans of one lead, where k is the plan's first-observed order within its lead. Every state color comes with a word, sign (`+`, `-`) or icon.
+**The Never Alone Rule.** Every team hue comes with a team letter or agent label. A lead's agents use letter·n with stable team-wide ordinals in first-observed plan/subtask order. Reserve waiting and ended siblings; later plans continue the sequence. Local subtask identifiers remain separate. Leadless plans retain local numbering, and a person-started lone agent uses its letter alone. Every state color comes with a word, sign (`+`, `-`) or icon.
 
 **The No Amber Rule.** There are no yellow or amber warnings. A warning is said in words with an
 icon, in neutral colors.
@@ -773,7 +775,7 @@ ring when a boundary carries meaning.
 The graph heading, legend, zoom controls and Modules/Functions/Details control (including zoom
 percentage) use fully opaque `panel` plates to mask lines behind their text.
 The legend, zoom controls and node chip popover use opaque `panel` plates with a 12px blur
-declared behind them. Their `frosted` backing declares overlay-panel (84% in dark, 96% in day),
+declared behind them. Their `frosted` backing declares overlay-panel (88% in dark, 96% in day),
 but the opaque plate overrides that fill. Other graph overlays use the 96% overlay-fill with no blur.
 Their field mask keeps moving light out of the overlay. The review header retains its matte still
 grain. Every gradient end, highlight, shadow and overlay color is a theme token under `data-theme`,
@@ -866,7 +868,8 @@ Gently rounded rectangles throughout; nothing pill-shaped except status pills, b
   It is absent from the static replay until that build has a bundled aggregate response.
 - **Decisions chip:** always visible in the same top-bar position and at the queue-counter height.
   At zero it reads "Nothing needs you" in muted gray, with no lamp or badge. Otherwise it reads
-  "Decisions · N", neutral across agents, with N in Mono and tabular figures. One pending change
+  "Decisions · N", neutral across agents, with N in Mono and tabular figures. In Chat below 768px,
+  only N is visible; the accessible name retains the count and Decisions label. One pending change
   counts once, with its questions and other decisions inside; answers and delegations do not
   consume it. Only its completed Approve, Request changes or Reject removes it. Standalone
   decisions, such as a lead plan, each count once. Its accessible name includes the count.
@@ -880,7 +883,7 @@ Gently rounded rectangles throughout; nothing pill-shaped except status pills, b
   and lifecycle meanings stay unchanged.
 - **Chat teams:** plain summaries use K3 membership, presentation and first-observed team order.
   A lettered team ring sits beside a separate disclosure; a solid 2px team-hue rule joins members.
-  All plans of one lead share a group, even when subtask labels collide; full “ · plan k” captions
+  All plans of one lead share a group with stable team-wide agent ordinals; full labels
   stay visible and accessible. Teams sharing a hue remain distinct. Person-started lone C stays C.
   Coding counts exclude leads; working includes working/revising. Existing needs-you and proposed
   plan attention remain factual. A leadless heading occupies the same position as Lead A:
@@ -931,60 +934,112 @@ Static aggregate bundling and the phone Usage layout remain deferred. The Missin
 uses recorded-run context over a mocked available backend. At 390px the full IDE retains
 its narrow-window notice, intentionally differing from the phone feasibility sheets.
 
-### Lead plan actions — first slice built
+### Lead plan actions and progress
 
-Premises: main `6ab92e7`, applied to the moved code on `54dc64d`; approved sketch packet
-b-1101a item 3 (2026-11-01, 01:03:27 ART). Decisions lazily loads proposed plan pieces:
-numbered subtasks, dependency conditions and a derived first-wave explanation. Queue plan
-uses the displayed plan revision; Reject plan opens an optional labeled comment with Reject
-plan and Keep plan. Linked proposed plans move below decisions into Queued, waiting for slots
-and stop counting. Observed queued/blocked items offer Take out of the queue with their own
-revision; dispatching withholds those actions. Failed lead plans retain their quoted detail
-under Ended without running. Both labels use the Group type (600, 11.5px, 0.08em tracking,
-uppercase styling), with readable sentence case in the DOM. Replay reads these pieces with
-source-aware words and no mutation controls.
+One lazy plan card serves the lead thread in Chat and Oversight and the decisions inbox,
+using the winning plan revision at the displayed event prefix. The lead row stays intact.
+Queue plan uses that revision. Reject plan offers an optional saved comment and Keep plan.
+Queued/blocked items offer Take out of the queue with the queue revision. Pending attempts
+are shared across mounted copies; observed dispatch removes controls and the first-wave
+explanation. Replay and history suppress commands. Event arrivals never open or focus anything.
 
-Plan rows use 12px vertical / 22px horizontal padding; the piece begins 8px below its title,
-with a solid 1px border, 12px radius, card-to-card-end fill and top-highlight. Its header uses
-10px 16px 8px padding / 10px gaps, and subtask rows 7px 16px / 20px neutral circles / 12px gaps.
-Rows grow with wrapped text. Titles are Next 15px/600, tasks 14px/1.4, conditions 13px/1.3,
-Plan 15.5px/700, captions 13px; numbers/counts use Mono, piece counts 13.5px. The inbox headline
-is 20px/700/1.3 without a separate hero numeral. Actions wrap: 34px high, 8px radius/gaps,
-14px/600 and 14px horizontal padding. Comments are 34px, on inset; focus is 2px text, offset
-2px. Existing theme roles supply every color, including day mode; Queue uses text/page,
-hover text-hover; Reject pairs failed-text with its word and X. Failures remain neutral with X.
-The existing 880/608px focus panel, 56px rails, graph minimum and scrolling remain owned by
-the shell. Edit, lead composer/card lifecycle and post-dispatch Plan tracking remain pending;
-the reserved Plan focus tab is not implemented by this slice.
+The solid bordered plan piece keeps its header, queue pill, card fill and 12px radius.
+HTML rows group into dependency waves; SVG lines occupy a left gutter. Stable local #n
+identifiers name prerequisites, and visible agent labels come from shared team presentation.
+The shared key reads Agent works › Proposal tests › Approval › Combined tests, if main moved
+› Merged. Each row has a five-step rail, distinct glyphs, a text legend, accessible step
+names and an evidence-backed state word. Unknown facts remain explicit. Approval alone
+never means merged. Known equal main/base permits not needed; an observed combined suite
+wins. Terminal inference excludes the row's own merge and later main observations.
+
+Wave and inbox group labels use Group typography: 600/11.5px/0.08em, uppercase styling.
+Tasks use Next 14.5px/20px, conditions and rail words 13px; numbers/counts use Mono.
+Above six subtasks, rows use one line where the card is at least 680px wide. Phone Chat
+wraps tasks, key and metadata, placing the rail below the task. A scoped phone-width rule
+gives plan controls and evidence links 44px targets; desktop controls remain 34px.
+No sideways scrolling, canvas, pan or zoom is introduced. Every color uses a theme token;
+solid row nodes never borrow pending-change dashes. The dispatched count adds · N merged.
+
+Requested running plans appear in Running plans without becoming decisions or inflating
+pending counts. Queued, waiting for slots and Ended without running remain separate groups;
+terminal plans leave Running plans. The shell retains its graph, tabs and scroll ownership.
+Plan editing, locks, optional gates and the reserved Plan focus tab remain unimplemented.
+
+Open workflow on the shared plan card opens a separate read-only HTML panel. In Oversight
+it occupies the reading area beside the repository graph, retaining the mounted thread or
+inbox underneath. In desktop Chat it sits beside the conversation without loading or revealing
+the repository graph. The docks retain their owners. Only a person opens or replaces a workflow;
+arrivals refresh its winning plan revision at the displayed event prefix without scrolling,
+changing selection or taking focus.
+
+The panel lists solid neutral step buttons: local number, task capped at 48 characters including
+ellipsis, and the projected state word. Whole words are retained when possible. Selection shows
+the full task and projected evidence: condition, wave, exact merge dependencies, gate progression,
+progress, notes and agent. Team hue sits beside the shared team label in detail only; state color
+always carries its word. Role, model and mode say Not known. Review change uses the card's existing
+proposal/status eligibility and navigation, with no mutation controls. Keyboard order is Close,
+numbered steps, then detail actions. Enter/Space select; Escape or Close restores launcher focus.
+Person navigation to a focus tab or Watch closes the workflow and reveals that destination.
+Updates preserve focus; a disappearing selected step clears selection. It focuses Close only when
+focus is inside the workflow, or has fallen to the document body because its focused control was
+removed. Focus in the conversation, replay controls or any other surface stays there.
+A focused Review change that loses eligibility stays inert until focus leaves, then disappears.
+
+At phone width, Chat's Open workflow explicitly maximizes the same one-column list. Back
+replaces Close and returns to the retained Chat view, its reading position and launcher focus;
+Escape does the same. The full-screen panel keeps background controls inert and keyboard
+traversal inside it. The fixed header and 44px controls remain available above scrolling evidence,
+with 16px side gutters and no sideways scroll. Oversight retains its widen-window notice.
+The Open workflow launcher appears from 1280 px and in Chat's phone layout; from 768 to
+1279 px, the shared plan card is the entry point.
 
 ### Settings tab
 
 Settings opens in the focus panel. The tab names it once: there is no second Settings title in
-the content. A left navigation lists Merge mode, Limits and budget, Protected areas, Models and
-keys, with a Saved line and the repository scope below. Section headings remain in the content.
+the content. Merge mode, Models and keys, and Limits and budget follow in one scrolling content
+column, without a second navigation. Section headings remain in the content.
 
 - **Merge mode:** two choice cards, Ask me and Merge alone when safe, followed by the rules
   checklist. Each rule is named in words with a result icon. The checklist reflects the backed
   policy and its assessment; the sketch's sample list does not redefine the merge rules.
 - **Limits and budget:** a currency input for the budget, then a threshold bar showing spent,
-  warnings at 50% and 80%, and the brake at 90%. Labels and marks carry these meanings without
-  color alone; warnings are neutral. The brake refuses new runs above 90%, as ARCHITECTURE.md,
-  Usage and the spend brake, specifies.
+  warnings at 50% and 80%, and the brake at the configured share, 90% by default. Drop warning
+  marks at or above the brake. Labels and marks carry these meanings without color alone;
+  warnings are neutral. The brake refuses new runs above the configured share, 90% by default,
+  as ARCHITECTURE.md, Usage and the spend brake, specifies.
   Steps per task is a minus/value/plus stepper. Change size and cone limits use numeric inputs
   with visible units (lines, functions); they do not turn current implementation limits into editable
   settings without backing support.
+  Supported file inputs cover Meta and Baseten budgets in USD, four input/output prices in USD
+  per million tokens, Brake at as a whole-number share of the budget (1–100%), and the positive
+  whole-number agent cap in agents. Emptying the brake or agent cap removes its file declaration,
+  restoring 90% or 4 agents; each field explains its default. Its Save sends only changed fields.
 - **Protected areas:** rows name the path or function, its type and a remove action; an add field
   and Add button follow the list. The row states that an edit waits for the person.
 - **Models and keys:** one neutral card per offered model, with its model selector. Below the model
   cards, separate rows hold the cross-review
   selector and key-status pills. Selectors use actual offered models and review choices. Key
-  pills report configured, missing or invalid from readiness; they never show a key value or
-  imply a provider was contacted to verify it.
+  pills report configured, missing or invalid from the saved file's parsed state; they never show
+  a key value or imply a provider was contacted to verify it. Separate Meta and Baseten key rows
+  are backed by the settings editor even when a key is missing. Each password field loads empty,
+  labeled by provider, with Replace key as its placeholder. Deleting a typed replacement sends
+  nothing. Only Clear key queues an empty value, shows `Key will be cleared when you save`, and
+  offers Undo until saved. The cross-review switch shares this section's Save button.
 - **Real settings only:** sample values are illustrative. Drop any row or choice with no backing
-  in Oversight, including a second provider-key row when none is configured for an offered slot.
-  A generic Muse key is not another credential: show Meta and, when used, Baseten readiness from
-  their actual settings. Keys stay in .env. Reserved behavior is not presented as a working
-  control, and Saved appears only after a supported save succeeds.
+  in Oversight. A generic Muse key is not another credential: show Meta and Baseten file state
+  from their actual settings. Keys stay in .env. Reserved behavior is not presented as a working
+  control, and Saved appears only after a supported save succeeds. The threshold bar, steps,
+  size and cone inputs, protected-area editor and model selectors remain targets until backed.
+- **Save and apply:** both sections save to the same startup file atomically. Saved appears as
+  `Saved.` beside that section's Save only after success. The last successfully saved section
+  keeps a persistent restart line beside its Save status while restart is required; a refused save
+  in another section does not move it. It says `Restart to apply: File > Reload settings.` for an
+  installed desktop launch, or `Restart the server to apply.` for a browser server. The desktop
+  menu is delivered separately; saving does not change the running configuration. Refusals keep
+  typed values and display the server's names-and-reasons message beside that section's Save
+  status. An environment override makes the row read-only with `Set by the environment`.
+  Replay sections are read-only and make no file request. Loading, saving and errors never move
+  focus. All fields follow Inputs / Fields above.
 
 ### Graph nodes and their states (signature component)
 
@@ -1046,7 +1101,7 @@ introduces no animation. Folded cards and opaque graph text plates mask straight
 Open frames retain their translucent body fill and stay below their rows during edge hover;
 straight lines can show through that fill.
 
-**Agent labels.** Hue means team; label means agent. Use the same label on graph work chips and markers, cards, Conversation, inbox, file presence and rails. Use letter·n for plan subtasks and the letter alone for a person-started lone agent. Append " · plan k" only when labels collide across plans of one lead, where k is the plan's first-observed order within its lead. Compact tiles and map chips show the short label with a separate "plan k" caption; the map's first line retains the state word. Labels are never inferred from runtime seats or palette families. For example, a plan’s second subtask is "Agent A·2"; colliding first subtasks are "Agent A·1 · plan 1" and "Agent A·1 · plan 2"; a person-started lone agent is "Agent A". No avatars, beads or mascots.
+**Agent labels.** Hue means team; label means agent. Use the same label on graph work chips and markers, cards, Conversation, inbox, file presence and rails. Lead-owned plans use stable team-wide letter·n ordinals in first-observed plan/subtask order, including reserved waiting and ended siblings. A later plan continues A·3, A·4 rather than restarting A·1. For example, "Agent A·2" keeps its label after a later plan starts. Revisions, delayed assignments and reused runtime seats retain identity. Local subtask numbers still identify dependencies. Leadless plans keep local numbering; a person-started lone agent uses its letter alone. Labels never derive from runtime seats or palette families. No avatars, beads or mascots.
 
 **Distance badges.** A 20px circle filled with text, the distance as a page-colored number, 12px,
 weight 700. Neutral: the cone is about the code, not an agent.
@@ -1138,7 +1193,7 @@ The graph stays visible and keeps positions.
    agent-2 · base 4ca5596". Unknown cost is written as "cost unknown".
 2. **Lead:** 24px below the header, with a 16/700 title on 22px lines and a right-hand 13px
    muted caption on 18px lines, separated by 14px. The variants and exact copy follow below.
-3. **Agent note:** "Agent B says" (or Agent A), 13px muted caption, then the agent's words at 15px
+3. **Agent note:** "What Agent B did" (or Agent A), 13px muted caption, then the agent's words at 15px
    on 22px lines, 4px below. State a says "Reserve also rejects fractional and boolean quantities."
    Cross-review follows when present, 18px below: "Muse Spark Open reviewed this change",
    "Nothing blocking · 1 note", then "pricing.py:23 · no test covers an extra percent above 30
@@ -1279,7 +1334,8 @@ not measured." In c: "3 of 9 callers measured; 6 were not.", "1 of 36 functions 
 168px graph context, then scrolling evidence. The build supplies the real recording label once.
 The review header holds a 24px letter badge beside "Agent B · Muse Spark Open" in f or
 "Agent A · Muse Spark" in f-b: 14px text, agent name in its agent color at 600, model muted.
-Below it, the task headline wraps at 20/700 on 26px lines, 8px below the agent line, then the
+Below it, the task headline wraps at 20/700 on 26px lines, clamped to two lines with a "Show full
+task" / "Show less" toggle when it overflows, 8px below the agent line, then the
 chips follow 12px below and wrap to at most two lines (three, then one). There is no provenance
 caption, status pill or review close button.
 The agent note follows the lead, never above it; it sits below the initial viewport in both
@@ -1321,7 +1377,9 @@ The sketch's +2 −0 line-change pair remains; do not print empty evidence count
   not yet proposed (the agent is working or revising) opens the live diff; a node with no pending
   change opens the file view.
 - **Live diff:** the task, the agent and its "Working" pill, the facts row; a banner saying the
-  diff updates with each edit and the decisions open when the agent proposes; the diff, read-only,
+  diff updates with each edit and the decisions open when the agent proposes; once the agent is
+  ready for review, "Agent X proposed this change. Review it to approve, request changes or
+  reject." with a secondary "Review change" button that opens its review; the diff, read-only,
   with a lock and a line saying so; the agent's last steps. The graph shows the cone of the
   edit so far.
 - **File view:** the file in main with the function's lines marked as a highlighted span; from level
@@ -1526,7 +1584,8 @@ at both ends and white at 17% from 30% to 70% in dark on the sidebar, focus pane
 expanded agents panel and agents rail. Day uses white at 90% on the sidebar and both agents
 panels only. Keyboard focus adds a 6px drop-shadow at 55% text beside the unchanged 2px text
 ring and 2px offset. Enabled buttons press down 1.5px with a 70ms ease-out transform transition;
-reduced motion removes the transition. Monaco and the graph host are excluded.
+reduced motion removes the transition. Monaco, the graph host and text fields are excluded: a text
+field matches focus on any click, and the shadow would blur its text.
 
 **Later** (target, not yet built): a scan band and one lamp per passing test while tests run,
 and numbers that roll digit by digit in tabular mono.
@@ -1548,7 +1607,7 @@ Python 3.12 dir() union of dict, list, set, frozenset, str, bytes, tuple and the
 The committed generation command lives beside builtinNames.ts. This filter affects only resting
 drawing: it never removes graph data, counts, hover/selection calls or cone members. Lines meet the
 two cards' borders and pass below opaque cards and their text, never through titles or counts.
-The legend's faint straight swatch reads “Possible call, matched by name”. Hover lift uses the
+The legend's faint straight swatch reads “Possible call (matched by name)”. Hover lift uses the
 neutral edge-hover token; edge-faint and edge-hover exist in both theme sets.
 
 Classes start as one header row with their method count. A click toggles the class; a fresh change
@@ -1691,6 +1750,12 @@ including module and class opening. Each motion says what changed:
   until capacity is free). None changes camera, selection, tabs or keyboard focus.
 - **View changes:** dimming and highlights ease to their new state after navigation or an event. A
   change of view is a plain crossfade, never a wipe.
+- **Interface motion (2026-11-04):** `motion.css` eases the colors of tabs, menu items, options and
+  tree rows (160ms) and the status pill's tint (200ms). Menus, the command palette and the shortcuts
+  sheet fade in with a 6px rise. Status and alert lines, queued tasks, conversation entries, agent
+  cards and tiles, step rows and lead cards fade in where they stand (200ms). Rows inside scrolling
+  lists fade without moving, so an arriving agent card fades rather than slides. Buttons keep the
+  70ms press, and the graph and Monaco are never targeted.
 
 **Reduced motion** (`prefers-reduced-motion: reduce`) turns all of these motions off, including
 card and row movement, value easing, crossfades, rings, lamp pulses, marker travel, merge travel,
@@ -1731,45 +1796,45 @@ text foreground, even where its use is restricted. **Bold** ratios fall below th
 
 | Text token (4.5:1) | shell | panel | page | card | card-bottom | raised | inset |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| text | 16.97 | 16.55 | 16.20 | 15.54 | 16.08 | 14.64 | 16.96 |
-| text-hover | 19.90 | 19.42 | 19.01 | 18.22 | 18.86 | 17.17 | 19.90 |
-| muted | 7.86 | 7.66 | 7.50 | 7.19 | 7.45 | 6.78 | 7.85 |
-| faint | 5.36 | 5.23 | 5.12 | 4.91 | 5.08 | 4.63 | 5.36 |
-| code-dim | 4.81 | 4.69 | 4.59 | **4.41** | 4.56 | **4.15** | 4.81 |
-| module-label | 13.12 | 12.80 | 12.53 | 12.01 | 12.43 | 11.32 | 13.11 |
-| agent-a-text | 7.70 | 7.51 | 7.35 | 7.05 | 7.29 | 6.64 | 7.69 |
-| agent-b-text | 8.24 | 8.04 | 7.87 | 7.55 | 7.81 | 7.11 | 8.24 |
-| agent-c-text | 7.24 | 7.06 | 6.91 | 6.63 | 6.86 | 6.25 | 7.24 |
-| agent-d-text | 9.63 | 9.39 | 9.19 | 8.81 | 9.12 | 8.30 | 9.62 |
-| agent-e-text | 11.41 | 11.13 | 10.90 | 10.45 | 10.81 | 9.84 | 11.41 |
-| agent-f-text | 5.96 | 5.81 | 5.69 | 5.45 | 5.64 | 5.14 | 5.95 |
-| on-agent | **1.06** | **1.04** | **1.01** | **1.03** | **1.01** | **1.09** | **1.06** |
-| passed | 10.49 | 10.23 | 10.01 | 9.60 | 9.94 | 9.05 | 10.48 |
-| failed | 6.88 | 6.71 | 6.57 | 6.30 | 6.52 | 5.93 | 6.88 |
-| failed-text | 7.93 | 7.74 | 7.58 | 7.26 | 7.52 | 6.84 | 7.93 |
-| syntax-plain | 13.79 | 13.45 | 13.17 | 12.63 | 13.07 | 11.90 | 13.79 |
-| syntax-keyword | 8.29 | 8.09 | 7.92 | 7.59 | 7.86 | 7.15 | 8.29 |
-| syntax-string | 10.02 | 9.78 | 9.57 | 9.18 | 9.50 | 8.64 | 10.02 |
-| syntax-number | 10.73 | 10.47 | 10.24 | 9.82 | 10.17 | 9.25 | 10.72 |
-| syntax-builtin | 9.27 | 9.04 | 8.85 | 8.49 | 8.79 | 8.00 | 9.27 |
-| syntax-definition | 17.58 | 17.15 | 16.79 | 16.09 | 16.66 | 15.16 | 17.57 |
+| text | 15.39 | 14.79 | 14.48 | 13.18 | 13.84 | 11.84 | 15.67 |
+| text-hover | 18.06 | 17.35 | 16.99 | 15.46 | 16.24 | 13.89 | 18.39 |
+| muted | 7.13 | 6.85 | 6.71 | 6.10 | 6.41 | 5.48 | 7.26 |
+| faint | 5.92 | 5.69 | 5.57 | 5.07 | 5.32 | 4.55 | 6.03 |
+| code-dim | 4.81 | 4.62 | 4.52 | **4.11** | **4.32** | **3.70** | 4.89 |
+| module-label | 11.90 | 11.43 | 11.19 | 10.19 | 10.70 | 9.16 | 12.12 |
+| agent-a-text | 6.98 | 6.71 | 6.57 | 5.98 | 6.28 | 5.37 | 7.11 |
+| agent-b-text | 7.48 | 7.18 | 7.03 | 6.40 | 6.72 | 5.75 | 7.61 |
+| agent-c-text | 6.57 | 6.31 | 6.18 | 5.63 | 5.91 | 5.05 | 6.69 |
+| agent-d-text | 8.73 | 8.39 | 8.21 | 7.48 | 7.85 | 6.72 | 8.89 |
+| agent-e-text | 10.35 | 9.95 | 9.74 | 8.87 | 9.31 | 7.96 | 10.54 |
+| agent-f-text | 5.91 | 5.67 | 5.55 | 5.06 | 5.31 | 4.54 | 6.01 |
+| on-agent | **1.04** | **1.08** | **1.10** | **1.21** | **1.15** | **1.35** | **1.02** |
+| passed | 9.52 | 9.14 | 8.95 | 8.15 | 8.55 | 7.32 | 9.69 |
+| failed | 6.24 | 6.00 | 5.87 | 5.35 | 5.61 | 4.80 | 6.36 |
+| failed-text | 7.20 | 6.92 | 6.77 | 6.16 | 6.47 | 5.54 | 7.33 |
+| syntax-plain | 12.51 | 12.02 | 11.77 | 10.71 | 11.25 | 9.63 | 12.74 |
+| syntax-keyword | 7.52 | 7.23 | 7.08 | 6.44 | 6.77 | 5.79 | 7.66 |
+| syntax-string | 9.09 | 8.74 | 8.55 | 7.79 | 8.17 | 6.99 | 9.26 |
+| syntax-number | 9.73 | 9.35 | 9.16 | 8.34 | 8.75 | 7.49 | 9.91 |
+| syntax-builtin | 8.41 | 8.08 | 7.91 | 7.20 | 7.56 | 6.47 | 8.56 |
+| syntax-definition | 15.95 | 15.32 | 15.00 | 13.66 | 14.34 | 12.27 | 16.24 |
 
 | Graphic/control token (3:1) | shell | panel | page | card | card-bottom | raised | inset |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| agent-a | 6.45 | 6.29 | 6.16 | 5.90 | 6.11 | 5.56 | 6.44 |
-| agent-b | 5.41 | 5.28 | 5.17 | 4.96 | 5.13 | 4.67 | 5.41 |
-| agent-c | 7.24 | 7.06 | 6.91 | 6.63 | 6.86 | 6.25 | 7.24 |
-| agent-d | 9.63 | 9.39 | 9.19 | 8.81 | 9.12 | 8.30 | 9.62 |
-| agent-e | 11.41 | 11.13 | 10.90 | 10.45 | 10.81 | 9.84 | 11.41 |
-| agent-f | 5.17 | 5.04 | 4.94 | 4.73 | 4.90 | 4.46 | 5.17 |
-| passed | 10.49 | 10.23 | 10.01 | 9.60 | 9.94 | 9.05 | 10.48 |
-| failed | 6.88 | 6.71 | 6.57 | 6.30 | 6.52 | 5.93 | 6.88 |
-| edge | 3.66 | 3.57 | 3.50 | 3.35 | 3.47 | 3.16 | 3.66 |
-| edge-possible | 3.10 | 3.03 | **2.96** | **2.84** | **2.94** | **2.68** | 3.10 |
-| lit-edge | 13.31 | 12.98 | 12.71 | 12.18 | 12.61 | 11.48 | 13.30 |
-| work-light | 5.90 | 5.75 | 5.63 | 5.40 | 5.59 | 5.09 | 5.89 |
-| node-hover | 3.91 | 3.81 | 3.73 | 3.58 | 3.70 | 3.37 | 3.91 |
-| control-edge | 3.25 | 3.17 | 3.10 | **2.97** | 3.08 | **2.80** | 3.25 |
+| agent-a | 5.85 | 5.62 | 5.50 | 5.01 | 5.26 | 4.50 | 5.96 |
+| agent-b | 4.91 | 4.72 | 4.62 | 4.20 | 4.41 | 3.78 | 5.00 |
+| agent-c | 6.57 | 6.31 | 6.18 | 5.63 | 5.91 | 5.05 | 6.69 |
+| agent-d | 8.73 | 8.39 | 8.21 | 7.48 | 7.85 | 6.72 | 8.89 |
+| agent-e | 10.35 | 9.95 | 9.74 | 8.87 | 9.31 | 7.96 | 10.54 |
+| agent-f | 4.69 | 4.51 | 4.41 | 4.02 | 4.22 | 3.61 | 4.78 |
+| passed | 9.52 | 9.14 | 8.95 | 8.15 | 8.55 | 7.32 | 9.69 |
+| failed | 6.24 | 6.00 | 5.87 | 5.35 | 5.61 | 4.80 | 6.36 |
+| edge | 3.96 | 3.80 | 3.72 | 3.39 | 3.56 | 3.04 | 4.03 |
+| edge-possible | 3.37 | 3.24 | 3.17 | **2.89** | 3.03 | **2.60** | 3.44 |
+| lit-edge | 12.07 | 11.60 | 11.36 | 10.34 | 10.85 | 9.29 | 12.29 |
+| work-light | 5.35 | 5.14 | 5.03 | 4.58 | 4.81 | 4.12 | 5.45 |
+| node-hover | 3.92 | 3.77 | 3.69 | 3.36 | 3.53 | 3.02 | 3.99 |
+| control-edge | 3.96 | 3.80 | 3.72 | 3.39 | 3.56 | 3.05 | 4.03 |
 
 **Maintainer notes; approved values remain unchanged.** The proposed alternatives below are the
 nearest passing 8-bit values along an equal-channel lightening ramp from the existing token.
@@ -1777,21 +1842,18 @@ They are proposals for the stated surface, not replacements made here.
 
 | Pair below the floor | Ratio | Proposed foreground | Ratio |
 | --- | --- | --- | --- |
-| code-dim on card (text) | 4.41 | `#7f7f7a` | 4.53 |
-| code-dim on raised (text) | 4.15 | `#83837e` | 4.51 |
-| on-agent on shell (text) | 1.06 | `#7d7771` | 4.50 |
-| on-agent on panel (text) | 1.04 | `#7f7973` | 4.52 |
-| on-agent on page (text) | 1.01 | `#817b75` | 4.55 |
-| on-agent on card (text) | 1.03 | `#847e78` | 4.54 |
-| on-agent on card-bottom (text) | 1.01 | `#817b75` | 4.51 |
-| on-agent on raised (text) | 1.09 | `#88827c` | 4.52 |
-| on-agent on inset (text) | 1.06 | `#7e7872` | 4.56 |
-| edge-possible on page (graphic/control) | 2.96 | `#60605c` | 3.01 |
-| edge-possible on card (graphic/control) | 2.84 | `#63635f` | 3.02 |
-| edge-possible on card-bottom (graphic/control) | 2.94 | `#61615d` | 3.03 |
-| edge-possible on raised (graphic/control) | 2.68 | `#676763` | 3.02 |
-| control-edge on card (graphic/control) | 2.97 | `#63635f` | 3.02 |
-| control-edge on raised (graphic/control) | 2.80 | `#676763` | 3.02 |
+| code-dim on card (text) | 4.11 | `#8b8b86` | 4.52 |
+| code-dim on card-bottom (text) | 4.32 | `#888883` | 4.56 |
+| code-dim on raised (text) | 3.70 | `#93938e` | 4.50 |
+| on-agent on shell (text) | 1.04 | `#847e78` | 4.50 |
+| on-agent on panel (text) | 1.08 | `#87817b` | 4.51 |
+| on-agent on page (text) | 1.10 | `#89837d` | 4.53 |
+| on-agent on card (text) | 1.21 | `#908a84` | 4.53 |
+| on-agent on card-bottom (text) | 1.15 | `#8c8680` | 4.51 |
+| on-agent on raised (text) | 1.35 | `#98928c` | 4.51 |
+| on-agent on inset (text) | 1.02 | `#837d77` | 4.52 |
+| edge-possible on card (graphic/control) | 2.89 | `#6e6e6a` | 3.02 |
+| edge-possible on raised (graphic/control) | 2.60 | `#757571` | 3.00 |
 
 On-agent is an inverse label for filled agent badges and buttons, never for the seven dark
 surfaces above. Its intended pairs remain 6.07:1 on agent-a / 5.09:1 on agent-b.
@@ -1853,6 +1915,6 @@ C–F letters on their dark graphic fills (`on-agent`): C 6.81:1, D 9.06:1, E 10
 | 1 | tokens and type; rest, read and editing states with letter badges; watch mode with agent cards and the decisions chip; the "Ready for review" pill; read-only live diff; review with Approve and Reject, dimming all but the change; plain review header |
 | 2 | agent B's color; pending nodes and edges; impact cone with distance badges, dimming and the cone card; Request changes; editable new side; editable file view; spend total; Stop and discard |
 | 3 | Usage desktop focus tab over GET /usage (built; static/phone deferred); possible call edges; "no test calls it" badges (neutral, with an icon); agent cursors with names in the editor; "Earlier today" history; cone overlap alerts; desktop recorded replay row (built Nov 1) |
-| Brought forward to level 1, never blocking | the LED field with its local light, working rings and agent marker, the rest contours and merge travel; plain ground (#070707 in dark) whenever WebGL2 is missing |
+| Brought forward to level 1, never blocking | the LED field with its local light, working rings and agent marker, the rest contours and merge travel; plain ground (#121214 in dark) whenever WebGL2 is missing |
 | After level 1, never blocking | the matte header's grain |
 | Mon Nov 2, only with level 2 closed | day mode |

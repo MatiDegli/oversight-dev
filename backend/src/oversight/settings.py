@@ -23,9 +23,12 @@ def _application_root() -> Path:
 
 
 REPO_ROOT = _application_root()
+# muse-spark-1.3-contributor, US dollars per million input/output tokens.
+MUSE_SPARK_DEFAULT_PRICES = (0.10, 0.20)
 TEST_TIMEOUT_ERROR = (
     "OVERSIGHT_TEST_TIMEOUT_S must be a whole number of seconds from 1 to 999999999"
 )
+MAX_STEPS_ERROR = "OVERSIGHT_MAX_STEPS must be a whole number from 5 to 100"
 LEAD_SETTING_DEFAULTS = {
     "max_leads": 6,
     "lead_max_turns": 50,
@@ -62,7 +65,7 @@ def read_env_file(path: Path) -> dict[str, str]:
     values: dict[str, str] = {}
     if not path.is_file():
         return values
-    for raw in bounded_text(path).splitlines():
+    for raw in bounded_text(path).removeprefix("\ufeff").splitlines():
         line = raw.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
@@ -79,12 +82,18 @@ def read_env_file(path: Path) -> dict[str, str]:
 
 @dataclass(frozen=True)
 class Settings:
+    env_file: Path | None = None
+    """The selected configuration path; direct no-file constructors leave editing unavailable."""
+    loaded_file_values: dict[str, str] = field(default_factory=dict[str, str], repr=False)
+    """Startup file snapshot, held in memory only; never serialized or logged."""
     host: str = "127.0.0.1"
     port: int = 8710
     vite_port: int | None = None
     """Optional development origin. Unset on backend-only/demo runs. OVERSIGHT_VITE_PORT."""
     runtime_dir: Path = REPO_ROOT / ".runtime"
     """Run-time state, gitignored: `runs/{run_id}.sqlite`, `replays/{run_id}.sqlite`, and so on."""
+    ledger_dir: Path | None = None
+    """OVERSIGHT_LEDGER_DIR: shared spend state; defaults to this run's runtime directory."""
     workspace_source: str = ""
     """OVERSIGHT_WORKSPACE_SOURCE: empty demo, pinned profile, or a native Windows drive path.
     Own repositories require validated preparation and staged disposable COPY startup."""
@@ -98,6 +107,8 @@ class Settings:
     max_agents: int = 4
     """OVERSIGHT_MAX_AGENTS: positive whole number of seats A..Z, AA, AB, ...; default 4.
     No product maximum; startup requires a recordable run.started event."""
+    max_steps: int = 30
+    """OVERSIGHT_MAX_STEPS: tool steps per agent round, a whole number from 5 to 100; default 30."""
     max_leads: int = 6
     lead_max_turns: int = 50
     lead_max_tool_calls: int = 12
@@ -158,13 +169,14 @@ class Settings:
     """OVERSIGHT_REVIEWER_FAKE_SCRIPT: reviewer fake, reviewing author fake-b."""
     reviewer_fake_b_script: Path | None = None
     """OVERSIGHT_REVIEWER_FAKE_B_SCRIPT: reviewer fake-b, reviewing author fake."""
-    # The spending brake: no defaults. A value that is missing, not a number or not positive is
-    # `None`, and every start on a Meta profile is then refused (not_configured).
+    spend_brake_percent: int | None = 90
+    """OVERSIGHT_SPEND_BRAKE_PERCENT: whole percentage from 1 to 100; None refuses spending."""
+    # No budget means no spending cap; explicitly invalid amounts still refuse starts.
     budget_usd: float | None = None
     """The credits, in US dollars. OVERSIGHT_BUDGET_USD."""
-    input_usd_per_m: float | None = None
+    input_usd_per_m: float | None = MUSE_SPARK_DEFAULT_PRICES[0]
     """Muse Spark's input price, US dollars per million tokens. MUSE_SPARK_INPUT_USD_PER_M."""
-    output_usd_per_m: float | None = None
+    output_usd_per_m: float | None = MUSE_SPARK_DEFAULT_PRICES[1]
     """Muse Spark's output price, US dollars per million tokens. MUSE_SPARK_OUTPUT_USD_PER_M."""
     baseten_input_usd_per_m: float | None = None
     """Optional Baseten input price, US dollars per million tokens. BASETEN_INPUT_USD_PER_M."""
@@ -173,7 +185,7 @@ class Settings:
     setting_problems: dict[ParsedSettingName, Literal["missing", "invalid"]] = field(
         default_factory=dict[ParsedSettingName, Literal["missing", "invalid"]]
     )
-    """Invalid amounts and overrides outside the capacity, by variable name; no raw values."""
+    """Invalid amounts, spending shares and capacity overrides, by variable name; no raw values."""
     demo_python: Path | None = None
     """Explicit prepared interpreter with pytest; required for oversight-self, never built there.
     No environment variable: supplied by the person-owned composition or a test fixture."""
@@ -188,6 +200,10 @@ class Settings:
     frontend_dist: Path | None = None
     """The built frontend the live app serves, or `None` for none. No variable: `load` sets
     frontend/dist, and a test that builds `Settings` itself gets no UI unless it passes one."""
+
+    @property
+    def ledger_root(self) -> Path:
+        return self.runtime_dir if self.ledger_dir is None else self.ledger_dir
 
     def __post_init__(self) -> None:
         for seat in "BCDEF":
@@ -231,6 +247,8 @@ class Settings:
             raise ValueError("OVERSIGHT_HISTORY_PRUNE_TOKENS must be an integer of at least 8000")
         if type(self.max_agents) is not int or self.max_agents < 1:
             raise ValueError("OVERSIGHT_MAX_AGENTS must be a positive whole number")
+        if type(self.max_steps) is not int or not 5 <= self.max_steps <= 100:
+            raise ValueError(MAX_STEPS_ERROR)
         if type(self.memory_hold_percent) is not int or not 1 <= self.memory_hold_percent <= 100:
             raise ValueError("OVERSIGHT_MEMORY_HOLD_PERCENT must be an integer from 1 to 100")
         if (
@@ -247,12 +265,29 @@ class Settings:
         """The process environment wins over the .env file."""
         if env_file is None:
             env_file = Path(os.environ.get("OVERSIGHT_ENV_FILE", REPO_ROOT / ".env"))
-        merged = read_env_file(env_file) | dict(os.environ)
+        file_values = read_env_file(env_file)
+        return cls.from_values(
+            file_values | dict(os.environ), env_file=env_file, loaded_file_values=file_values
+        )
+
+    @classmethod
+    def from_values(
+        cls,
+        merged: Mapping[str, str],
+        *,
+        env_file: Path | None = None,
+        loaded_file_values: dict[str, str] | None = None,
+    ) -> "Settings":
+        """Parse a candidate without reading a file or consulting the process environment."""
         port, vite_port = resolve_ports(merged)
         max_agents = resolve_max_agents(merged)
         models, scripts, slot_problems = resolve_slot_overrides(merged, max_agents)
+        spend_brake_percent = resolve_spend_brake_percent(merged)
+        if spend_brake_percent is None:
+            slot_problems["OVERSIGHT_SPEND_BRAKE_PERCENT"] = "invalid"
         for name in (
             "OVERSIGHT_BUDGET_USD",
+            "OVERSIGHT_BASETEN_BUDGET_USD",
             "MUSE_SPARK_INPUT_USD_PER_M",
             "MUSE_SPARK_OUTPUT_USD_PER_M",
             "BASETEN_INPUT_USD_PER_M",
@@ -261,6 +296,8 @@ class Settings:
             if merged.get(name) and positive_amount(merged[name]) is None:
                 slot_problems[name] = "invalid"
         return cls(
+            env_file=env_file,
+            loaded_file_values=loaded_file_values or {},
             preview_profile=resolve_preview_profile(merged, port, vite_port),
             preview_app=merged.get("OVERSIGHT_PREVIEW_APP"),
             preview_node=Path(merged["OVERSIGHT_PREVIEW_NODE"])
@@ -276,6 +313,9 @@ class Settings:
             port=port,
             vite_port=vite_port,
             runtime_dir=Path(merged.get("OVERSIGHT_RUNTIME_DIR", cls.runtime_dir)),
+            ledger_dir=Path(merged["OVERSIGHT_LEDGER_DIR"])
+            if merged.get("OVERSIGHT_LEDGER_DIR")
+            else None,
             workspace_source=merged.get("OVERSIGHT_WORKSPACE_SOURCE", ""),
             # Joining an absolute path onto REPO_ROOT gives that path, so only a relative one moves.
             layout=REPO_ROOT / (merged.get("OVERSIGHT_LAYOUT") or cls.layout),
@@ -283,6 +323,7 @@ class Settings:
             meta_api_key=merged.get("META_API_KEY") or None,
             baseten_api_key=merged.get("BASETEN_API_KEY") or None,
             max_agents=max_agents,
+            max_steps=resolve_max_steps(merged),
             max_leads=resolve_lead_setting(merged, "max_leads"),
             lead_max_turns=resolve_lead_setting(merged, "lead_max_turns"),
             lead_max_tool_calls=resolve_lead_setting(merged, "lead_max_tool_calls"),
@@ -315,9 +356,14 @@ class Settings:
             history_prune_tokens=_history_threshold(merged.get("OVERSIGHT_HISTORY_PRUNE_TOKENS")),
             reviewer_fake_script=_repo_path(merged.get("OVERSIGHT_REVIEWER_FAKE_SCRIPT")),
             reviewer_fake_b_script=_repo_path(merged.get("OVERSIGHT_REVIEWER_FAKE_B_SCRIPT")),
+            spend_brake_percent=spend_brake_percent,
             budget_usd=positive_amount(merged.get("OVERSIGHT_BUDGET_USD")),
-            input_usd_per_m=positive_amount(merged.get("MUSE_SPARK_INPUT_USD_PER_M")),
-            output_usd_per_m=positive_amount(merged.get("MUSE_SPARK_OUTPUT_USD_PER_M")),
+            input_usd_per_m=positive_amount(merged["MUSE_SPARK_INPUT_USD_PER_M"])
+            if merged.get("MUSE_SPARK_INPUT_USD_PER_M")
+            else MUSE_SPARK_DEFAULT_PRICES[0],
+            output_usd_per_m=positive_amount(merged["MUSE_SPARK_OUTPUT_USD_PER_M"])
+            if merged.get("MUSE_SPARK_OUTPUT_USD_PER_M")
+            else MUSE_SPARK_DEFAULT_PRICES[1],
             baseten_input_usd_per_m=positive_amount(merged.get("BASETEN_INPUT_USD_PER_M")),
             baseten_output_usd_per_m=positive_amount(merged.get("BASETEN_OUTPUT_USD_PER_M")),
             setting_problems=slot_problems,
@@ -427,6 +473,17 @@ def resolve_max_agents(values: Mapping[str, object]) -> int:
     return result
 
 
+def resolve_max_steps(values: Mapping[str, object]) -> int:
+    """Absent or empty means 30; anything else must be ASCII digits naming 5 to 100."""
+    raw = values.get("OVERSIGHT_MAX_STEPS") or "30"
+    if not isinstance(raw, str) or not raw.isascii() or not raw.isdecimal():
+        raise ValueError(MAX_STEPS_ERROR)
+    digits = raw.lstrip("0")
+    if len(digits) > 3 or not 5 <= int(digits or "0") <= 100:
+        raise ValueError(MAX_STEPS_ERROR)
+    return int(digits)
+
+
 def resolve_slot_overrides(
     values: Mapping[str, str], capacity: int
 ) -> tuple[dict[str, str], dict[str, Path], dict[str, Literal["missing", "invalid"]]]:
@@ -458,6 +515,14 @@ def resolve_slot_overrides(
         elif path := _repo_path(values[name]):
             scripts[seat] = path
     return models, scripts, problems
+
+
+def resolve_spend_brake_percent(values: Mapping[str, str]) -> int | None:
+    """Absent or empty means 90; malformed or out-of-range values fail closed without raising."""
+    raw = (values.get("OVERSIGHT_SPEND_BRAKE_PERCENT") or "90").lstrip("0")
+    if not raw.isascii() or not raw.isdecimal() or len(raw) > 3 or not 1 <= int(raw) <= 100:
+        return None
+    return int(raw)
 
 
 def resolve_memory_hold_percent(values: Mapping[str, str]) -> int:

@@ -17,6 +17,8 @@ import type {
   UsageTick,
   LeadReplyEvent,
   LeadViewEvent,
+  ChangeStages,
+  ServerEvent,
 } from "@contracts";
 
 import type { DecisionEvent } from "./decisionProjection";
@@ -51,6 +53,8 @@ export interface ChangeState {
   crossReviewRound: ChangeResolved | null;
   needsYou: NeedsYou | null;
   personActed: boolean;
+  /** Confirmed changes_requested resolutions, independent of steps or conversation rounds. */
+  revisionRounds: number;
 }
 
 export type ModelWait = Pick<ModelAttemptFailed, "attempt" | "max_attempts" | "cause"> & {
@@ -64,7 +68,7 @@ export interface BudgetMark {
   ts: string;
   brake: "warn_50" | "warn_80" | "blocked";
   spent_usd: number;
-  budget_usd: number;
+  budget_usd: number | null;
 }
 
 export interface AgentMessage {
@@ -91,6 +95,8 @@ export interface State {
   eventFacts: Record<number, EventFact>;
   gap: boolean;
   graph: GraphSnapshot | null;
+  /** Accepted main observations in envelope order, including terminal gate history. */
+  mainHeads: { seq: number; commit: string }[];
   agents: Record<string, AgentStatus>;
   steps: Record<string, AgentStep[]>;
   modelWaits: Record<string, ModelWait>;
@@ -131,6 +137,10 @@ export interface State {
   changeFacts: Record<string, ChangeFacts[]>;
   /** Run-local inbox evidence; retained even when the current proposal is replaced. */
   decisionEvents: DecisionEvent[];
+  /** Complete accepted inventory: continuity and horizon include unrelated events. */
+  stageEvents: ServerEvent[];
+  /** Stage horizons are independent of change and graph-evidence identities. */
+  changeStages: Record<string, ChangeStages | null>;
 }
 
 export function createInitialState(): State {
@@ -143,6 +153,7 @@ export function createInitialState(): State {
     eventFacts: {},
     gap: false,
     graph: null,
+    mainHeads: [],
     agents: {},
     steps: {},
     modelWaits: {},
@@ -167,6 +178,8 @@ export function createInitialState(): State {
     testExecutions: {},
     changeFacts: {},
     decisionEvents: [],
+    stageEvents: [],
+    changeStages: {},
   };
 }
 
@@ -193,5 +206,6 @@ export function createChange(change_id: string, agent_id: string): ChangeState {
     crossReviewRound: null,
     needsYou: null,
     personActed: false,
+    revisionRounds: 0,
   };
 }

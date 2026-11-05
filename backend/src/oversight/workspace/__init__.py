@@ -6,12 +6,14 @@ imports only `oversight_contracts`, shared byte limits and the standard library.
 
 from oversight.workspace._behavior_values import MAX_RANGE_ITEMS
 from oversight.workspace._platform import (
+    acquire_lock,
     assign_job,
     close_job,
     create_kill_job,
     is_link_like,
     job_pids,
     preflight_placement,
+    release_lock,
     replace_retry,
     resume_suspended,
     terminate_job,
@@ -55,6 +57,7 @@ from oversight.workspace.isolation_probe import print_isolation_probe
 from oversight.workspace.junit import MAX_TESTS, MAX_XML_BYTES, RunProblem, parse_junit
 from oversight.workspace.junit import Outcome as JUnitOutcome
 from oversight.workspace.junit import TestRun as JUnitRun
+from oversight.workspace.locks import offload
 from oversight.workspace.measured_report import CallReport, CallTarget, Invocation
 from oversight.workspace.preview import PreviewManager
 from oversight.workspace.preview_launch_spec import PreviewLaunchSpec, load_preview_app
@@ -170,6 +173,7 @@ __all__ = [
     "Workspace",
     "WorkspaceBusy",
     "WorkspaceError",
+    "acquire_lock",
     "apply_inverse",
     "assign_job",
     "authorize_reviewed_app",
@@ -186,6 +190,7 @@ __all__ = [
     "job_pids",
     "list_tree",
     "load_preview_app",
+    "offload",
     "outside_profile",
     "parse_cases",
     "parse_junit",
@@ -193,6 +198,7 @@ __all__ = [
     "prepare_inverse",
     "prepare_merge_guard",
     "print_isolation_probe",
+    "release_lock",
     "remember_trust",
     "render_examples",
     "replace_retry",
