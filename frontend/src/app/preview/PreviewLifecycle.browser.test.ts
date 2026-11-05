@@ -227,6 +227,8 @@ it("a duplicate copying an unmarked owner record stays an observer and sends not
       await duplicate.page.close();
     }
     await session.page.locator(".preview-panel button").click();
+    // The owner dismisses its panel only after the Stop receipt confirms closure.
+    await check(session.page.locator(".preview-panel")).toHaveCount(0);
     expect(support.state()).toBe("stopped");
   } finally {
     await session.context.close();
