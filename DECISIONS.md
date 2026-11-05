@@ -5540,7 +5540,7 @@ scope in ARCHITECTURE.md:60; it does not certify Windows or macOS acceptance tod
 
 ## 2026-11-05 — Run independent milestones in parallel after M0
 
-The maintainer chose parallel delivery: M3 starts alongside M0; M1/M2 follow M0's applicable gates.
+The maintainer chose M1, M2 and M3 in parallel from the start, each under its own gate.
 The person's terminal follows its security plan, M5 editing runs alongside, actions wait for M1 recovery and approved
 contracts, hosted nodes wait for M2, the agent shell waits for M3, M6 grows progressively and M10
 waits for evidence acceptance. Serial delivery was rejected because independent work can proceed.
@@ -5552,6 +5552,8 @@ The maintainer chose to end the new-since-kickoff requirement (AGENTS.md:16), wi
 M0's own front rewrites AGENTS.md and PRODUCT.md for broader language/model scope (PRODUCT.md:24, AGENTS.md:18) and phased tool/key/SDK changes (AGENTS.md:48, AGENTS.md:24, AGENTS.md:34); those changes take effect with their named fronts.
 Cross-provider merge review (AGENTS.md:4), the submission freeze until he lifts it, security and authority invariants, maintainer-owned contracts, license controls, hooks and fake-only checks stay.
 README.md's historical "Built during the hackathon" section and the daily DEVLOG also stay (AGENTS.md:17).
+The ban on code from, and on mentioning or linking, the maintainer's other projects (AGENTS.md:16-17)
+stays until he changes it.
 Retaining all hackathon restrictions was rejected because they block the approved broader product; this entry changes neither AGENTS.md nor PRODUCT.md today.
 
 ## 2026-11-05 — Build the usage ledger after judging and the freeze
