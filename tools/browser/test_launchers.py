@@ -66,6 +66,7 @@ if [ "${{4:-}}" = "tools/resolve_ports.py" ]; then
   exec {python} tools/resolve_ports.py
 fi
 printf '%s %s\\n' "$OVERSIGHT_PORT" "$OVERSIGHT_VITE_PORT" > "$FIXTURE/backend.ports"
+printf '%s\\n' "${{OVERSIGHT_PREVIEW_PORTS-unset}}" > "$FIXTURE/backend.preview-ports"
 echo $$ > "$FIXTURE/backend.pid"
 """
     if capture:
@@ -76,6 +77,7 @@ echo $$ > "$FIXTURE/backend.pid"
     pnpm_script = """#!/bin/bash
 set -eu
 printf '%s %s\\n' "$OVERSIGHT_PORT" "$OVERSIGHT_VITE_PORT" > "$FIXTURE/vite.ports"
+printf '%s\\n' "${OVERSIGHT_PREVIEW_PORTS-unset}" > "$FIXTURE/vite.preview-ports"
 echo $$ > "$FIXTURE/vite.pid"
 """
     if capture:
@@ -129,6 +131,10 @@ def launcher(
             "OVERSIGHT_FAKE_SCRIPT_B": "fixtures/fake-model/document-restock.json",
         }
     )
+    if capture:
+        env["OVERSIGHT_APP_ROOT"] = str(tmp_path)
+    else:
+        env["OVERSIGHT_ENV_FILE"] = str(tmp_path / ".env")
     env.update(overrides)
     log = tmp_path / "launcher.log"
     with log.open("w") as output:
@@ -159,6 +165,56 @@ def test_default_exports_without_binding_default_ports(
         assert child.wait(timeout=20) == 0, log.read_text()
     assert (tmp_path / "backend.ports").read_text() == "8710 5710\n"
     assert (tmp_path / "vite.ports").read_text() == "8710 5710\n"
+    assert (tmp_path / "backend.preview-ports").read_text() == "\n"
+    assert (tmp_path / "vite.preview-ports").read_text() == "\n"
+
+
+@pytest.mark.parametrize("target", ["dev", "replay"])
+@pytest.mark.parametrize("selected_file", [False, True])
+@pytest.mark.parametrize("pool_override", [None, "19683,19684", ""])
+def test_resolved_preview_pool_reaches_both_processes(
+    tmp_path: Path, target: str, selected_file: bool, pool_override: str | None
+) -> None:
+    env_text = 'OVERSIGHT_PREVIEW_PORTS="19681, 19682"\n'
+    overrides = {}
+    expected_ports = "8710 5710\n"
+    if selected_file:
+        selected = tmp_path / "selected settings.env"
+        selected.write_text("OVERSIGHT_PORT=8810\nOVERSIGHT_VITE_PORT=5810\n" + env_text)
+        overrides["OVERSIGHT_ENV_FILE"] = str(selected)
+        expected_ports = "8810 5810\n"
+    else:
+        repository = tmp_path / "repository"
+        repository.mkdir()
+        (repository / ".env").write_text(env_text)
+        overrides["OVERSIGHT_APP_ROOT"] = str(repository)
+    # Neither an explicit file nor the repository default may fall back to cwd's .env.
+    env_text = "OVERSIGHT_PORT=invalid\nOVERSIGHT_PREVIEW_PORTS=invalid\n"
+    if pool_override is not None:
+        overrides["OVERSIGHT_PREVIEW_PORTS"] = pool_override
+    expected_pool = "19681,19682" if pool_override is None else pool_override
+    with launcher(tmp_path, target, env_text, overrides, capture=True) as (child, log):
+        assert child.wait(timeout=20) == 0, log.read_text()
+    for process in ("backend", "vite"):
+        assert (tmp_path / f"{process}.ports").read_text() == expected_ports
+        assert (tmp_path / f"{process}.preview-ports").read_text() == expected_pool + "\n"
+
+
+@pytest.mark.parametrize("target", ["dev", "replay"])
+@pytest.mark.parametrize("environment_override", [False, True])
+@pytest.mark.parametrize("pool", ["invalid", "19681,", "19681,19681", "0", "65536", "8710", "5710"])
+def test_invalid_preview_pool_stops_launcher_before_either_process(
+    tmp_path: Path, target: str, environment_override: bool, pool: str
+) -> None:
+    env_text = f"OVERSIGHT_PREVIEW_PORTS={pool}\n"
+    overrides = {}
+    if environment_override:
+        env_text = "OVERSIGHT_PREVIEW_PORTS=19681,19682\n"
+        overrides["OVERSIGHT_PREVIEW_PORTS"] = pool
+    with launcher(tmp_path, target, env_text, overrides, capture=True) as (child, log):
+        assert child.wait(timeout=20) != 0, log.read_text()
+    assert not (tmp_path / "backend.pid").exists()
+    assert not (tmp_path / "vite.pid").exists()
 
 
 @pytest.mark.parametrize("target", ["dev", "replay"])
