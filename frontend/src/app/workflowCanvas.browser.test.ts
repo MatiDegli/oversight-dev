@@ -246,8 +246,8 @@ it("reattaches pixel-sized arrowheads after text growth and viewport resizing wi
         renderedWidth: bounds.width,
         start: [start.x + bounds.left, start.y + bounds.top],
         end: [end.x + bounds.left, end.y + bounds.top],
-        expectedStart: [(from.left + from.right) / 2, from.bottom],
-        expectedEnd: [(to.left + to.right) / 2, to.top - 8],
+        expectedStart: [from.left + (from.right - from.left) * (0.1 + 0.35 / 3), from.bottom],
+        expectedEnd: [to.left + (to.right - to.left) * 0.725, to.top - 1],
         markerWidth: svg.querySelector("marker")?.getAttribute("markerWidth"),
       };
     });

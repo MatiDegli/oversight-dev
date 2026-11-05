@@ -1,6 +1,7 @@
 import { expect as check } from "@playwright/test";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { canvasSteps, workflow, workflowBrowser } from "./workflowCanvas.browser.support";
+import { edgeContacts } from "./workflow/edgeCollision.browser.support";
 
 let harness: Awaited<ReturnType<typeof workflowBrowser>>;
 beforeAll(async () => {
@@ -61,6 +62,31 @@ it.each([1920, 1280, 390])(
         expect(await workflow(page).evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(
           true,
         );
+        expect(await edgeContacts(workflow(page))).toEqual([]);
+        expect(
+          await workflow(page).evaluate((panel) => {
+            const svg = panel.querySelector(".workflow-canvas svg");
+            const bodies = [...(svg?.querySelectorAll<SVGPathElement>(":scope > path") ?? [])];
+            const arrows = [...(svg?.querySelectorAll<SVGPathElement>(":scope > g > path") ?? [])];
+            return (
+              bodies.length === arrows.length &&
+              bodies.every((body, index) => {
+                const arrow = arrows[index];
+                if (!arrow?.hasAttribute("marker-end") && !arrow?.style.markerEnd) {
+                  // React writes markerEnd as the SVG marker-end attribute.
+                  return false;
+                }
+                const tip = body.getPointAtLength(body.getTotalLength());
+                const arrowTip = arrow.getPointAtLength(arrow.getTotalLength());
+                return (
+                  !body.hasAttribute("marker-end") &&
+                  Math.hypot(tip.x - arrowTip.x, tip.y - arrowTip.y) < 0.1 &&
+                  Math.abs(arrow.getTotalLength() - 1) < 0.1
+                );
+              })
+            );
+          }),
+        ).toBe(true);
       }
     } finally {
       await page.close();

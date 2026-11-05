@@ -73,14 +73,15 @@ export function WorkflowCanvas({
             </marker>
           </defs>
           {canvas.edges.map((edge) => (
-            <path
-              key={`${edge.from}:${edge.to}`}
-              vectorEffect="non-scaling-stroke"
-              markerEnd={`url(#${arrow})`}
-            >
+            <path key={`${edge.from}:${edge.to}`} vectorEffect="non-scaling-stroke">
               <title>{edge.label}</title>
             </path>
           ))}
+          <g aria-hidden="true">
+            {canvas.edges.map((edge) => (
+              <path key={`${edge.from}:${edge.to}`} markerEnd={`url(#${arrow})`} />
+            ))}
+          </g>
         </svg>
         <ol className="workflow-steps" aria-label="Workflow steps">
           {canvas.nodes.map(({ key, row, column, line }) => (

@@ -14,7 +14,8 @@
   overflow: visible;
   pointer-events: none;
 }
-.workflow-canvas svg > path {
+.workflow-canvas svg > path,
+.workflow-canvas svg > g > path {
   stroke: var(--edge);
   stroke-width: 1.5;
   fill: none;
