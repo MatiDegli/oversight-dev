@@ -12,6 +12,8 @@ docs/additions.md (inventory and status) and docs/roadmap.md (approved transitio
 2. How the maintainer and his agents actually work, or better.
 3. Highly controllable and configurable, where that is appropriate and viable.
 Every proposal or brief recommending a product option states how it meets each criterion, in this order.
+This governs product settings; this file's development rules (hooks, gates, review, contracts, the freeze,
+fake-only checks) stay fixed.
 Only two things are fixed: authority comes only from the person (no agent grants itself or another agent more
 authority than the person configured); every loosening is visible, recorded in the event log and reversible.
 Every other limit is a setting with a safe default, so a person accepting more risk can choose it. Limits from

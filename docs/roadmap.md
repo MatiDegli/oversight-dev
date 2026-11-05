@@ -38,7 +38,7 @@ Each milestone starts when its gate holds and a slot is free. Milestones run in 
 **M1 · Real repositories, any language.** Gate: M0's rules rewrite. Execution per principle 3.
 - Open any repository on every platform. Today arbitrary POSIX paths are refused (`backend/src/oversight/workspace/source.py:355`) and Windows needs a validated `.venv`. Add recent repositories and a remembered last repository.
 - Per-repository workspace trust (principle 3), set by the person and shown in the review; off by default, disclosed, labeled "unsandboxed", with verified process, port and temporary-state cleanup (available from M1).
-- The session design of `docs/own-repository.md:13-19`: session branches, following external commits, an overlay for personal edits, and guarded integration into the original. Automatic integration replaces required manual export by default; export, following external commits and recovery retry remain configurable, with visible session/recovery settings (available from M1).
+- The session design of `docs/own-repository.md:13-19`: session branches, following external commits, an overlay for personal edits, and guarded integration into the original. Guarded integration (a pointer click with no shortcut, or rules under its own standing grant, off by default and revocable; `docs/own-repository.md:27-31`) replaces required manual export; export, following external commits and recovery retry become configurable, with visible session/recovery settings (available from M1).
 - Acceptance tests for:
   - reopen;
   - crash recovery;

@@ -70,3 +70,32 @@ def test_preview_documentation_matches_authorized_scope():
     ):
         assert phrase in flattened
     assert "Reviewed self-profile front (2026-11-03)" in (root / "DEVLOG.md").read_text()
+
+
+def test_roadmap_original_repository_integration_requires_person_authority():
+    root = Path(__file__).resolve().parents[2]
+    roadmap = (root / "docs/roadmap.md").read_text()
+    session = next(line for line in roadmap.splitlines() if line.startswith("- The session design"))
+
+    assert (
+        "Guarded integration (a pointer click with no shortcut, or rules under its own standing "
+        "grant, off by default and revocable; `docs/own-repository.md:27-31`) replaces required "
+        "manual export"
+    ) in session
+    assert "export, following external commits and recovery retry become configurable" in session
+    assert "available from M1" in session
+    assert "Automatic integration" not in session
+    assert "remain configurable" not in session
+
+
+def test_product_settings_do_not_loosen_development_rules():
+    root = Path(__file__).resolve().parents[2]
+    instructions = (root / "AGENTS.md").read_text()
+    settings = instructions.split("## Product criteria and person-owned settings\n", 1)[1]
+    settings = " ".join(settings.split("## Hard rules", 1)[0].split())
+
+    assert (
+        "This governs product settings; this file's development rules (hooks, gates, review, "
+        "contracts, the freeze, fake-only checks) stay fixed."
+    ) in settings
+    assert len(instructions.splitlines()) < 120
