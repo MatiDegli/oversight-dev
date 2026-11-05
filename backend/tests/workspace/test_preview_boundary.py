@@ -15,7 +15,7 @@ from oversight.workspace import preview_boundary as boundary
 from oversight.workspace import preview_boundary_entry as entry
 from oversight.workspace.runner import child_env
 
-from .preview_boundary_support import Inputs, config, prepared, result
+from .preview_boundary_support import Inputs, config, prepared, released_descendants, result
 
 pytestmark = pytest.mark.anyio
 
@@ -506,21 +506,16 @@ async def test_boundary_stop_verified_kills_all_descendants(roots: Inputs, mode:
 
     from .preview_boundary_support import DESCENDANTS, all_reaped, descendants, eventually_file
 
-    marker = roots.state / "detached"
-    if await asyncio.to_thread(marker.exists):
-        await asyncio.to_thread(marker.unlink)
+    for name in ("detached", "reaped", "release"):
+        await asyncio.to_thread((roots.state / name).unlink, missing_ok=True)
     settings = config(DESCENDANTS)
     if mode == "deadline":
         settings = dataclasses.replace(settings, lifetime_s=3)
     if mode in {"normal", "nonzero"}:
-        settings = config(
-            DESCENDANTS.replace(
-                "while True: time.sleep(1)\n", "while True: time.sleep(1)\n", 1
-            ).rsplit("while True: time.sleep(1)", 1)[0]
-            + f"time.sleep(0.5)\nos._exit({0 if mode == 'normal' else 7})\n"
-        )
+        settings = config(released_descendants(0 if mode == "normal" else 7))
     handle = await boundary.launch_boundary(settings, roots)
-    await eventually_file(marker)
+    await eventually_file(roots.state / "detached")
+    await eventually_file(roots.state / "reaped")
     identities = list(handle.processes.values())
     members = await asyncio.to_thread(descendants, handle.processes["init"].pid)
     assert members, "a detached descendant must exist before stop"
@@ -528,6 +523,8 @@ async def test_boundary_stop_verified_kills_all_descendants(roots: Inputs, mode:
     independent = [open_pidfd(pid) for pid in observed]
     owned = [*handle.pidfds.values(), *handle.namespace_fds.values()]
     try:
+        if mode in {"normal", "nonzero"}:
+            await asyncio.to_thread((roots.state / "release").touch)
         if mode == "stop":
             await handle.stop_verified()
         elif mode == "owner_eof":
@@ -555,6 +552,18 @@ async def test_boundary_stop_verified_kills_all_descendants(roots: Inputs, mode:
     finally:
         for fd in independent:
             os.close(fd)
+        await handle.stop_verified()
+
+
+async def test_boundary_release_wait_expires_for_namespace_init(roots: Inputs) -> None:
+    await asyncio.to_thread((roots.state / "release").unlink, missing_ok=True)
+    handle = await boundary.launch_boundary(config(released_descendants(0, wait_s=1)), roots)
+    try:
+        async with asyncio.timeout(5):
+            await handle.wait()
+        assert handle.returncode == 9
+        assert handle.verified_dead
+    finally:
         await handle.stop_verified()
 
 
