@@ -17,11 +17,11 @@ class EventClock:
 
     def __init__(
         self,
-        wall_clock: Clock = system_clock,
-        monotonic: Callable[[], float] = time.monotonic,
+        wall_clock: Clock | None = None,
+        monotonic: Callable[[], float] | None = None,
     ) -> None:
-        self._wall_clock = wall_clock
-        self._monotonic = monotonic
+        self._wall_clock = system_clock if wall_clock is None else wall_clock
+        self._monotonic = time.monotonic if monotonic is None else monotonic
         self._previous: datetime | None = None
         self._previous_monotonic = 0.0
 

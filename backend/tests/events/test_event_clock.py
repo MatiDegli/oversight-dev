@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -93,6 +94,24 @@ async def test_default_stores_get_independent_clocks(tmp_path: Path, monkeypatch
         assert (await first.publish(step(1, 1))).ts == format_ts(NOW)
         assert (await first.publish(step(1, 2))).ts == format_ts(NOW + timedelta(seconds=1))
         assert (await second.publish(step(2, 1))).ts == format_ts(NOW)
+
+
+@pytest.mark.anyio
+async def test_default_store_clock_reads_system_sources(tmp_path: Path, monkeypatch) -> None:
+    wall = iter([NOW, NOW - timedelta(seconds=2), NOW + timedelta(seconds=5)])
+    monotonic = iter([10.0, 10.25, 10.5])
+    monkeypatch.setattr(clocks, "system_clock", wall.__next__)
+    monkeypatch.setattr(clocks, "time", SimpleNamespace(monotonic=monotonic.__next__))
+
+    async with EventStore(tmp_path / "run.sqlite", RUN_ID) as store:
+        for number in range(1, 4):
+            await store.publish(step(1, number))
+
+    assert [row.ts for row in read_store(store.path)] == [
+        format_ts(NOW),
+        format_ts(NOW + timedelta(milliseconds=250)),
+        format_ts(NOW + timedelta(seconds=5)),
+    ]
 
 
 @pytest.mark.anyio
