@@ -18,6 +18,22 @@ import {
 
 const viewport = { width: 1920, height: 1080 };
 
+/** Coverage of the entire field, including the areas suppressed by its masks. */
+function expectLineCoverage(coverage: number) {
+  expect(coverage).toBeGreaterThan(0.035);
+  // Field-only: 4d309f2a^ 0.0505729813, 4d309f2a 0.0494579061,
+  // 25fd9c12 0.0514723891. Use the release value with the old 0.00825/0.09675
+  // relative margin (8.53%): ceiling 0.0558615076, with foreground hidden in every revision.
+  expect(coverage).toBeLessThan(0.0514723891319966 * (1 + 0.00825 / 0.09675));
+}
+
+it("rejects doubled field-only line coverage", () => {
+  // A 10% field must fail even though it passed the former 0.105 ceiling.
+  expect(() => {
+    expectLineCoverage(0.1);
+  }).toThrow(/to be less than/);
+});
+
 /** The graph's area as a PNG, with the field as it stands. */
 async function groundShot(page: Page) {
   await settledGraph(page);
@@ -73,7 +89,24 @@ it("draws the lines at the approved sketch's level on the #121214 ground", async
     { scene: "rest", reducedMotion: "reduce", viewport: { width: 1920, height: 1080 } },
     async (page) => {
       await settledGraph(page);
-      const png = await page.screenshot({ clip: { x: 60, y: 520, width: 940, height: 420 } });
+      const rect = await page.evaluate(() => {
+        const { x, y, width, height } = window.fieldTest.elements().field.getBoundingClientRect();
+        return { x, y, width, height };
+      });
+      // A viewport patch includes folded cards as framing moves. Measure the field itself;
+      // visibility keeps the graph layout and every mask rectangle in place.
+      const cover = await page.addStyleTag({
+        content: `[aria-label="Graph stage"] { visibility: hidden; }
+          [aria-label="Graph stage"] canvas[aria-hidden="true"] { visibility: visible; }`,
+      });
+      let png: Buffer;
+      try {
+        png = await page.screenshot({ clip: rect });
+      } finally {
+        await cover.evaluate((element) => {
+          element.parentNode?.removeChild(element);
+        });
+      }
       const seen = await page.evaluate(async (base64) => {
         const bitmap = await createImageBitmap(
           new Blob([Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))]),
@@ -96,16 +129,14 @@ it("draws the lines at the approved sketch's level on the #121214 ground", async
           coverage: lines.length / values.length,
         };
       }, png.toString("base64"));
-      // The ground is #121214, brightest channel 20; lines are measured above it. On the sketch's
-      // #070707 ground its brightest lines stood 18 to 21 above it, its median line about 16, and its
-      // lines covered 6 to 7% of a clear area (it was 11, 9 and 2.7% on black).
+      // The ground is #121214, brightest channel 20; lines are measured above it. The sketch's
+      // brightest lines stood 18 to 21 above its #070707 ground, its median line about 16.
+      // Coverage here includes masked ground, so use the field-only baseline, not a clear patch.
       expect(seen.ground).toBe(20);
       expect(seen.brightest).toBeGreaterThanOrEqual(15);
       expect(seen.brightest).toBeLessThanOrEqual(25);
       expect(seen.median).toBeGreaterThanOrEqual(11);
-      expect(seen.coverage).toBeGreaterThan(0.035);
-      // Old bound 0.09 → 0.105: new-start coverage 0.09675 + 0.00825 margin.
-      expect(seen.coverage).toBeLessThan(0.105);
+      expectLineCoverage(seen.coverage);
     },
   );
 }, 60_000);
@@ -245,12 +276,14 @@ it("sends a merge's pulse along the graph to its node, then lights it and fades 
     const lit = await lightMass(page);
     expect(lit).toBeGreaterThan(waiting * 0.9);
     expect(lit).toBeLessThan(waiting * 1.1);
+    // Anchored waiting/arrival masses are 84/76 at 25fd9c12; guard the evidence's headroom.
+    expect(Math.min(waiting, lit)).toBeGreaterThan(50 * 1.3);
     // Soft: the light is not a block, its colour stays off the overlays, and it fades as time goes:
     // 20 s in, its halo outside the card is still lit and thinner; the cut ends it before the 90 s.
     await page.clock.fastForward(20_000);
     const half = await fieldPixels(page);
     expect(half.warm).toBeGreaterThan(0);
-    // Old ratio 0.8 → 0.85: new-start mass 45/55 = 0.81818 + 0.03182 margin.
+    // Anchored at 25fd9c12: 20 s mass 47/76 = 0.61842; retain the existing fade bound.
     expect(await lightMass(page)).toBeLessThan(lit * 0.85);
     expect(half.inside).toBe(0);
     await page.clock.fastForward(71_000);
@@ -463,6 +496,8 @@ it("has no travel under reduced motion: the light stays where it was and fades a
     const lit = await lightMass(page);
     expect(lit).toBeGreaterThan(waiting * 0.9);
     expect(lit).toBeLessThan(waiting * 1.1);
+    // Anchored waiting/arrival masses are 84/84 at 25fd9c12, comfortably above 50.
+    expect(Math.min(waiting, lit)).toBeGreaterThan(50 * 1.3);
     await page.clock.fastForward(20_000);
     // The lamps thin out as the light fades; some are still lit, and fewer than before.
     expect((await fieldPixels(page)).warm).toBeGreaterThan(0);
@@ -498,6 +533,8 @@ it("holds a steady, dimmer light while the change waits on an inbox entry, howev
     await page.clock.fastForward(600_000);
     expect(await lifeOf(page)).toEqual({ pulses: 0, lights: 0, contours: true });
     expect(await lightMass(page)).toBe(lit);
+    // Anchored mass is 84 both initially and after ten minutes at 25fd9c12.
+    expect(lit).toBeGreaterThan(50 * 1.3);
   });
 }, 60_000);
 

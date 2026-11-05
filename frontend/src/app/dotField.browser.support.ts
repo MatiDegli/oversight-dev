@@ -260,15 +260,22 @@ async function fieldPixels(page: Page) {
 
 /**
  * How much light the field has computed: the sum of the lamp levels on a 14 px grid over the
- * canvas. It reads the field's own cells, so the graph's styling over them cannot move it.
+ * canvas, anchored on the lit node. A canvas-origin grid samples a different part of the dither
+ * when the heading moves the graph; the node's live center keeps the sample on its light.
  */
 function lightMass(page: Page) {
   return page.evaluate(() => {
-    const { field } = window.fieldTest.elements();
+    const { field, graph } = window.fieldTest.elements();
     const probe = field.oversightField;
+    const center = graph.oversightGraph
+      ?.nodeCenters()
+      .find(({ id }) => id === window.fieldTest.changed);
+    if (!probe || !center) throw new Error("The field or its lit node is missing");
+    const x0 = ((center.x % 14) + 14) % 14;
+    const y0 = ((center.y % 14) + 14) % 14;
     let mass = 0;
-    for (let y = 7; y < field.clientHeight; y += 14)
-      for (let x = 7; x < field.clientWidth; x += 14) mass += probe?.lamp(x, y)?.level ?? 0;
+    for (let y = y0; y < field.clientHeight; y += 14)
+      for (let x = x0; x < field.clientWidth; x += 14) mass += probe.lamp(x, y)?.level ?? 0;
     return mass;
   });
 }
