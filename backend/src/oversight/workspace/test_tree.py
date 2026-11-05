@@ -61,9 +61,8 @@ async def capture_test_tree(
         await offload(partial(veto_gitmodules, root, deadline))
         await git("add", "-A")
         tree = (await git("write-tree")).strip()
-        committed = (await git("rev-parse", "HEAD^{tree}")).strip()
-        commit = (await git("rev-parse", "HEAD")).strip() if tree == committed else None
-        return tree, commit
+        commit, committed = (await git("rev-parse", "HEAD", "HEAD^{tree}")).splitlines()
+        return tree, commit if tree == committed else None
     finally:
         if sys.platform == "win32":
             try:
