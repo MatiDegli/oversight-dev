@@ -73,7 +73,24 @@ it("draws the lines at the approved sketch's level on the #121214 ground", async
     { scene: "rest", reducedMotion: "reduce", viewport: { width: 1920, height: 1080 } },
     async (page) => {
       await settledGraph(page);
-      const png = await page.screenshot({ clip: { x: 60, y: 520, width: 940, height: 420 } });
+      const rect = await page.evaluate(() => {
+        const { x, y, width, height } = window.fieldTest.elements().field.getBoundingClientRect();
+        return { x, y, width, height };
+      });
+      // A viewport patch includes folded cards as framing moves. Measure the field itself;
+      // visibility keeps the graph layout and every mask rectangle in place.
+      const cover = await page.addStyleTag({
+        content: `[aria-label="Graph stage"] { visibility: hidden; }
+          [aria-label="Graph stage"] canvas[aria-hidden="true"] { visibility: visible; }`,
+      });
+      let png: Buffer;
+      try {
+        png = await page.screenshot({ clip: rect });
+      } finally {
+        await cover.evaluate((element) => {
+          element.parentNode?.removeChild(element);
+        });
+      }
       const seen = await page.evaluate(async (base64) => {
         const bitmap = await createImageBitmap(
           new Blob([Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))]),
