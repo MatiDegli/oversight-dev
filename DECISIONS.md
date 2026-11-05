@@ -5124,8 +5124,9 @@ Contracts, the faithful recorded-time fold, explicit replay `ts`, injected clock
 payload times are unchanged. Replay keeps its recorded timestamps, and the change
 manager keeps its existing clock. No reader substitutes the current wall time for `ts`.
 
-Residual: after a backward step, event times run ahead of the wall clock by at most that step
-until the wall clock catches up. They are logical event times during that interval.
+Residual: after backward steps, event times run ahead of the wall clock by the sum of backward
+steps not yet offset by forward steps; that lead lasts until a forward step or a wake from
+suspend offsets it. They are logical event times during that interval.
 ## 2026-11-04 — Preview recovery requires the departing page's mark
 
 A live preview owner persists its minimal private record in per-tab sessionStorage. Pagehide
