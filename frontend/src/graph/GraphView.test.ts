@@ -78,8 +78,10 @@ it("synchronizes graph updates and ignores transport-only publications", async (
   const cy = mocks.instances[0];
   if (!cy) throw new Error("Graph was not created");
   setLabel("First");
+  paint();
   expect(cy.getElementById("billing:fee").data("label")).toBe("First");
   setLabel("Second");
+  paint();
   expect(cy.getElementById("billing:fee").data("label")).toBe("Second");
   const batch = vi.spyOn(cy, "batch");
   stateStore.setState(({ state }) => ({ state: { ...state, lastSeq: state.lastSeq + 1 } }));

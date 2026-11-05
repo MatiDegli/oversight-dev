@@ -14,6 +14,7 @@ import { prepareGraphLayout, useMapController } from "./mapController";
 import type { MapOptions } from "./mapController";
 import { graphVisibility } from "./graphVisibility";
 import { projectionState, sameProjectionState } from "./projectionState";
+import { replacePaintPublication } from "./paintPublication";
 import { graphSync } from "./graphSync";
 import type { State } from "../state";
 import { elementSnapshot } from "./elementSnapshot";
@@ -359,17 +360,38 @@ export function GraphView({
           : 0;
       };
       const snapshot = elementSnapshot();
+      let lastFull: GraphElement[] | undefined;
+      let lastRun: string | undefined;
+      let lastMap: boolean | undefined;
+      let foldRevision = 0;
+      let renderedFold = -1;
+      let lastSelected: string | null | undefined;
       const sync = (
         fallback?: GraphElement[],
         state: State = stateStore.getState().state,
         props = latest.current,
+        revision = foldRevision,
       ) => {
         // A second addition can arrive before the first ease ends. Include both targets when
         // replacing that animation, rather than leaving the first addition outside the view.
         if (!cy.animated() || latest.current.panelOpen) arriving.clear();
-        const existing = new Set(cy.nodes().map((node) => node.id()));
         const full = fallback ?? snapshot(projectionState(state), props);
         if (!fallback && !prepareGraphLayout(cy, full, retrySync)) return;
+        if (
+          full === lastFull &&
+          state.run?.run_id === lastRun &&
+          props.map === lastMap &&
+          revision === renderedFold
+        ) {
+          if (props.selectedId !== lastSelected) showSelection(cy, props.selectedId ?? null);
+          lastSelected = props.selectedId;
+          return;
+        }
+        const existing = new Set(cy.nodes().map((node) => node.id()));
+        lastFull = full;
+        lastRun = state.run?.run_id;
+        lastMap = props.map;
+        renderedFold = revision;
         const foldsChanged = folding.render(state, full);
         mapControl.sync(full);
         if (
@@ -393,6 +415,7 @@ export function GraphView({
           });
         }
         showSelection(cy, latest.current.selectedId ?? null);
+        lastSelected = latest.current.selectedId;
         reportSoon();
         if (
           mapControl.level() !== "map" &&
@@ -415,13 +438,19 @@ export function GraphView({
       };
       const visibility = graphVisibility(host);
       const updates = graphSync({
-        read: () => ({ state: stateStore.getState().state, props: latest.current }),
+        read: () => ({
+          state: stateStore.getState().state,
+          props: latest.current,
+          revision: foldRevision,
+        }),
         equal: (a, b) =>
+          a.revision === b.revision &&
           a.props === b.props &&
           a.state.run?.run_id === b.state.run?.run_id &&
           sameProjectionState(a.state, b.state),
-        apply: ({ state, props }) => {
-          sync(undefined, state, props);
+        replace: replacePaintPublication,
+        apply: ({ state, props, revision }) => {
+          sync(undefined, state, props, revision);
         },
         visible: visibility.visible,
         resize: () => cy.resize(),
@@ -430,7 +459,9 @@ export function GraphView({
         if (!visibility.visible()) updates.publish();
         else sync(fallback);
       };
-      resync.current = updates.publish;
+      resync.current = () => {
+        updates.publish();
+      };
       current.current = updates.force;
       const stopVisibility = visibility.observe(updates.visibility);
       cy.on("tap", "node", (event) => {
@@ -445,14 +476,19 @@ export function GraphView({
           if (event.position.y > top + height) return;
         }
         updates.force();
-        if (folding.toggle(id)) updates.publish(true);
-        else latest.current.onNodeTap?.(id);
+        if (folding.toggle(id)) {
+          foldRevision++;
+          updates.publish(true);
+          updates.force();
+        } else latest.current.onNodeTap?.(id);
       });
       graph.current = cy;
       const mapApi = mapControl.api(
         folding,
         () => {
+          foldRevision++;
           updates.publish(true);
+          updates.force();
         },
         () => panelGeometry(host, latest.current),
       );
@@ -491,6 +527,7 @@ export function GraphView({
         updates.publish();
       });
       updates.publish();
+      if (visibility.visible()) updates.force();
       if ((latest.current.panelOpen || latest.current.referenceFrame) && startFrame === undefined)
         frameInitialPanel();
       const resize = new ResizeObserver(() => {

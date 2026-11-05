@@ -175,6 +175,7 @@ it.each([0, 400])("passes the styled panel occlusion to growth (%s px)", async (
       graph: { ...state.graph, nodes: state.graph.nodes.concat({ ...template, id: "new" }) },
     },
   });
+  paint();
   expect(expand).toHaveBeenCalledExactlyOnceWith(cy, ["new"], false, covered);
   expect(computed).toHaveBeenCalledWith(overlays);
   expect(property).toHaveBeenCalledWith("--graph-overlay-occlusion");

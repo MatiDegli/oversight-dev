@@ -46,6 +46,9 @@ it.each([true, false])(
       );
       order.length = 0;
       updateGraph(cy, elements);
+      expect(order).toEqual([]);
+      cy.nodes().first().position({ x: 700, y: 200 });
+      updateGraph(cy, elements);
       expect(order).toEqual(["frames", "routes"]);
     } finally {
       cy.destroy();
