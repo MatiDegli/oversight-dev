@@ -216,6 +216,8 @@ class Session:
                 "output_tokens_per_turn": 4096,
                 "billing_ceiling_guaranteed": False,
             },
-            "raw_events": f"events-{self.events.run_id}.jsonl",
+            "raw_events": self.events.evidence.name,
         }
-        manifest(out.parent / "manifest.json", self.events.run_id, values)
+        # Scope the advertisement with its evidence, without changing the product run id.
+        key = self.events.evidence.stem.removeprefix("events-")
+        manifest(out.parent / "manifest.json", key, values)

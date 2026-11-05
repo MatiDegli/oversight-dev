@@ -7,6 +7,7 @@ import secrets
 import sys
 from pathlib import Path
 from types import SimpleNamespace
+from uuid import uuid4
 
 from tools.eval.arms import PAID_OUTPUT, Arm, load_arms, output_path, validate_pair
 from tools.eval.detection.__main__ import compare_passes, history, validated_labels
@@ -145,6 +146,7 @@ async def run_plan(
                 shared_ledger=ledger,
                 pilot=pilot,
                 trace=trace,
+                evidence_session=uuid4(),
             )
     return {"plan_id": plan_id, "seed": seed, "projection": projection, "report": report(ledger)}
 
