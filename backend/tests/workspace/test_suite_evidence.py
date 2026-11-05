@@ -100,25 +100,30 @@ def test_parser_is_shared_with_beforeafter_and_retains_phase_error(tmp_path: Pat
 
 
 @pytest.mark.anyio
-async def test_dirty_tree_is_recorded_without_changing_staging(
-    workspace: Workspace, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("dirty", [False, True], ids=["clean", "dirty"])
+async def test_tested_tree_is_recorded_without_changing_staging(
+    workspace: Workspace, monkeypatch: pytest.MonkeyPatch, dirty: bool
 ) -> None:
     monkeypatch.setattr(workspace, "_demo_python", Path(sys.executable))
     tree = workspace.main
     async with workspace.locks(main=True):
-        old_index = await workspace.git_ok(tree, "write-tree")
-        original = await tree.read_text("shop/mod.py")
-        await tree.write_text(
-            "shop/mod.py", original.content + "\n# observed\n", expected_hash=original.hash
-        )
+        old_index = (await workspace.git_ok(tree, "write-tree")).strip()
+        head = await tree.head()
+        if dirty:
+            original = await tree.read_text("shop/mod.py")
+            await tree.write_text(
+                "shop/mod.py", original.content + "\n# observed\n", expected_hash=original.hash
+            )
     run = await workspace.run_tests(tree, timeout_s=60)
-    assert run.tested_tree != old_index and run.tested_commit is None
+    if dirty:
+        assert run.tested_tree != old_index and run.tested_commit is None
+    else:
+        assert run.tested_tree == old_index and run.tested_commit == head
     assert run.cases and not run.problems
     async with workspace.locks(main=True):
-        assert await workspace.git_ok(tree, "write-tree") == old_index
-        assert "# observed" in await workspace.git_ok(
-            tree, "show", f"{run.tested_tree}:shop/mod.py"
-        )
+        assert (await workspace.git_ok(tree, "write-tree")).strip() == old_index
+        content = await workspace.git_ok(tree, "show", f"{run.tested_tree}:shop/mod.py")
+        assert ("# observed" in content) is dirty
     assert not list(workspace.tmp_dir.glob("suite-index-*"))
 
 

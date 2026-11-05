@@ -179,6 +179,7 @@ async def test_capture_shares_pins_scans_once_and_only_overrides_index(
     tree = await workspace.create_worktree("agent-1")
     scans: list[GitIdentity] = []
     calls: list[dict[str, str]] = []
+    commands: list[list[str]] = []
     real_scan, real_spawn = scan_nested_git, run_process
 
     def scan(identity: GitIdentity, deadline: float) -> None:
@@ -187,6 +188,7 @@ async def test_capture_shares_pins_scans_once_and_only_overrides_index(
 
     async def spawn(*args: Any, **kwargs: Any) -> ProcessResult:
         calls.append(kwargs["env"])
+        commands.append(args[0][len(core.GIT_FLAGS) + 1 :])
         return await real_spawn(*args, **kwargs)
 
     monkeypatch.setattr(test_tree, "scan_nested_git", scan)
@@ -199,7 +201,10 @@ async def test_capture_shares_pins_scans_once_and_only_overrides_index(
             flags=core.GIT_FLAGS,
             timeout_s=5,  # pyright: ignore[reportPrivateUsage]
         )
-    assert len(scans) == 1 and len(calls) == 6
+    assert len(scans) == 1 and len(calls) == 5
+    assert [args for args in commands if args[0] == "rev-parse"] == [
+        ["rev-parse", "HEAD", "HEAD^{tree}"]
+    ]
     baseline = workspace._git_env(tree, None, None)  # pyright: ignore[reportPrivateUsage]
     for env in calls:
         assert {key: value for key, value in env.items() if key != "GIT_INDEX_FILE"} == baseline
