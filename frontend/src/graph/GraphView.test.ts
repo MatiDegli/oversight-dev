@@ -71,7 +71,7 @@ const { mount, rerender } = setupGraphView(mocks, (value) => {
   cleanup = value;
 });
 
-it("synchronizes each store update immediately, including transport-only updates", async () => {
+it("synchronizes graph updates and ignores transport-only publications", async () => {
   setLabel("Initial");
   const { settle } = mount();
   await settle("resolved");
@@ -83,7 +83,7 @@ it("synchronizes each store update immediately, including transport-only updates
   expect(cy.getElementById("billing:fee").data("label")).toBe("Second");
   const batch = vi.spyOn(cy, "batch");
   stateStore.setState(({ state }) => ({ state: { ...state, lastSeq: state.lastSeq + 1 } }));
-  expect(batch).toHaveBeenCalled();
+  expect(batch).not.toHaveBeenCalled();
 });
 
 it.each(["resolved", "rejected"] as const)(

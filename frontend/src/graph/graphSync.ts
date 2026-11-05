@@ -7,13 +7,16 @@ export function graphSync<T>({
   apply,
   visible,
   resize,
+  equal = Object.is,
 }: {
   read: () => T;
   apply: (input: T) => void;
   visible: () => boolean;
   resize: () => void;
+  equal?: (a: T, b: T) => boolean;
 }) {
   let pending: T[] = [];
+  let previous: T | undefined;
   let wasVisible = visible();
   const flush = (force = false) => {
     if (!force && !visible()) return;
@@ -22,8 +25,11 @@ export function graphSync<T>({
     for (const input of inputs) apply(input);
   };
   return {
-    publish: () => {
-      pending.push(read());
+    publish: (force = false) => {
+      const input = read();
+      if (!force && previous !== undefined && equal(previous, input)) return;
+      previous = input;
+      pending.push(input);
       flush();
     },
     visibility: () => {

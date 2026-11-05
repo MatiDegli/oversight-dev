@@ -13,6 +13,7 @@ import { ControlledMapLayer, MapRoutingOmissions } from "./MapLayer";
 import { prepareGraphLayout, useMapController } from "./mapController";
 import type { MapOptions } from "./mapController";
 import { graphVisibility } from "./graphVisibility";
+import { projectionState, sameProjectionState } from "./projectionState";
 import { graphSync } from "./graphSync";
 import type { State } from "../state";
 import { elementSnapshot } from "./elementSnapshot";
@@ -367,7 +368,7 @@ export function GraphView({
         // replacing that animation, rather than leaving the first addition outside the view.
         if (!cy.animated() || latest.current.panelOpen) arriving.clear();
         const existing = new Set(cy.nodes().map((node) => node.id()));
-        const full = fallback ?? snapshot(state, props);
+        const full = fallback ?? snapshot(projectionState(state), props);
         if (!fallback && !prepareGraphLayout(cy, full, retrySync)) return;
         const foldsChanged = folding.render(state, full);
         mapControl.sync(full);
@@ -415,6 +416,10 @@ export function GraphView({
       const visibility = graphVisibility(host);
       const updates = graphSync({
         read: () => ({ state: stateStore.getState().state, props: latest.current }),
+        equal: (a, b) =>
+          a.props === b.props &&
+          a.state.run?.run_id === b.state.run?.run_id &&
+          sameProjectionState(a.state, b.state),
         apply: ({ state, props }) => {
           sync(undefined, state, props);
         },
@@ -440,12 +445,16 @@ export function GraphView({
           if (event.position.y > top + height) return;
         }
         updates.force();
-        if (folding.toggle(id)) updates.publish();
+        if (folding.toggle(id)) updates.publish(true);
         else latest.current.onNodeTap?.(id);
       });
       graph.current = cy;
-      const mapApi = mapControl.api(folding, updates.publish, () =>
-        panelGeometry(host, latest.current),
+      const mapApi = mapControl.api(
+        folding,
+        () => {
+          updates.publish(true);
+        },
+        () => panelGeometry(host, latest.current),
       );
       if (apiRef) {
         apiRef.current = {
@@ -478,7 +487,9 @@ export function GraphView({
       }
       const unexpose = exposeProbe(host, cy);
       source.attach(cy);
-      const unsubscribe = stateStore.subscribe(updates.publish);
+      const unsubscribe = stateStore.subscribe(() => {
+        updates.publish();
+      });
       updates.publish();
       if ((latest.current.panelOpen || latest.current.referenceFrame) && startFrame === undefined)
         frameInitialPanel();

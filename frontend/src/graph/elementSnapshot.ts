@@ -1,20 +1,22 @@
-import type { State } from "../state";
+import { createInitialState } from "../state";
+import { projectionState } from "./projectionState";
+import type { ProjectionState } from "./projectionState";
 import { getActiveTheme } from "../theme";
 
 import { graphElements } from "./elements";
 import { nodeGeometry } from "./geometry";
 import type { GraphViewProps } from "./GraphView";
 
-/** Fold controls reuse one elements snapshot until state, scope or theme changes. */
+/** Fold controls reuse one elements snapshot until projection inputs, scope or theme changes. */
 export function elementSnapshot() {
   let previous: readonly unknown[] = [];
   let elements: ReturnType<typeof graphElements> = [];
-  return (state: State, props: GraphViewProps) => {
+  return (state: ProjectionState, props: GraphViewProps) => {
     const cone = props.cone ?? props.liveCone;
     const preserveReads = props.field?.mode === "live-diff";
     const theme = getActiveTheme();
     const inputs = [
-      state,
+      ...Object.values(projectionState(state)),
       props.litIds,
       cone,
       props.measured,
@@ -25,7 +27,7 @@ export function elementSnapshot() {
     ];
     if (inputs.some((value, index) => value !== previous[index])) {
       elements = graphElements(
-        state,
+        { ...createInitialState(), ...state },
         false,
         props.litIds ? new Set(props.litIds) : null,
         cone,
