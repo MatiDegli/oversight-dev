@@ -62,6 +62,7 @@ async def check_source_config(
     env: Mapping[str, str],
     time_left: Callable[[], float],
     refuse: Callable[[str], Exception],
+    validate: Callable[[str, str], None] | None = None,
 ) -> None:
     """Fail closed before source queries; the caller owns the deadline and refusal type."""
     listing_env = {name: value for name, value in env.items() if name.upper() not in REPOSITORY_ENV}
@@ -114,3 +115,5 @@ async def check_source_config(
                 raise refuse(f"{label}: malformed Git config key")
             if (refused := refused_key(key, value)) is not None:
                 raise refuse(f"{label}: refused Git config key {refused}")
+            if validate is not None:
+                validate(key, value)
