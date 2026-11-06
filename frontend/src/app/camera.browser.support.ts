@@ -159,6 +159,8 @@ async function withPage(
       await page.evaluate(() => {
         window.graphTest.loadDemo();
       });
+      // The publication is coalesced to rAF; this fixture owns and must advance that frame.
+      await paint(page);
     }
     // The graph is created once its font settles.
     await page.waitForFunction(
