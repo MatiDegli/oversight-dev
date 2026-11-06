@@ -1,0 +1,223 @@
+/* Keep a Chat-hidden tab mounted when returning from Code, with its scroll geometry intact. */
+.shell-stage.has-hidden-focus {
+  position: relative;
+}
+.shell-stage.has-hidden-focus > .focus-panel[hidden] {
+  display: flex;
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+}
+/* Code is a preset of the same mounted shell, with the editor as its primary work area. */
+.code-shell .focus-panel {
+  width: 100%;
+  border-right: 0;
+}
+.code-shell > .shell-sidebar {
+  position: static;
+}
+.code-shell [aria-label="Watch"] {
+  display: none;
+}
+.shell-frame[data-workspace-view="Code"] > .narrow-notice {
+  display: none;
+}
+.code-empty {
+  align-self: center;
+  margin-inline: auto;
+  padding: var(--spacing-lg);
+  color: var(--muted);
+  font-size: var(--body-size);
+}
+.code-empty h1 {
+  margin-bottom: var(--spacing-sm);
+  color: var(--text);
+  font-size: var(--title-size);
+  font-weight: 700;
+}
+.code-empty button {
+  margin-top: var(--spacing-lg);
+  min-height: 44px;
+  padding-inline: var(--spacing-md);
+  border: 1px solid var(--control-edge);
+  border-radius: var(--radius-control);
+  color: var(--text);
+}
+.code-empty button:hover {
+  background: var(--raised);
+}
+/* The three choices leave less room for a long repository name at laptop width. */
+@media (768px <= width <= 1440px) {
+  .shell-top-bar > p {
+    min-width: 0;
+    flex-shrink: 1;
+  }
+  .shell-top-bar .palette-trigger {
+    min-width: 44px;
+    width: 44px;
+    flex-shrink: 0;
+    justify-content: center;
+  }
+  .shell-top-bar .palette-trigger > span,
+  .shell-top-bar .palette-trigger > kbd {
+    display: none;
+  }
+}
+@media (width < 768px) {
+  /* Keep view, Settings and the queue reachable in one stable phone header. */
+  .shell-frame[data-workspace-view="Code"] > .shell-top-bar,
+  .shell-frame[data-workspace-view="Chat"] > .shell-top-bar {
+    height: auto;
+    min-height: 100px;
+    flex-wrap: wrap;
+    padding: 8px 16px;
+    gap: 4px 8px;
+  }
+  .shell-frame[data-workspace-view="Code"] > .shell-top-bar > span,
+  .shell-frame[data-workspace-view="Code"] > .shell-top-bar > p,
+  .shell-frame[data-workspace-view="Code"] .shell-top-bar .palette-trigger,
+  .shell-frame[data-workspace-view="Code"] .shell-top-bar [aria-label="Spend"],
+  .shell-frame[data-workspace-view="Code"] .shell-top-bar [aria-label="Usage"],
+  .shell-frame[data-workspace-view="Code"] .shell-top-bar [data-practice-entry] {
+    display: none;
+  }
+  .shell-frame:is([data-workspace-view="Code"], [data-workspace-view="Chat"]) .view-switch {
+    height: 44px;
+    flex-basis: 100%;
+  }
+  .shell-frame:is([data-workspace-view="Code"], [data-workspace-view="Chat"]) .view-switch button {
+    flex: 1;
+    justify-content: center;
+    min-height: 44px;
+    margin: -3px 0;
+    border: 0;
+  }
+  .shell-frame[data-workspace-view="Chat"] > .shell-top-bar > span:first-child {
+    display: none;
+  }
+  .shell-frame[data-workspace-view="Code"] [aria-label="Review queue"] {
+    min-width: 0;
+    margin-left: 0;
+    flex: 1;
+  }
+  .shell-frame[data-workspace-view="Code"] [aria-label="Review queue"] button {
+    height: 44px;
+    max-width: 100%;
+  }
+  .shell-frame[data-workspace-view="Code"] [aria-label="Settings"] {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .code-shell {
+    flex-direction: column;
+    min-width: 0;
+  }
+  .code-shell > .left-rail {
+    width: 100%;
+    flex-direction: row;
+    padding: 4px 16px;
+    border-right: 0;
+    border-bottom: 1px solid var(--divider);
+  }
+  .code-shell .rail-button,
+  .code-shell .shell-sidebar button,
+  .code-shell .focus-tabs button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .code-shell > .shell-sidebar {
+    width: 100%;
+    max-height: 30%;
+    border-right: 0;
+    border-bottom: 1px solid var(--divider);
+  }
+  .code-shell .code-empty,
+  .code-shell > .shell-sidebar > header,
+  .code-shell .shell-sidebar p {
+    padding-inline: 16px;
+  }
+  .code-shell .dock-header {
+    height: 44px;
+  }
+  .code-shell .dock-header button {
+    min-width: 44px;
+    min-height: 44px;
+    padding-inline: 16px;
+  }
+  .code-shell .files-tree-row {
+    min-height: 44px;
+    font-size: var(--body-size);
+  }
+  .code-shell .shell-center {
+    min-height: 0;
+  }
+  .code-shell .focus-tabs {
+    height: 44px;
+  }
+  .code-shell .focus-tab {
+    font-size: var(--body-size);
+  }
+  .code-shell .focus-body,
+  .code-shell .focus-body > aside {
+    min-width: 0;
+    overflow: auto;
+  }
+  .code-shell [aria-label="File view"] > header {
+    flex-wrap: wrap;
+    padding-inline: 16px;
+  }
+  .code-shell [aria-label="File view"] > header button,
+  .workspace-settings select {
+    min-height: 44px;
+  }
+  .code-shell > .agents-rail {
+    width: 100%;
+    max-height: 52px;
+    flex-direction: row;
+    overflow-x: auto;
+    border-top: 1px solid var(--divider);
+    padding: 4px 16px;
+  }
+  .code-shell .agents-rail-tile {
+    width: auto;
+    flex-direction: row;
+  }
+  .shell-frame[data-workspace-view="Code"] .status-line {
+    height: 44px;
+    min-width: 0;
+    gap: 8px;
+    padding-inline: 16px;
+  }
+  .shell-frame[data-workspace-view="Code"] .status-line > :not(:first-child, button) {
+    display: none;
+  }
+  .shell-frame[data-workspace-view="Code"] .status-line > span:first-child {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .shell-frame[data-workspace-view="Code"] .status-line button {
+    min-height: 44px;
+    flex-shrink: 0;
+  }
+  .shell-frame[data-workspace-view="Code"] .status-line kbd {
+    display: none;
+  }
+  .code-shell .bottom-dock {
+    max-height: 35%;
+    overflow: auto;
+  }
+}
+/* At 200% zoom or a short window, scroll the workspace before squeezing away the editor. */
+@media (width < 768px) and (height <= 600px) {
+  .code-shell {
+    overflow-y: auto;
+  }
+  .code-shell .shell-center {
+    min-height: 400px;
+  }
+  .code-shell > .agents-rail {
+    flex-shrink: 0;
+  }
+}

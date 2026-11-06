@@ -15,6 +15,7 @@ import type { FrameProps } from "../Frame";
 import { UsageMount } from "../usage/UsageMount";
 import { LivePanel } from "./LivePanel";
 import { ChatMergeChip, ChatMergeReceipt, isRulesMerge, resolvedReviewAction } from "./ChatMerge";
+import type { StartupView } from "./workspacePreferences";
 import { focusRing } from "./shared";
 import { ChatReview } from "./ChatReview";
 import { ChatChangeCard } from "./ChatChangeCard";
@@ -151,6 +152,11 @@ export function FocusPanel(
     WorkflowNavigation & {
       startAgentAction: ReactNode;
       chat?: boolean;
+      code?: boolean;
+      hidden?: boolean;
+      onOpenFiles?: () => void;
+      startupView?: StartupView;
+      onStartupView?: (view: StartupView) => void;
       composerDisclosure?: ReactNode;
       onGraph?: (changeId: string) => void;
       practiceOnly?: boolean;
@@ -179,8 +185,8 @@ export function FocusPanel(
     <section
       className="focus-panel"
       aria-label="Focus panel"
-      hidden={props.workflowCovered}
-      inert={props.workflowCovered}
+      hidden={props.workflowCovered || props.hidden}
+      inert={props.workflowCovered || props.hidden}
     >
       <div
         className="focus-tabs"
@@ -259,15 +265,17 @@ export function FocusPanel(
             );
           })}
         </div>
-        <button
-          type="button"
-          aria-label={props.maximized ? "Show graph" : "Maximize focus panel"}
-          title={props.maximized ? "Show graph" : "Maximize focus panel"}
-          onClick={props.onMaximize}
-          className={`px-3 text-muted ${focusRing}`}
-        >
-          <Icon aria-hidden="true" className="size-4" />
-        </button>
+        {!props.code && (
+          <button
+            type="button"
+            aria-label={props.maximized ? "Show graph" : "Maximize focus panel"}
+            title={props.maximized ? "Show graph" : "Maximize focus panel"}
+            onClick={props.onMaximize}
+            className={`px-3 text-muted ${focusRing}`}
+          >
+            <Icon aria-hidden="true" className="size-4" />
+          </button>
+        )}
       </div>
       <div id="focus-content" role="tabpanel" className="focus-body">
         {view.activeTab === "usage" ? (
@@ -280,6 +288,8 @@ export function FocusPanel(
           <LazyPanel key="settings" frame={<SettingsFrame />}>
             <SettingsPanel
               state={state}
+              startupView={props.startupView}
+              onStartupView={props.onStartupView}
               attempt={props.mergeModeAttempt}
               onSetMergeMode={props.onSetMergeMode}
             />
@@ -321,6 +331,14 @@ export function FocusPanel(
             commit={state.graph?.commit ?? ""}
             onClose={onClosePanel}
           />
+        ) : props.code ? (
+          <div className="code-empty">
+            <h1>Open a file to start coding</h1>
+            <p>Files, live diffs and reviews share this workspace.</p>
+            <button type="button" onClick={props.onOpenFiles} className={focusRing}>
+              Browse files
+            </button>
+          </div>
         ) : null}
       </div>
     </section>

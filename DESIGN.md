@@ -643,8 +643,11 @@ code inside a panel stays Mono.
 
 ## Layout
 
-One shell, with zones and docks. The graph stays visible beside the active focus tab, except
-when the person explicitly maximizes that panel. The [v4 sketches](docs/sketches/v4/) show the
+One shell has three layout presets: **Chat · Code · Oversight**, with shared tabs, models,
+session and unsaved buffers. Chat puts conversation first; Code puts files, diffs and review
+across the available focus width, with Files on the left and a folded agents rail even with no
+open tab. Oversight keeps the graph beside the active focus tab, except when the person
+explicitly maximizes that panel. The [v4 sketches](docs/sketches/v4/) show the
 1920x1080 recording frame; these are CSS pixels, not a requirement to show every zone at once.
 
 | Zone | Size at 1920x1080 | Contents |
@@ -670,6 +673,15 @@ below 1280px and during practice. At overlay widths it subtracts the agents pane
 leaving the existing graph owner and framing rules intact. Neutral replay paint and control
 gradients belong to theme tokens; control boundaries use control-edge and focus uses text.
 
+- **Workspace view:** the top-bar group has one Tab stop. Left/Right wrap; Home/End move to
+  the ends. Enter/Space activate the focused choice and retain focus there; editors never
+  autofocus. Code has no visible or interactive graph. Chat and Code defer the graph until
+  the first Oversight entry, then retain the same hidden, inert instance when leaving.
+- **Opening:** default to Last used, with Chat on first run. Settings offers Last used, Chat,
+  Code and Oversight for the next opening. Last view, startup choice and Oversight maximize
+  are browser-local, versioned and deployment-base scoped; denied/corrupt storage falls back
+  safely. Only these preferences persist, never documents or credentials. Code's full width
+  does not change Oversight maximize. Explicit browser fixture overrides remain deterministic.
 - **Watch:** the focus panel is closed, leaving the graph beside the agents panel.
 - **Focus:** opening any focus tab folds the agents panel into its rail. Up to six tabs open by
   navigation; the active tab frames its subject on the graph. Its 2px top line takes agent-a,
@@ -682,13 +694,15 @@ gradients belong to theme tokens; control boundaries use control-edge and focus 
   and the graph keeps its 560px minimum. The focus panel takes
   `min(880px, available center width - 560px)`. When the expanded agents panel covers the graph,
   the graph's overlays and every camera framing end 24px from the panel's edge, so no control or
-  frame sits under it. Below 1280px a notice asks the person to widen the window. Type and radii
+  frame sits under it. Below 1280px Oversight shows a notice asking the person to widen the window. Type and radii
   do not shrink to fit. The two-change practice uses the exception in **Phone width** below.
   Target, not built yet: the sidebar becomes an overlay first below 1832px, and below 1552px the
   focus panel shrinks to `min(880px, viewport width - 112px - 560px)`: 823px at 1495px and
   608px at 1280px. Overlays cover their part without changing these target widths.
 - **Maximize:** an explicit focus-panel control fills the work area and hides the graph behind a
-  restore-graph button. Restoring returns to the same shell; maximize is not used in the video.
+  restore-graph button. Oversight maximize is remembered across openings and view changes.
+  Code always fills its focus area independently; it has no maximize control. Restoring returns
+  to the same shell; maximize is not used in the video.
 - **Keyboard:** Ctrl K jumps to functions and files and runs commands; Ctrl B toggles the sidebar;
   Ctrl backtick toggles the bottom dock; Alt+W or Esc closes the active focus tab; Esc also
   dismisses the current overlay. Shell shortcuts pause while typing; Esc in the review comment
@@ -747,7 +761,14 @@ gradients belong to theme tokens; control boundaries use control-edge and focus 
 
 ### Phone width
 
-- The submission practice supports widths below 1280px; the full IDE keeps its widen-window notice.
+- Code supports a single-column file workspace at 390×844: a wrapping header retains the view
+  selector, decisions and Settings; Files is a disclosure above the editor with a bounded,
+  scrolling tree. Tabs scroll horizontally; the agents rail folds to a horizontal state strip;
+  Dock stays reachable from the status line. Use 16px gutters and at least 44px phone targets,
+  with normal readable type. Shell width never grows to fit editor content.
+  At narrow heights up to 600px (including desktop zoom), the workspace scrolls vertically
+  around a minimum 400px center so long filenames and controls cannot squeeze away the editor.
+- The submission practice supports widths below 1280px; Oversight keeps its widen-window notice.
 - The approved review states f and f-b govern phone practice. Their full layout and copy are
   specified under "Phone, f and f-b" in Review panel with the matte header below.
 - Stack the top bar, one provenance strip, 168px graph context, scrolling evidence and decision

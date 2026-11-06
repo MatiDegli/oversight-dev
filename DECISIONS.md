@@ -5732,3 +5732,35 @@ After merging caller extras, `child_env` removes names case-insensitively when t
 This closes the extras bypass and keeps a future per-launch backend credential out of test,
 preview and shop environments; existing callers need no matching names. It does not defend
 against code reading files or process memory as the same user; isolation is a later front.
+
+
+## 2026-11-06 — Code joins Chat and Oversight; reopen the last workspace view
+
+The maintainer approved option C, named **Code**, and opening the last view used:
+“Si, vamos con C, nombre "Code", vista al abrir: la ultima que usaste.” The dispatch supplies
+this approval; the referenced inputs/approval.md is not part of the development worktree.
+
+One shell offers Chat · Code · Oversight. Code gives the existing file/diff/review focus panel
+all available center width, Files, the bottom dock and folded agents, including the empty state.
+The graph stays deferred until Oversight is entered, and retained hidden/inert afterward. Shared
+App-owned tabs, drafts and session stay above composition; switching presets retains the mounted
+editor and never focuses it. Oversight's maximize preference is independent of Code's width.
+The infinite canvas plan remains a separate front.
+
+Criteria, in order:
+1. Comfortable return to the person's workspace: Last used is the default, Chat on first run;
+   remembered Oversight maximize restores the chosen supervision workspace.
+2. Uninterrupted movement for the maintainer and agents: conversation, coding and supervision
+   share navigation, editor state and the current session without a reload or focus theft.
+3. Person-controlled startup: Settings offers Last used, Chat, Code and Oversight, effective on
+   next opening. A small browser-local adapter isolates these preferences for M6's settings file.
+
+The versioned oversight.workspace namespace includes the normalized deployment base, avoiding
+collisions between a root and subpath deployment on one origin. Invalid/unreadable values use
+safe defaults; failed writes leave the current in-memory choice usable. No buffer, credential,
+execution grant, contract or event is stored by this preference adapter. Fixtures explicitly
+selecting an initial view ignore persisted startup/maximize and do not write preferences.
+
+DESIGN.md remains visual authority. Installed Impeccable 4.5.2 shape/layout references informed
+the composition; the approved dispatch resolves shape's confirmation step and the explicit
+single-session instruction replaces layout's optional parallel assessments with in-session review.

@@ -2,9 +2,15 @@ import { createContext, useContext, useEffect, useState } from "react";
 // eslint-disable-next-line no-restricted-imports -- Signal eligibility without loading the editor implementation.
 import { allowEditorWithoutGraph } from "../../editor/loader";
 
-export type ShellLayout = "Chat" | "Oversight";
-/** Chat opens first in production; fixtures may explicitly choose either view. */
-export const InitialShellLayout = createContext<ShellLayout>("Chat");
+import {
+  readWorkspacePreferences,
+  writeWorkspacePreference,
+  type ShellLayout,
+  type StartupView,
+} from "./workspacePreferences";
+export type { ShellLayout } from "./workspacePreferences";
+/** Explicit fixture overrides ignore persisted startup/maximize and never write preferences. */
+export const InitialShellLayout = createContext<ShellLayout | undefined>(undefined);
 
 /** Includes Monaco's hidden input and native edit context, not just ordinary fields. */
 export function isTyping(target: EventTarget | null): boolean {
@@ -22,12 +28,20 @@ export function isEditableMonaco(target: EventTarget | null): boolean {
 }
 
 export function useShell(hasPanel: boolean, onClose: () => void, hiddenChatPanel = false) {
-  const [layout, setLayout] = useState(useContext(InitialShellLayout));
+  const initial = useContext(InitialShellLayout);
+  const [preferences] = useState(readWorkspacePreferences);
+  const [startupView, setStartupView] = useState<StartupView>(preferences.startup);
+  const [layout, setLayout] = useState<ShellLayout>(
+    initial ?? (preferences.startup === "last-used" ? preferences.lastView : preferences.startup),
+  );
+  useEffect(() => {
+    if (initial === undefined) writeWorkspacePreference("lastView", layout);
+  }, [initial, layout]);
   // Hidden Chat tabs remain available, but only a visible panel can be closed by a shortcut.
   const open = hasPanel && (layout !== "Chat" || !hiddenChatPanel);
   const [oversightVisited, setOversightVisited] = useState(layout === "Oversight");
   useEffect(() => {
-    if (layout === "Chat" && !oversightVisited) allowEditorWithoutGraph();
+    if (layout !== "Oversight" && !oversightVisited) allowEditorWithoutGraph();
   }, [layout, oversightVisited]);
   const [layoutRevision, setLayoutRevision] = useState(0);
   useEffect(() => {
@@ -39,10 +53,16 @@ export function useShell(hasPanel: boolean, onClose: () => void, hiddenChatPanel
       window.removeEventListener("resize", resized);
     };
   }, []);
-  const [sidebar, setSidebar] = useState<"Files" | "Changes" | null>(null);
+  const [otherSidebar, setOtherSidebar] = useState<"Files" | "Changes" | null>(null);
+  const [codeSidebar, setCodeSidebar] = useState<"Files" | "Changes" | null>("Files");
+  const sidebar = layout === "Code" ? codeSidebar : otherSidebar;
+  const setSidebar = layout === "Code" ? setCodeSidebar : setOtherSidebar;
   const [dock, setDock] = useState(false);
   const [shortcuts, setShortcuts] = useState(false);
-  const [maximized, setMaximized] = useState(false);
+  const [maximized, setMaximized] = useState(initial === undefined && preferences.maximized);
+  useEffect(() => {
+    if (initial === undefined) writeWorkspacePreference("maximized", maximized);
+  }, [initial, maximized]);
   const [palette, setPalette] = useState<{ returnFocus: HTMLElement | null } | null>(null);
   const openPalette = () => {
     const returnFocus =
@@ -107,7 +127,7 @@ export function useShell(hasPanel: boolean, onClose: () => void, hiddenChatPanel
     return () => {
       window.removeEventListener("keydown", onKey);
     };
-  }, [open, onClose, shortcuts, palette]);
+  }, [open, onClose, shortcuts, palette, setSidebar]);
   return {
     panelOpen: open,
     layout,
@@ -121,6 +141,11 @@ export function useShell(hasPanel: boolean, onClose: () => void, hiddenChatPanel
     dock,
     shortcuts,
     maximized,
+    startupView,
+    chooseStartupView: (choice: StartupView) => {
+      setStartupView(choice);
+      if (initial === undefined) writeWorkspacePreference("startup", choice);
+    },
     palette,
     openPalette,
     closePalette: () => {

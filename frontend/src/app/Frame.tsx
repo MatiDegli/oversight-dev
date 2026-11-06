@@ -41,6 +41,7 @@ import { useChatReviewNavigation } from "./chatReviewNavigation";
 import { PaletteMount } from "./palette/PaletteMount";
 import "./shell/shell.css";
 import "./shell/chatShell.css";
+import "./shell/codeShell.css";
 import "./shell/settings.css";
 import "./shell/life.css";
 import "./shell/motion.css";
@@ -254,6 +255,7 @@ export function Frame(input: FrameProps) {
       : `${shell.sidebar ?? ""}:${String(shell.dock)}:${String(shell.maximized)}:${String(task.expanded)}:${String(shell.layoutRevision)}`;
   return (
     <div
+      data-workspace-view={shell.layout}
       data-settings-open={view.activeTab === "settings" || undefined}
       className={`shell-frame flex h-full flex-col bg-background text-text ${phone ? "practice-phone" : ""}`}
     >
@@ -293,6 +295,7 @@ export function Frame(input: FrameProps) {
           state={props.chatState ?? state}
           readOnly={Boolean(props.historySession)}
           active={shell.layout === "Chat"}
+          code={shell.layout === "Code"}
           selectedAgentId={
             !open || showNewLead
               ? undefined
@@ -331,7 +334,7 @@ export function Frame(input: FrameProps) {
             )
           }
           agents={
-            open && !task.expanded ? (
+            shell.layout === "Code" || (open && !task.expanded) ? (
               <AgentsRail state={state} />
             ) : (
               <AgentsPanel {...props} mergeLabels={arrival.labels} inputRef={task.inputRef} />
@@ -339,14 +342,23 @@ export function Frame(input: FrameProps) {
           }
         >
           <div
-            className={`shell-center ${shell.maximized && open && !workflowOpen ? "is-maximized" : ""}`}
+            className={`shell-center ${shell.layout === "Oversight" && shell.maximized && open && !workflowOpen ? "is-maximized" : ""}`}
           >
-            <div className={`shell-stage ${workflowOpen ? "has-workflow" : ""}`}>
-              {open && (
+            <div
+              className={`shell-stage ${workflowOpen ? "has-workflow" : ""} ${shell.layout === "Chat" && !open ? "has-hidden-focus" : ""}`}
+            >
+              {(panelOpen(view) || shell.layout === "Code") && (
                 <FocusPanel
                   {...props}
                   view={view}
                   chat={shell.layout === "Chat"}
+                  code={shell.layout === "Code"}
+                  hidden={shell.layout === "Chat" && !open}
+                  onOpenFiles={() => {
+                    if (shell.sidebar !== "Files") shell.openSidebar("Files");
+                  }}
+                  startupView={shell.startupView}
+                  onStartupView={shell.chooseStartupView}
                   composerDisclosure={composerDisclosure}
                   onGraph={chatReview.onGraph}
                   onViewHighlight={(ids, key) => {
@@ -417,8 +429,8 @@ export function Frame(input: FrameProps) {
               )}
               <div
                 className="oversight-stage"
-                hidden={shell.layout === "Chat"}
-                inert={shell.layout === "Chat"}
+                hidden={shell.layout !== "Oversight"}
+                inert={shell.layout !== "Oversight"}
               >
                 {shell.oversightVisited && (
                   <LazyPanel frame={<GraphLoadingFrame />}>

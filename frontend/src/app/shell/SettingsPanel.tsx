@@ -14,6 +14,12 @@ import { previewStartup } from "../preview/previewStartup";
 import { mergeModePending, type MergeModeAttempt } from "./mergeModeAttempt";
 import { EditableSettings } from "./EditableSettings";
 import { SettingsFrame } from "./SettingsFrame";
+import {
+  readWorkspacePreferences,
+  writeWorkspacePreference,
+  shellLayouts,
+  type StartupView,
+} from "./workspacePreferences";
 import { focusRing } from "./shared";
 
 const choices: readonly [MergeMode, string, string][] = [
@@ -29,8 +35,12 @@ export function SettingsPanel({
   state,
   attempt,
   onSetMergeMode,
+  startupView,
+  onStartupView,
 }: {
   state: State;
+  startupView?: StartupView;
+  onStartupView?: (view: StartupView) => void;
   attempt?: MergeModeAttempt;
   onSetMergeMode?: (mode: MergeMode) => void;
 }) {
@@ -88,6 +98,7 @@ export function SettingsPanel({
       )}
       <EditableSettings live={Boolean(onSetMergeMode)} workspace={state.run?.workspace} />
       <PreviewStartupPanel result={previewStartup()} headingId="settings-preview-startup-heading" />
+      <WorkspaceSettings value={startupView} onChange={onStartupView} />
       <AppearanceSettings />
     </SettingsFrame>
   );
@@ -157,6 +168,50 @@ export function AppearanceSettings() {
           The graph and open code views pick up the new colors when Oversight reloads.
         </p>
       )}
+    </section>
+  );
+}
+
+/** Local layout choices stay separate from server-owned execution settings. */
+function WorkspaceSettings({
+  value,
+  onChange,
+}: {
+  value?: StartupView;
+  onChange?: (view: StartupView) => void;
+}) {
+  const id = useId();
+  const [local, setLocal] = useState(() => readWorkspacePreferences().startup);
+  return (
+    <section aria-labelledby={`${id}-workspace`} className="workspace-settings mt-8 min-w-0">
+      <h2 id={`${id}-workspace`} className="text-(length:--title-size) font-bold">
+        Workspace
+      </h2>
+      <label htmlFor={`${id}-startup`} className="mt-4 block text-sm font-bold">
+        View on opening
+      </label>
+      <select
+        id={`${id}-startup`}
+        value={value ?? local}
+        className={`mt-2 rounded-control border border-outline bg-page px-3 py-2 text-sm ${focusRing}`}
+        onChange={(event) => {
+          const choice = event.currentTarget.value as StartupView;
+          setLocal(choice);
+          if (onChange) onChange(choice);
+          else writeWorkspacePreference("startup", choice);
+        }}
+      >
+        <option value="last-used">Last used</option>
+        {shellLayouts.map((layout) => (
+          <option key={layout} value={layout}>
+            {layout}
+          </option>
+        ))}
+      </select>
+      <p className="mt-2 text-sm text-muted">
+        Applies next time you open Oversight. Kept in this browser, along with the last view and
+        Oversight maximize.
+      </p>
     </section>
   );
 }

@@ -124,8 +124,8 @@ it.each<PreviewStartupResult>([
   expect(previewStartup).toHaveBeenCalledExactlyOnceWith();
   expect(html).toContain('aria-labelledby="settings-preview-startup-heading"');
   expect(html.match(/id="settings-preview-startup-heading"/gu)).toHaveLength(1);
-  // Merge mode, Repository, Models, Limits, Preview startup and the client-side Appearance.
-  expect(html.match(/<h2\b/gu)).toHaveLength(6);
+  // Merge mode, Repository, Models, Limits, Preview startup, Workspace and Appearance.
+  expect(html.match(/<h2\b/gu)).toHaveLength(7);
   expect(html).not.toContain(">Settings</h2>");
   expect(html.indexOf("Preview startup")).toBeGreaterThan(
     html.indexOf("Setting the merge mode is not available in a replay."),

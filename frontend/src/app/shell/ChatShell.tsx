@@ -99,6 +99,7 @@ export function ChatWorkFrame({ children }: { children?: ReactNode }) {
 export function ChatShell({
   state,
   active,
+  code,
   rail,
   sidebar,
   agents,
@@ -114,13 +115,14 @@ export function ChatShell({
     children: ReactNode;
     state: State;
     active: boolean;
+    code?: boolean;
     rail: ReactNode;
     sidebar: ReactNode;
     agents: ReactNode;
     previewSlot?: ChatPreviewSlot;
   }) {
   return (
-    <div className={`shell-workspace ${active ? "chat-shell" : ""}`}>
+    <div className={`shell-workspace ${active ? "chat-shell" : code ? "code-shell" : ""}`}>
       {rail}
       {sidebar}
       {active && (

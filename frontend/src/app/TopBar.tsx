@@ -1,4 +1,15 @@
-import { Folder, GitBranch, MessagesSquare, Network, Search, Settings, Timer } from "lucide-react";
+import {
+  Code2,
+  Folder,
+  GitBranch,
+  MessagesSquare,
+  Network,
+  Search,
+  Settings,
+  Timer,
+} from "lucide-react";
+
+import { shellLayouts } from "./shell/workspacePreferences";
 
 import { selectDecisionInboxCount } from "../state";
 import type { State } from "../state";
@@ -82,13 +93,42 @@ export function TopBar({
       )}
       {onLayout && (
         <div role="group" aria-label="Workspace view" className="view-switch">
-          {(["Chat", "Oversight"] as const).map((choice) => {
-            const Icon = choice === "Chat" ? MessagesSquare : Network;
+          {shellLayouts.map((choice) => {
+            const Icon = choice === "Chat" ? MessagesSquare : choice === "Code" ? Code2 : Network;
             return (
               <button
                 type="button"
                 key={choice}
                 aria-pressed={layout === choice}
+                tabIndex={layout === choice ? 0 : -1}
+                onFocus={(event) => {
+                  for (const button of event.currentTarget.parentElement?.querySelectorAll(
+                    "button",
+                  ) ?? [])
+                    button.tabIndex = button === event.currentTarget ? 0 : -1;
+                }}
+                onBlur={(event) => {
+                  const group = event.currentTarget.parentElement;
+                  if (!group?.contains(event.relatedTarget))
+                    for (const button of group?.querySelectorAll("button") ?? [])
+                      button.tabIndex = button.getAttribute("aria-pressed") === "true" ? 0 : -1;
+                }}
+                onKeyDown={(event) => {
+                  const index = shellLayouts.indexOf(choice);
+                  const next =
+                    event.key === "Home"
+                      ? 0
+                      : event.key === "End"
+                        ? 2
+                        : event.key === "ArrowRight"
+                          ? (index + 1) % 3
+                          : event.key === "ArrowLeft"
+                            ? (index + 2) % 3
+                            : null;
+                  if (next === null || event.altKey || event.ctrlKey || event.metaKey) return;
+                  event.preventDefault();
+                  event.currentTarget.parentElement?.querySelectorAll("button")[next]?.focus();
+                }}
                 onClick={() => {
                   onLayout(choice);
                 }}
