@@ -1,12 +1,28 @@
 import type { Core, CytoscapeOptions } from "cytoscape";
 import { afterEach, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({
-  effects: [] as (() => undefined | (() => void))[],
-  instances: [] as Core[],
-  refs: [] as { current: unknown }[],
-  refIndex: 0,
-}));
+const mocks = vi.hoisted(() => {
+  let solverStarted = () => {};
+  const importingSolver = new Promise<void>((resolve) => {
+    solverStarted = resolve;
+  });
+  return {
+    effects: [] as (() => undefined | (() => void))[],
+    instances: [] as Core[],
+    refs: [] as { current: unknown }[],
+    refIndex: 0,
+    releaseSolver: () => {},
+    solverStarted,
+    importingSolver,
+  };
+});
+vi.mock("cytoscape-fcose", async (importOriginal) => {
+  await new Promise<void>((resolve) => {
+    mocks.releaseSolver = resolve;
+    mocks.solverStarted();
+  });
+  return importOriginal();
+});
 vi.mock("react", () => ({
   // The container ref (null) stands in as a host; other refs keep their initial value.
   useRef: (...initial: unknown[]) => {
@@ -49,6 +65,7 @@ import { themes } from "../theme";
 const theme = themes.dark;
 
 import * as camera from "./camera";
+import * as layout from "./mapController";
 
 import { frames, paint, setLabel, setupGraphView } from "./GraphView.support";
 
@@ -69,6 +86,53 @@ afterEach(() => {
 
 const { mount, rerender } = setupGraphView(mocks, (value) => {
   cleanup = value;
+});
+
+it("retries the initial layout on show when fcose finishes importing in Chat", async () => {
+  const prepare = layout.prepareGraphLayout;
+  let retryFinished = () => {};
+  const retried = new Promise<void>((resolve) => {
+    retryFinished = resolve;
+  });
+  vi.spyOn(layout, "prepareGraphLayout").mockImplementation((cy, elements, retry) =>
+    prepare(cy, elements, (fallback) => {
+      retry(fallback);
+      retryFinished();
+    }),
+  );
+  setLabel("Unplaced");
+  stateStore.setState(({ state }) => ({
+    state: { ...state, graph: state.graph && { ...state.graph, positions: {} } },
+  }));
+  const { settle } = mount();
+  let hidden = false;
+  let visibilityChanged = () => {};
+  const stage = { getAttribute: () => String(hidden) };
+  Object.assign(mocks.refs[1]?.current ?? {}, { closest: () => stage });
+  vi.stubGlobal(
+    "MutationObserver",
+    class {
+      constructor(changed: () => void) {
+        visibilityChanged = changed;
+      }
+      observe() {}
+      disconnect() {}
+    },
+  );
+  await settle("resolved");
+  const cy = mocks.instances[0];
+  if (!cy) throw new Error("Missing graph");
+  expect(cy.nodes()).toHaveLength(0);
+  hidden = true;
+  visibilityChanged();
+  // Let the import factory start without waiting for the deferred chunk to resolve.
+  await mocks.importingSolver;
+  mocks.releaseSolver();
+  await retried;
+  expect(cy.nodes()).toHaveLength(0);
+  hidden = false;
+  visibilityChanged();
+  expect(cy.getElementById("billing:fee").data("label")).toBe("Unplaced");
 });
 
 it("synchronizes graph updates and ignores transport-only publications", async () => {

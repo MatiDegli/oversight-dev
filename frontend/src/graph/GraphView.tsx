@@ -456,7 +456,7 @@ export function GraphView({
         resize: () => cy.resize(),
       });
       const retrySync = (fallback?: GraphElement[]) => {
-        if (!visibility.visible()) updates.publish();
+        if (!visibility.visible()) updates.publish(true);
         else sync(fallback);
       };
       resync.current = () => {
