@@ -21,3 +21,4 @@ its "Built during the hackathon" section.
 - Hardened four load-sensitive tests and corrected dot-field test measurements and thresholds.
 - Gave the Vite development server the backend's preview port pool, with launcher and
   configuration regression coverage.
+- Masked tested-tree secrets in model observations, test events and reviewer inputs while preserving Git hashes.
