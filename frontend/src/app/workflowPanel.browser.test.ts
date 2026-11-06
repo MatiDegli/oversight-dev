@@ -268,7 +268,53 @@ it("traverses Close, all numbered steps and eligible detail actions with native 
   }
 });
 
-it("never opens, replaces, scrolls or focuses on arrival; missing selection falls back to Close", async () => {
+it.each(["step", "view", "external", "body"])(
+  "preserves actual %s focus when another selected step disappears (synthetic events)",
+  async (target) => {
+    const page = await open({ scene: "large" });
+    try {
+      await page.getByRole("button", { name: "Open workflow", exact: true }).click();
+      await steps(page).nth(3).click();
+      await check(steps(page).nth(3)).toHaveAttribute("aria-pressed", "true");
+      if (target === "external")
+        await page.evaluate(() => {
+          const input = document.createElement("input");
+          input.setAttribute("aria-label", "External control");
+          document.body.append(input);
+        });
+      const control =
+        target === "step"
+          ? steps(page).nth(0)
+          : target === "view"
+            ? panel(page).getByRole("button", { name: "Merge queue", exact: true })
+            : page.locator(target === "body" ? "body" : '[aria-label="External control"]');
+      if (target === "body")
+        await steps(page)
+          .nth(3)
+          .evaluate((node) => {
+            node.blur();
+          });
+      else await control.focus();
+      const focused = await control.elementHandle();
+      expect(await focused.evaluate((node) => document.activeElement === node)).toBe(true);
+      await page.evaluate(() => {
+        window.workflowTest.removeSelected();
+      });
+      await check(steps(page)).toHaveCount(2);
+      await check(panel(page).getByText("Select a step to see its evidence.")).toBeVisible();
+      await check(panel(page).getByRole("button", { pressed: true })).toHaveText([
+        "Dependency canvas",
+      ]);
+      expect(
+        await focused.evaluate((node) => node.isConnected && document.activeElement === node),
+      ).toBe(true);
+    } finally {
+      await page.close();
+    }
+  },
+);
+
+it("never opens, replaces, scrolls or focuses on arrival; removed focused control falls back to Close", async () => {
   const page = await open({ scene: "large" });
   try {
     const launcher = page.getByRole("button", { name: "Open workflow", exact: true });
@@ -306,6 +352,7 @@ it("never opens, replaces, scrolls or focuses on arrival; missing selection fall
       window.workflowTest.removeSelected();
     });
     await check(steps(page)).toHaveCount(2);
+    expect(await selected.evaluate((node) => node.isConnected)).toBe(false);
     await check(panel(page).getByText("Select a step to see its evidence.")).toBeVisible();
     await check(panel(page).getByRole("button", { name: "Close", exact: true })).toBeFocused();
     await check(panel(page).getByRole("button", { pressed: true })).toHaveText([

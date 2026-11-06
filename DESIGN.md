@@ -981,7 +981,7 @@ proposal/status eligibility and navigation, with no mutation controls. Keyboard 
 numbered steps, then detail actions. Enter/Space select; Escape or Close restores launcher focus.
 Person navigation to a focus tab or Watch closes the workflow and reveals that destination.
 Updates preserve focus; a disappearing selected step clears selection. It focuses Close only when
-focus is inside the workflow, or has fallen to the document body because its focused control was
+focus has fallen to the document body because its focused workflow control was
 removed. Focus in the conversation, replay controls or any other surface stays there.
 A focused Review change that loses eligibility stays inert until focus leaves, then disappears.
 
