@@ -1,8 +1,6 @@
 import type { LeadStatus } from "@contracts";
 import { compare } from "./chatLeadShots.support";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { mkdir, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { expect as check, type Browser, type Page } from "@playwright/test";
 import { createServer, type ViteDevServer } from "vite";
@@ -14,7 +12,9 @@ let server: ViteDevServer, browser: Browser, html: string, url: string;
 beforeAll(async () => {
   server = await createServer({
     root: fileURLToPath(new URL("../../", import.meta.url)),
-    cacheDir: await mkdtemp(join(tmpdir(), "chat-leads-vite-")),
+    cacheDir: fileURLToPath(
+      new URL("../../node_modules/.vite-browser-tests/chat-leads", import.meta.url),
+    ),
     server: { host: "127.0.0.1", port: 0, strictPort: false },
   });
   html = await server.transformIndexHtml(

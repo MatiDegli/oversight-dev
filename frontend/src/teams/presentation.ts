@@ -99,7 +99,12 @@ function allocate(state: State, identities: ReturnType<typeof selectTeams>) {
         : "agent_id" in event.payload
           ? event.payload.agent_id
           : null;
-    const identity = id ? identities.byAgent[id] : undefined;
+    const identity =
+      event.type === "plan.updated"
+        ? identities.byPlan[event.payload.plan_id]
+        : id
+          ? identities.byAgent[id]
+          : undefined;
     if (!identity) continue;
     introduce(identity.team);
     const team = teams.get(identity.team);
@@ -222,6 +227,26 @@ function buildPresentation(state: State) {
   }
   return Object.freeze({
     byAgent: Object.freeze(byAgent),
+    byPlan: Object.freeze(
+      Object.fromEntries(
+        Object.entries(identities.byPlan).map(([id, identity]) => {
+          const order = identities.teamOrder.indexOf(identity.team);
+          const hue = teams.get(identity.team)?.hue;
+          return [
+            id,
+            hue
+              ? Object.freeze({
+                  ...identity,
+                  letter: teamLetter(order),
+                  hue,
+                  family: agentLook[hue].family,
+                  order,
+                })
+              : undefined,
+          ];
+        }),
+      ),
+    ),
     teamOrder: identities.teamOrder,
   });
 }
@@ -239,5 +264,10 @@ export function presentationFor(state: State, agentId: string | null | undefined
   return agentId ? selectPresentation(state).byAgent[agentId] : undefined;
 }
 
-export const presentationStyle = (identity: AgentPresentation | undefined) =>
+export const presentationStyle = (identity: Pick<AgentPresentation, "hue"> | undefined) =>
   agentSlotStyle(identity?.hue);
+
+/** Plan ownership is available even before an agent is assigned or reports status. */
+export function presentationForPlan(state: State, planId: string) {
+  return selectPresentation(state).byPlan[planId];
+}

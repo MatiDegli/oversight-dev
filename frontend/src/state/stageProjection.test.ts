@@ -15,18 +15,21 @@ it.each(["2026-10-29T15:01:00.000Z", "2026-10-27T14:03:26.605Z"])(
     const tick = events.find((event) => event.type === "usage.tick");
     if (!tick) throw new Error("Missing usage tick");
     let state = before;
+    const inventory = events.slice(0, 21);
     for (let n = 0; n < 3; n++) {
-      state = applyEvent(state, { ...tick, seq: state.lastSeq + 1, ts });
+      const event = { ...tick, seq: state.lastSeq + 1, ts };
+      inventory.push(event);
+      state = applyEvent(state, event);
       expect(state.changes).toBe(before.changes);
       expect(state.changeFacts).toBe(before.changeFacts);
       expect(state.graph).toBe(before.graph);
       expect(state.agents).toBe(before.agents);
       expect(state.decisionEvents).toBe(before.decisionEvents);
       expect(state.clock).toBe(ts);
-      expect(state.stageEvents.at(-1)?.seq).toBe(state.lastSeq);
-      expect(state.changeStages["change-1"]).toEqual(foldStages(state.stageEvents, "change-1"));
+      expect(state.stageHorizon?.seq).toBe(state.lastSeq);
+      expect(state.changeStages["change-1"]).toEqual(foldStages(inventory, "change-1"));
     }
-    expect(before.stageEvents).toHaveLength(21);
+    expect(before.stageHorizon?.seq).toBe(21);
   },
 );
 
@@ -46,12 +49,12 @@ it("retains closed stage identities on unrelated ticks and clears them on a new 
   expect(after.changes).toBe(before.changes);
   const gap = applyEvent(after, { ...tick, seq: after.lastSeq + 2 });
   expect(gap.changeStages).toBe(after.changeStages);
-  expect(gap.stageEvents).toBe(after.stageEvents);
+  expect(gap.stageAcc).toBe(after.stageAcc);
   const restarted = applyEvent(after, {
     ...start,
     payload: { ...start.payload, run_id: "another-run" },
   });
   expect(restarted.changeStages).toEqual({});
   expect(restarted.changes).toEqual({});
-  expect(before.changeStages["change-1"]).toEqual(foldStages(before.stageEvents, "change-1"));
+  expect(before.changeStages["change-1"]).toEqual(foldStages(completed.slice(0, 19), "change-1"));
 });

@@ -11,8 +11,11 @@ import {
 import { ArrowLeft, X } from "lucide-react";
 import { selectPlanEvidence } from "../../review";
 import { projectPlanFlow, type PlanFlowRow, type State } from "../../state";
-import { presentationFor, presentationStyle } from "../../teams/presentation";
-import { truncateTask } from "./truncateTask";
+import { presentationStyle } from "../../teams/presentation";
+import { WorkflowCanvas, stepKey } from "./WorkflowCanvas";
+import { WorkflowFocusBoundary } from "./WorkflowFocusBoundary";
+import { MergeQueueView } from "./MergeQueueView";
+import { ReviewAction } from "./ReviewAction";
 import { workflowDetail } from "./workflowDetail";
 import "./workflowPanel.css";
 import "./workflowPhone.css";
@@ -52,7 +55,9 @@ export function WorkflowPanel({
   const plan = selectPlanEvidence(state).plans.get(planId)?.payload;
   const rows = useMemo(() => (plan ? projectPlanFlow(state, plan) : []), [state, plan]);
   const host = useRef<HTMLElement>(null);
-  const { selection, selected, setSelection, close } = useStepSelection(rows, host);
+  const scope = JSON.stringify([state.run?.run_id, planId, plan?.revision]);
+  const { selection, selected, setSelection, close } = useStepSelection(rows, host, scope);
+  const [queue, setQueue] = useState(false);
   const phone = useSyncExternalStore(subscribePhone, phoneSnapshot, () => false) && chat;
   const detailId = useId();
   usePhoneBoundary(phone, host, close);
@@ -69,67 +74,120 @@ export function WorkflowPanel({
         workflowKeys(event, phone, onClose);
       }}
     >
-      <header className="workflow-header">
-        <h2>Workflow</h2>
-        <button ref={close} type="button" onClick={onClose}>
-          <Icon size={16} aria-hidden="true" />
-          {phone ? "Back" : "Close"}
-        </button>
-      </header>
-      <div className="workflow-body">
-        {rows.length ? (
-          <>
-            <WorkflowSteps
-              rows={rows}
-              selection={selection}
-              detailId={detailId}
-              onSelect={setSelection}
-            />
-            <section id={detailId} className="workflow-detail" aria-label="Step detail">
-              {selected ? (
-                <StepDetail row={selected} state={state} onReview={onReview} />
-              ) : (
-                <p>Select a step to see its evidence.</p>
-              )}
-            </section>
-          </>
-        ) : (
-          <p>No steps are available at this point in the run.</p>
-        )}
-      </div>
+      <WorkflowFocusBoundary host={host} fallback={close}>
+        <header className="workflow-header">
+          <h2>Workflow</h2>
+          <button ref={close} type="button" onClick={onClose}>
+            <Icon size={16} aria-hidden="true" />
+            {phone ? "Back" : "Close"}
+          </button>
+        </header>
+        <div className="workflow-views" aria-label="Workflow views">
+          <button
+            type="button"
+            aria-pressed={!queue}
+            onClick={() => {
+              setQueue(false);
+            }}
+          >
+            Dependency canvas
+          </button>
+          <button
+            type="button"
+            aria-pressed={queue}
+            onClick={() => {
+              setQueue(true);
+            }}
+          >
+            Merge queue
+          </button>
+        </div>
+        <WorkflowBody
+          queue={queue}
+          state={state}
+          planId={planId}
+          onReview={onReview}
+          rows={rows}
+          selection={selection}
+          selected={selected}
+          detailId={detailId}
+          onSelect={setSelection}
+        />
+      </WorkflowFocusBoundary>
     </section>
   );
 }
 
-function useStepSelection(rows: PlanFlowRow[], host: RefObject<HTMLElement | null>) {
-  const [selection, setSelection] = useState<number | null>(null);
-  const selected = rows.find((row) => row.index === selection);
+function WorkflowBody({
+  queue,
+  state,
+  planId,
+  onReview,
+  rows,
+  selection,
+  selected,
+  detailId,
+  onSelect,
+}: {
+  queue: boolean;
+  state: State;
+  planId: string;
+  onReview?: (id: string) => void;
+  rows: PlanFlowRow[];
+  selection: string | null;
+  selected: PlanFlowRow | undefined;
+  detailId: string;
+  onSelect: (key: string) => void;
+}) {
+  return (
+    <div className="workflow-body">
+      {queue ? (
+        <MergeQueueView state={state} planId={planId} onReview={onReview} />
+      ) : rows.length ? (
+        <>
+          <WorkflowCanvas
+            rows={rows}
+            selection={selection}
+            detailId={detailId}
+            onSelect={onSelect}
+          />
+          <section id={detailId} className="workflow-detail" aria-label="Step detail">
+            {selected ? (
+              <StepDetail row={selected} state={state} onReview={onReview} />
+            ) : (
+              <p>Select a step to see its evidence.</p>
+            )}
+          </section>
+        </>
+      ) : (
+        <p>No steps are available at this point in the run.</p>
+      )}
+    </div>
+  );
+}
+
+function useStepSelection(rows: PlanFlowRow[], host: RefObject<HTMLElement | null>, scope: string) {
+  const [selection, setSelection] = useState<string | null>(null);
+  const [previousScope, setPreviousScope] = useState(scope);
+  if (previousScope !== scope) {
+    setPreviousScope(scope);
+    setSelection(null);
+  }
+  const selected =
+    previousScope === scope ? rows.find((row) => stepKey(row) === selection) : undefined;
   const close = useRef<HTMLButtonElement>(null);
-  const previousSelection = useRef<number | null>(null);
-  const focused = useRef<Element | null>(null);
+  const previousSelection = useRef<string | null>(null);
   // Clear removed local indices before committing the new evidence. The layout effect
   // still observes the removal and returns keyboard focus after that commit.
   if (selection !== null && !selected) setSelection(null);
   useLayoutEffect(() => {
-    const rememberFocus = () => {
-      focused.current = host.current?.contains(document.activeElement)
-        ? document.activeElement
-        : null;
-    };
-    document.addEventListener("focusin", rememberFocus);
     close.current?.focus({ preventScroll: true });
-    return () => {
-      document.removeEventListener("focusin", rememberFocus);
-    };
-  }, [host]);
+  }, []);
   useLayoutEffect(() => {
     if (
       previousSelection.current !== null &&
-      !rows.some((row) => row.index === previousSelection.current) &&
-      (host.current?.contains(document.activeElement) ||
-        (document.activeElement === document.body &&
-          focused.current !== null &&
-          !focused.current.isConnected))
+      !rows.some((row) => stepKey(row) === previousSelection.current) &&
+      host.current?.contains(document.activeElement)
     ) {
       close.current?.focus({ preventScroll: true });
     }
@@ -179,7 +237,7 @@ function workflowKeys(event: KeyboardEvent<HTMLElement>, phone: boolean, onClose
     onClose();
   } else if (phone && event.key === "Tab") {
     const controls = [
-      ...event.currentTarget.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"),
+      ...event.currentTarget.querySelectorAll<HTMLElement>("button:not(:disabled), summary"),
     ];
     const first = controls[0],
       last = controls.at(-1);
@@ -193,42 +251,6 @@ function workflowKeys(event: KeyboardEvent<HTMLElement>, phone: boolean, onClose
   }
 }
 
-function WorkflowSteps({
-  rows,
-  selection,
-  detailId,
-  onSelect,
-}: {
-  rows: PlanFlowRow[];
-  selection: number | null;
-  detailId: string;
-  onSelect: (index: number) => void;
-}) {
-  return (
-    <ol className="workflow-steps" aria-label="Workflow steps">
-      {rows.map((row) => (
-        <li key={row.index}>
-          <button
-            type="button"
-            className="workflow-step"
-            aria-pressed={selection === row.index}
-            aria-controls={detailId}
-            onClick={() => {
-              onSelect(row.index);
-            }}
-          >
-            <span className="workflow-number">{row.index + 1}</span>
-            <span>{truncateTask(row.task.task)}</span>
-            <span className="workflow-word" data-word={row.word}>
-              {row.word}
-            </span>
-          </button>
-        </li>
-      ))}
-    </ol>
-  );
-}
-
 function StepDetail({
   row,
   state,
@@ -239,7 +261,7 @@ function StepDetail({
   onReview?: (id: string) => void;
 }) {
   const detail = workflowDetail(row, state, !!onReview);
-  const identity = presentationFor(state, row.agentId);
+  const identity = detail.team;
   return (
     <>
       <h3>{detail.task}</h3>
@@ -263,35 +285,12 @@ function StepDetail({
   );
 }
 
-/** Withdraw navigation immediately while keeping a focused control in the tab sequence. */
-function ReviewAction({ id, onReview }: { id: string | null; onReview?: (id: string) => void }) {
-  const [focused, setFocused] = useState(false);
-  if (!id && !focused) return null;
-  return (
-    <button
-      type="button"
-      aria-disabled={!id || undefined}
-      onFocus={() => {
-        setFocused(true);
-      }}
-      onBlur={() => {
-        setFocused(false);
-      }}
-      onClick={() => {
-        if (id) onReview?.(id);
-      }}
-    >
-      Review change →
-    </button>
-  );
-}
-
 function DetailFacts({
   detail,
   identity,
 }: {
   detail: ReturnType<typeof workflowDetail>;
-  identity: ReturnType<typeof presentationFor>;
+  identity: ReturnType<typeof workflowDetail>["team"];
 }) {
   const fields = [
     ["Agent", detail.agent],
@@ -302,6 +301,7 @@ function DetailFacts({
     ["Role", detail.role],
     ["Model", detail.model],
     ["Mode", detail.mode],
+    ["Reasoning", detail.reasoning],
   ] as const;
   return (
     <dl className="workflow-facts">

@@ -9,37 +9,58 @@ import { applyGraphEvent } from "./applyGraphEvent";
 import { isDecisionEvent } from "./decisionProjection";
 import { createInitialState } from "./types";
 import type { State } from "./types";
-import { foldStages } from "./stageFold";
+import { consumeStage, finishStages, sameStages, stagePoint } from "./stageFold";
 
 /** Apply validated events, identically for live streams and parsed replay logs. */
 export function applyEvent(state: State, event: ServerEvent): State {
   const next = applyEnvelope(state, event);
   if (next.gap) return next;
-  const stageEvents = [...(event.type === "run.started" ? [] : state.stageEvents), event];
+  const projection = projectStages(next, event, Object.keys(next.changes));
   let changes = next.changes;
-  let changeStages = next.changeStages;
-  for (const [id, change] of Object.entries(next.changes)) {
-    const stages = foldStages(stageEvents, id);
-    const revisionRounds =
-      change.revisionRounds +
-      Number(
-        event.type === "change.resolved" &&
-          event.payload.change_id === id &&
-          event.payload.decision === "changes_requested",
-      );
-    // Open horizons can advance on any envelope without invalidating graph evidence.
-    // Equal readings also keep the stage map itself stable on unrelated events.
-    if (JSON.stringify(stages) !== JSON.stringify(changeStages[id])) {
-      if (changeStages === next.changeStages) changeStages = { ...next.changeStages };
-      changeStages[id] = stages;
-    }
-    if (revisionRounds !== change.revisionRounds) {
-      if (changes === next.changes) changes = { ...next.changes };
-      changes[id] = { ...change, revisionRounds };
+  if (event.type === "change.resolved" && event.payload.decision === "changes_requested") {
+    const id = event.payload.change_id;
+    const change = changes[id];
+    if (change)
+      changes = { ...changes, [id]: { ...change, revisionRounds: change.revisionRounds + 1 } };
+  }
+  const observed = observeMain({ ...next, ...projection, changes }, event);
+  return recordEventFact(observed, event);
+}
+
+type StageProjection = Pick<State, "stageAcc" | "stageHorizon" | "lastEventType" | "changeStages">;
+
+/** Projection only, also measured separately from unrelated reducer inventories by the bench. */
+export function projectStages(
+  state: StageProjection,
+  event: ServerEvent,
+  changeIds: readonly string[],
+): StageProjection {
+  const at = stagePoint(event);
+  const stageHorizon = {
+    ...at,
+    contiguous:
+      state.stageHorizon === null
+        ? event.seq === 1
+        : state.stageHorizon.contiguous && event.seq === state.stageHorizon.seq + 1,
+  };
+  const id = "change_id" in event.payload ? event.payload.change_id : null;
+  let stageAcc = state.stageAcc;
+  if (id !== null) {
+    const acc = consumeStage(stageAcc[id], event, at);
+    if (acc && acc !== stageAcc[id]) stageAcc = { ...stageAcc, [id]: acc };
+  }
+  let changeStages = state.changeStages;
+  for (const changeId of changeIds) {
+    const acc = stageAcc[changeId];
+    // With no open interval or window, finish never reads the horizon.
+    if (changeId !== id && !acc?.active && !acc?.window && changeId in changeStages) continue;
+    const stages = stageHorizon.contiguous ? finishStages(acc, at) : null;
+    if (!sameStages(changeStages[changeId], stages)) {
+      if (changeStages === state.changeStages) changeStages = { ...changeStages };
+      changeStages[changeId] = stages;
     }
   }
-  const observed = observeMain({ ...next, stageEvents, changeStages, changes }, event);
-  return recordEventFact(observed, event);
+  return { stageAcc, stageHorizon, lastEventType: event.type, changeStages };
 }
 
 function applyEnvelope(state: State, event: ServerEvent): State {

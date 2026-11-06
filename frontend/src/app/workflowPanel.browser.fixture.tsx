@@ -4,9 +4,12 @@ import { useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
 import { useStore } from "zustand";
-import { createInitialState, stateStore } from "../state";
+import { applyEvent, createInitialState, projectPlanFlow, stateStore, type State } from "../state";
 import { DecisionContext, selectPlanEvidence } from "../review";
 import { startLive, startReplay, type EventStream, type Transport } from "../transport";
+import { workflowCanvas } from "./workflow/WorkflowCanvas";
+import { workflowDetail } from "./workflow/workflowDetail";
+import { mergeQueue } from "./workflow/mergeQueue";
 import { Frame } from "./Frame";
 import { InitialShellLayout, type ShellLayout } from "./shell/useShell";
 import { reconcileReplayView } from "./replay/model";
@@ -29,6 +32,7 @@ export type WorkflowOptions = {
   mode?: "live" | "replay";
   prefix?: number;
   inactiveReview?: boolean;
+  events?: ServerEvent[];
 };
 let root: Root | undefined;
 let transport: Transport | undefined;
@@ -109,7 +113,7 @@ export async function mountWorkflow(next: WorkflowOptions = {}) {
   root?.unmount();
   options = next;
   navigation.length = 0;
-  source = flowEvents(next.scene ?? "gates").map((event, index) => ({
+  source = (next.events ?? flowEvents(next.scene ?? "gates")).map((event, index) => ({
     ...event,
     seq: index + 1,
     ts: `2026-11-03T19:00:${String(index).padStart(2, "0")}Z`,
@@ -174,10 +178,15 @@ export function arrive() {
       task: "Another plan must not replace your workflow",
     },
   });
+  const status = stateStore.getState().state.agents["flow-2"];
+  if (status)
+    append({ type: "agent.status", seq: 0, ts: "", payload: { ...status, step: status.step + 1 } });
+}
+export function reviseWorkflow() {
   const current = selectPlanEvidence(stateStore.getState().state).plans.get(
     "plan-checkout",
   )?.payload;
-  if (!current) throw new Error("Missing synthetic plan");
+  if (!current) throw new Error("Missing plan");
   append({
     type: "plan.updated",
     seq: 0,
@@ -187,11 +196,12 @@ export function arrive() {
       revision: current.revision + 1,
       subtasks:
         current.subtasks?.map((task, index) =>
-          index === 0 ? { ...task, task: "Updated evidence for the first task" } : task,
+          index === 0 ? { ...task, task: "Revision replacement task" } : task,
         ) ?? null,
     },
   });
 }
+
 export function removeSelected() {
   const plan = selectPlanEvidence(stateStore.getState().state).plans.get("plan-checkout")?.payload;
   if (!plan) throw new Error("Missing synthetic plan");
@@ -241,4 +251,45 @@ export function prepareGraphNavigation() {
 
 export function settleReview() {
   append(resolved("flow-2"));
+}
+
+export function resetRun() {
+  const opening = source.find((item) => item.type === "run.started");
+  if (opening?.type !== "run.started") throw new Error("Missing run");
+  stream?.onmessage?.(
+    new MessageEvent("message", {
+      data: JSON.stringify({
+        ...opening,
+        seq: 1,
+        payload: { ...opening.payload, run_id: "next-workflow-run" },
+      }),
+    }),
+  );
+}
+
+function evidenceSnapshot(state: State) {
+  const plan = selectPlanEvidence(state).plans.get("plan-checkout")?.payload;
+  if (!plan) return null;
+  const rows = projectPlanFlow(state, plan);
+  const canvas = workflowCanvas(rows);
+  return {
+    nodes: canvas.nodes,
+    edges: canvas.edges,
+    details: rows.map((row) => workflowDetail(row, state, true)),
+    candidates: mergeQueue(state, plan.plan_id, true),
+  };
+}
+export function prefixProof(prefix: number) {
+  const before = JSON.stringify(source);
+  const state = stateStore.getState().state;
+  const saved = JSON.stringify(state);
+  const live = evidenceSnapshot(state);
+  const reconstructed = evidenceSnapshot(
+    source.slice(0, prefix).reduce(applyEvent, createInitialState()),
+  );
+  return {
+    live,
+    reconstructed,
+    unchanged: saved === JSON.stringify(state) && before === JSON.stringify(source),
+  };
 }

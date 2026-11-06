@@ -389,6 +389,8 @@ it("keeps a chip popover still while its button presses, excluding editor and gr
     });
     await chip.click();
     const popover = page.locator("[data-chip-popover]");
+    // Placement reveals the initially hidden popover after writing its transform.
+    await check(popover).toBeVisible();
     const before = await popover.boundingBox();
     const box = await chip.boundingBox();
     if (!box || !before) throw new Error("Missing chip or popover");

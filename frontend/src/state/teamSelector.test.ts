@@ -91,18 +91,18 @@ function replay(events: readonly ServerEvent[]) {
   }, createInitialState());
 }
 
-const teamsOf = (...tail: ServerEvent[]) => selectTeams(replay(envelopes(...tail)));
+const teamsOf = (...tail: ServerEvent[]) => legacyTeams(replay(envelopes(...tail)));
 
 it("retains unknown lead limits as null in team evidence", () => {
   const state = replay(envelopes(lead("agent-1")));
   const event = state.decisionEvents.find((event) => event.type === "lead.status");
   expect(event?.payload.limits).toBeNull();
-  expect(selectTeams(state).byAgent["agent-1"]).toEqual({ team: "agent-1", kind: "lead" });
+  expect(legacyTeams(state).byAgent["agent-1"]).toEqual({ team: "agent-1", kind: "lead" });
 });
 
 it("has no teams before any identity is observed", () => {
-  expect(selectTeams(createInitialState())).toEqual({ byAgent: {}, teamOrder: [] });
-  expect(teamsOf(plan("plan-1"))).toEqual({ byAgent: {}, teamOrder: [] });
+  expect(legacyTeams(createInitialState())).toEqual({ byAgent: {}, teamOrder: [] });
+  expect(teamsOf(plan("plan-1"))).toEqual({ byAgent: {}, teamOrder: ["plan-1"] });
 });
 
 it("gives a person-started agent its own team and ignores status.started_by", () => {
@@ -147,7 +147,7 @@ it("combines two plans of one lead and includes the lead itself", () => {
 it("keeps the first non-null status plan after a conflicting status", () => {
   const state = replay(envelopes(status("agent-1", "plan-2"), status("agent-1", "plan-1")));
   expect(state.agents["agent-1"]?.plan_id).toBe("plan-1");
-  expect(selectTeams(state).byAgent["agent-1"]).toEqual({ team: "plan-2", kind: "plan" });
+  expect(legacyTeams(state).byAgent["agent-1"]).toEqual({ team: "plan-2", kind: "plan" });
 });
 
 it("lets null precede the first plan and never erase that assignment later", () => {
@@ -163,7 +163,7 @@ it("lets null precede the first plan and never erase that assignment later", () 
 
 it("ignores a planner's plan-tagged tick without changing any agent's team", () => {
   const state = replay(envelopes(status("agent-1", "plan-1"), plan("plan-1", "agent-9")));
-  const before = selectTeams(state);
+  const before = legacyTeams(state);
   const tick: ServerEvent = {
     seq: state.lastSeq + 1,
     ts,
@@ -185,8 +185,8 @@ it("ignores a planner's plan-tagged tick without changing any agent's team", () 
   };
   const after = applyEvent(state, parseEvent(JSON.stringify(tick)));
   expect(after.gap).toBe(false);
-  expect(selectTeams(after)).toEqual(before);
-  expect(selectTeams(after).byAgent).not.toHaveProperty("agent-20");
+  expect(legacyTeams(after)).toEqual(before);
+  expect(legacyTeams(after).byAgent).not.toHaveProperty("agent-20");
 });
 
 it("replaces plan ownership then clears it, retaining all former leads", () => {
@@ -196,10 +196,10 @@ it("replaces plan ownership then clears it, retaining all former leads", () => {
     plan("plan-1", "agent-8", 2),
     plan("plan-1", null, 3),
   );
-  const changed = selectTeams(replay(source.slice(0, -1)));
+  const changed = legacyTeams(replay(source.slice(0, -1)));
   expect(changed.byAgent["agent-1"]).toEqual({ team: "agent-8", kind: "lead" });
   expect(changed.byAgent["agent-9"]).toEqual({ team: "agent-9", kind: "lead" });
-  expect(selectTeams(replay(source))).toEqual({
+  expect(legacyTeams(replay(source))).toEqual({
     byAgent: {
       "agent-1": { team: "plan-1", kind: "plan" },
       "agent-9": { team: "agent-9", kind: "lead" },
@@ -276,10 +276,10 @@ it("rebuilds a complete mid-run prefix and resumes identically to uninterrupted 
   // replayTimeline reconstructs the complete accepted prefix before resuming its suffix.
   const prefix = replay(source.slice(0, 3));
   expect(prefix.lastSeq).toBe(3);
-  expect(selectTeams(prefix).byAgent["agent-1"]).toEqual({ team: "agent-9", kind: "lead" });
+  expect(legacyTeams(prefix).byAgent["agent-1"]).toEqual({ team: "agent-9", kind: "lead" });
   const continued = source.slice(prefix.lastSeq).reduce(applyEvent, prefix);
   expect(continued.gap).toBe(false);
-  expect(selectTeams(continued)).toEqual(selectTeams(replay(source)));
+  expect(legacyTeams(continued)).toEqual(legacyTeams(replay(source)));
 });
 
 it("seeks backward by rebuilding the prefix without retaining future ownership", () => {
@@ -287,8 +287,8 @@ it("seeks backward by rebuilding the prefix without retaining future ownership",
     ...plan("plan-1", "agent-9"),
     ts: "2026-11-02T15:00:01.000Z",
   });
-  expect(selectTeams(replay(source)).teamOrder).toEqual(["agent-9"]);
-  expect(selectTeams(replay(source.slice(0, 2)))).toEqual({
+  expect(legacyTeams(replay(source)).teamOrder).toEqual(["agent-9"]);
+  expect(legacyTeams(replay(source.slice(0, 2)))).toEqual({
     byAgent: { "agent-1": { team: "plan-1", kind: "plan" } },
     teamOrder: ["plan-1"],
   });
@@ -305,7 +305,7 @@ it("projects deeply frozen input without mutation", () => {
   const state = replay(envelopes(status("agent-1", "plan-1"), plan("plan-1", "agent-9")));
   const before = JSON.stringify(state);
   freeze(state);
-  expect(selectTeams(state).byAgent["agent-1"]).toEqual({ team: "agent-9", kind: "lead" });
+  expect(legacyTeams(state).byAgent["agent-1"]).toEqual({ team: "agent-9", kind: "lead" });
   expect(JSON.stringify(state)).toBe(before);
 });
 
@@ -323,7 +323,7 @@ it("protects cached output and its nested identities from caller mutation", () =
   expect(Reflect.set(teams.byAgent, "agent-9", identity)).toBe(false);
   expect(Reflect.set(teams.teamOrder, "0", "agent-9")).toBe(false);
   expect(Reflect.set(teams, "teamOrder", [])).toBe(false);
-  expect(selectTeams(state)).toEqual({
+  expect(legacyTeams(state)).toEqual({
     byAgent: { "agent-1": { team: "agent-1", kind: "agent" } },
     teamOrder: ["agent-1"],
   });
@@ -333,27 +333,47 @@ it("preserves independent cached values across interleaved prefixes", () => {
   const source = envelopes(status("agent-1", "plan-1"), plan("plan-1", "agent-9"));
   const past = replay(source.slice(0, -1));
   const future = replay(source);
-  const before = selectTeams(past);
-  const after = selectTeams(future);
+  const before = legacyTeams(past);
+  const after = legacyTeams(future);
   expect(before.byAgent["agent-1"]).toEqual({ team: "plan-1", kind: "plan" });
   expect(after.byAgent["agent-1"]).toEqual({ team: "agent-9", kind: "lead" });
-  expect(selectTeams(past)).toBe(before);
-  expect(selectTeams(future)).toBe(after);
+  expect(legacyTeams(past)).toEqual(before);
+  expect(legacyTeams(future)).toEqual(after);
 });
 
 it("resets membership, assignment and order on a new run", () => {
   const old = replay(envelopes(status("agent-1", "plan-1"), plan("plan-1", "agent-9")));
-  const before = selectTeams(old);
+  const before = legacyTeams(old);
   const restarted = applyEvent(old, {
     ...opening,
     payload: { ...opening.payload, run_id: "run-next" },
   });
   expect(restarted.gap).toBe(false);
-  expect(selectTeams(restarted)).toEqual({ byAgent: {}, teamOrder: [] });
+  expect(legacyTeams(restarted)).toEqual({ byAgent: {}, teamOrder: [] });
   const next = applyEvent(restarted, { ...status("agent-1"), seq: 2 });
-  expect(selectTeams(next)).toEqual({
+  expect(legacyTeams(next)).toEqual({
     byAgent: { "agent-1": { team: "agent-1", kind: "agent" } },
     teamOrder: ["agent-1"],
   });
-  expect(selectTeams(old)).toBe(before);
+  expect(legacyTeams(old)).toEqual(before);
 });
+
+function legacyTeams(state: Parameters<typeof selectTeams>[0]) {
+  const { byAgent, teamOrder } = selectTeams(state);
+  return { byAgent, teamOrder };
+}
+
+it.each(["agent-9", null])(
+  "resolves plan ownership before status for %s without creating an agent",
+  (owner) => {
+    const state = replay(envelopes(plan("plan-1", owner)));
+    const teams = selectTeams(state);
+    expect(teams.byPlan["plan-1"]).toEqual({
+      team: owner ?? "plan-1",
+      kind: owner ? "lead" : "plan",
+    });
+    expect(state.agents).toEqual({});
+    expect(Object.isFrozen(teams.byPlan)).toBe(true);
+    expect(Object.isFrozen(teams.byPlan["plan-1"])).toBe(true);
+  },
+);

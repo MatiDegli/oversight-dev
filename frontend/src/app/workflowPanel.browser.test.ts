@@ -159,7 +159,7 @@ it("keeps the workflow when replay prunes an inactive focus tab", async () => {
     await steps(page).nth(3).click();
     await page.evaluate(() => window.workflowTest.seekBeforeReview());
     await check(panel(page)).toBeVisible();
-    await check(steps(page).nth(3)).toHaveAttribute("aria-pressed", "true");
+    await check(steps(page).nth(3)).toHaveAttribute("aria-pressed", "false");
     await check(steps(page).nth(3)).toBeFocused();
     await panel(page).getByRole("button", { name: "Close", exact: true }).click();
     await check(page.getByRole("tab")).toHaveCount(1);
@@ -194,7 +194,7 @@ it.each([
     await check(panel(page).getByRole("button", { name: "Close", exact: true })).toBeFocused();
     await check(steps(page)).toHaveCount(4);
     await check(steps(page).first()).toHaveAccessibleName(
-      "1 Reject negative prices in Item Merged",
+      "1 Reject negative prices in Item · Merged · Started first",
     );
     if (options.layout === "Chat") {
       expect(graphRequests).toEqual([]);
@@ -223,6 +223,16 @@ it("traverses Close, all numbered steps and eligible detail actions with native 
     await launcher.click();
     const close = panel(page).getByRole("button", { name: "Close", exact: true });
     await close.press("Tab");
+    await check(panel(page).getByRole("button", { name: "Dependency canvas" })).toBeFocused();
+    await check(panel(page).getByRole("button", { name: "Dependency canvas" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await page.keyboard.press("Tab");
+    await check(
+      panel(page).getByRole("button", { name: "Merge queue", exact: true }),
+    ).toBeFocused();
+    await page.keyboard.press("Tab");
     await check(steps(page).nth(0)).toBeFocused();
     await page.keyboard.press("Enter");
     await check(steps(page).nth(0)).toHaveAttribute("aria-pressed", "true");
@@ -299,7 +309,9 @@ it("never opens, replaces, scrolls or focuses on arrival; missing selection fall
     await check(steps(page)).toHaveCount(2);
     await check(panel(page).getByText("Select a step to see its evidence.")).toBeVisible();
     await check(panel(page).getByRole("button", { name: "Close", exact: true })).toBeFocused();
-    await check(panel(page).getByRole("button", { pressed: true })).toHaveCount(0);
+    await check(panel(page).getByRole("button", { pressed: true })).toHaveText([
+      "Dependency canvas",
+    ]);
   } finally {
     await page.close();
   }
@@ -357,6 +369,12 @@ it.each(["dark", "day"])(
       );
       expect(await chat.evaluate((node) => node.scrollTop)).toBe(before);
       await back.press("Tab");
+      await check(panel(page).getByRole("button", { name: "Dependency canvas" })).toBeFocused();
+      await page.keyboard.press("Tab");
+      await check(
+        panel(page).getByRole("button", { name: "Merge queue", exact: true }),
+      ).toBeFocused();
+      await page.keyboard.press("Tab");
       await check(steps(page).first()).toBeFocused();
       await page.keyboard.press("Enter");
       await page.keyboard.press("Tab");

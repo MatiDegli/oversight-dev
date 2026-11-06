@@ -37,7 +37,8 @@ describe("live transport", () => {
         [reply.seq]: { type: reply.type, ts: reply.ts, agentId: "agent-1" },
       },
       lastSeq: reply.seq,
-      stageEvents: [...before.stageEvents, reply],
+      stageHorizon: { seq: reply.seq, ms: Date.parse(reply.ts), contiguous: true },
+      lastEventType: reply.type,
       clock: reply.ts,
       leadReplies: { ...before.leadReplies, "agent-1": [reply] },
     });
@@ -67,7 +68,8 @@ describe("live transport", () => {
         [idle.seq]: { type: idle.type, ts: idle.ts, agentId: "agent-1" },
       },
       lastSeq: idle.seq,
-      stageEvents: [...before.stageEvents, reply, idle],
+      stageHorizon: { seq: idle.seq, ms: Date.parse(idle.ts), contiguous: true },
+      lastEventType: idle.type,
       clock: idle.ts,
       decisionEvents: [...before.decisionEvents, idle],
       leadReplies: { ...before.leadReplies, "agent-1": [reply] },
@@ -143,7 +145,12 @@ describe("live transport", () => {
       },
       mergeMode: { mode: "merge_when_safe", revision: 1 },
       lastSeq: before.lastSeq + unwired.length,
-      stageEvents: [...before.stageEvents, ...delivered],
+      stageHorizon: {
+        seq: delivered.at(-1)?.seq,
+        ms: Date.parse(delivered.at(-1)?.ts ?? ""),
+        contiguous: true,
+      },
+      lastEventType: delivered.at(-1)?.type,
       clock: reservedA.at(-1)?.ts,
       decisionEvents: [
         ...before.decisionEvents,
@@ -204,13 +211,26 @@ describe("live transport", () => {
       },
       mergeMode: { mode: "merge_when_safe", revision: 1 },
       lastSeq: before.lastSeq + reserved.length + reservedA.length - 1,
-      stageEvents: [...before.stageEvents, ...delivered],
+      stageHorizon: {
+        seq: delivered.at(-1)?.seq,
+        ms: Date.parse(delivered.at(-1)?.ts ?? ""),
+        contiguous: true,
+      },
+      lastEventType: delivered.at(-1)?.type,
       clock: reservedA.at(-1)?.ts,
       changes: {
         ...before.changes,
         "change-1": {
           ...prior,
           reviews: [{ seq: review.seq, review: review.payload }],
+        },
+      },
+      stageAcc: {
+        ...before.stageAcc,
+        "change-1": {
+          ...before.stageAcc["change-1"],
+          tests: { known_ms: 1, intervals: 1, unknown: false, running: false },
+          phases: { proposal: { ms: 1, runs: 1 } },
         },
       },
       changeStages: {
@@ -465,7 +485,8 @@ describe("live transport", () => {
     expect(store.getState().state).toEqual({
       ...createInitialState(),
       run: newRun.payload,
-      stageEvents: [newRun],
+      stageHorizon: { seq: newRun.seq, ms: Date.parse(newRun.ts), contiguous: true },
+      lastEventType: newRun.type,
       mainHeads: [{ seq: 1, commit: newRun.payload.base_commit }],
       runStartedAt: newRun.ts,
       eventFacts: { 1: { type: "run.started", ts: newRun.ts, agentId: null } },
