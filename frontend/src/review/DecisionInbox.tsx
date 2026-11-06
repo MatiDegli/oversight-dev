@@ -13,6 +13,7 @@ import { Example } from "./AnswerChoices";
 import { selectChangeCard, selectInboxSummary, selectPossibleCallersWait } from "./inboxSelectors";
 import { factsForRevision } from "./factsForRevision";
 import { GrantChoice } from "./GrantChoice";
+import { ApprovalPacket } from "./ApprovalPacket";
 import { selectPlanEvidence, selectRetainedPlans } from "./planSelectors";
 import "./inbox.css";
 
@@ -108,6 +109,7 @@ function InboxRow({
       {plan?.subtasks && planPiece(state, plan, onReview, onOpenWorkflow)}
       {example && <Example row={example} identity={identity} />}
       <InboxAnswer state={state} entry={entry} />
+      <ApprovalPacket state={state} entry={entry} />
       {change && onReview && (
         <button
           className="review-link"

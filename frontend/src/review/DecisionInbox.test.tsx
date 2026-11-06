@@ -55,7 +55,8 @@ it.each(["change-2", "change-3", "change-4"])(
       ?.find((row) => row.includes("Follow main before deciding"));
     expect(row).toBeDefined();
     expect(row).toContain("<h3>Follow main before deciding</h3>");
-    expect(row).not.toContain("<summary>");
+    expect(row).not.toContain('class="inbox-answer"');
+    expect(row).toContain("<summary>Approval packet</summary>");
     expect(row).not.toContain('class="grant-choice"');
   },
 );
