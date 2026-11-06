@@ -157,7 +157,7 @@ Each milestone starts when its gate holds and a slot is free. Milestones run in 
   - a rule and gate editor that replaces the code tables (`backend/src/oversight/changes/_assessment.py:34`, `backend/src/oversight/changes/_protected_paths.py:20`);
   - broader grant scopes, protected-path grants, expiry and free-text grants (`docs/additions.md:958`), person-owned by default; lead delegation per workflow or plan is revocable, and rules can approve everything by the person's choice (available from M5);
   - person-drawn zones and approved growth (`docs/additions.md:273`).
-- Repository memory, rules files, skills and review lessons (`docs/additions.md:961`).
+- Repository memory, rules files, skills and review lessons (`docs/additions.md:973`).
 - **Checkpoints and rewind**, with bounded semantics:
   - a filesystem checkpoint per agent step (a commit in its worktree) and a conversation checkpoint;
   - resume through each harness's own session support;
@@ -232,7 +232,7 @@ Each milestone starts when its gate holds and a slot is free. Milestones run in 
 - Explicit HTTPS authorities only after authentication exists: configurable; default = today's behavior, loopback only; indicator "remote authority" (available from M9).
 
 **M10 · Evidence and review intelligence (Oversight's edge).** Gate: an evidence-quality acceptance before any of it widens automatic merge policies. Historical paid detection arms failed their criteria (`tools/eval/detection/RESULTS.md:22`), and current results must be re-verified, not inherited.
-- Examples-before-code admission (`docs/additions.md:833`).
+- Examples-before-code admission (`docs/additions.md:845`).
 - Executable pins, lenses and node explanations.
 - One-hop initial context.
 - Deeper overlap facts and start-box warnings.
