@@ -35,7 +35,13 @@ try {
     "nodes | scenario | path | event→2rAF median ms | work ms/burst | long tasks | applications | frames ms | routes ms",
   );
   for (const size of [100, 1000, 10000])
-    for (const scenario of ["class", "unrelated", "hidden", "pan/zoom"] satisfies Scenario[]) {
+    for (const scenario of [
+      "class",
+      "unrelated",
+      "hidden",
+      "hidden-events",
+      "pan/zoom",
+    ] satisfies Scenario[]) {
       for (const path of ["before", "after"] as const) {
         const result = await page.evaluate(
           ({ size, scenario, path }) => window.runInvalidationBench(size, scenario, path),
@@ -51,7 +57,10 @@ try {
               ? 7
               : 210,
         );
-        assert.equal(result.resumeApplications, path === "after" && scenario === "hidden" ? 1 : 0);
+        assert.equal(
+          result.resumeApplications,
+          path === "after" && (scenario === "hidden" || scenario === "hidden-events") ? 1 : 0,
+        );
         assert.ok(
           [result.pixelMs, result.workMs, result.framesMs, result.routesMs, result.resumeMs].every(
             Number.isFinite,

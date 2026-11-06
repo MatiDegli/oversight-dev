@@ -28,7 +28,7 @@ const pixel = async () => {
 };
 const median = (values: number[]) =>
   [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)] ?? 0;
-export type Scenario = "class" | "unrelated" | "hidden" | "pan/zoom";
+export type Scenario = "class" | "unrelated" | "hidden" | "hidden-events" | "pan/zoom";
 
 function synthetic(size: number): State {
   const state = createInitialState();
@@ -158,7 +158,7 @@ export async function runInvalidationBench(
     costs.length = 0;
     applications = 0;
     longTasks.length = 0;
-    if (scenario === "hidden") {
+    if (scenario === "hidden" || scenario === "hidden-events") {
       host.dataset.graphHidden = "true";
       host.hidden = true;
       updates.visibility();
@@ -175,27 +175,50 @@ export async function runInvalidationBench(
         for (let i = 0; i < 30; i++) {
           const envelope = { seq: state.lastSeq + 1, ts: "2026-11-05T19:00:00-03:00" };
           const event: ServerEvent =
-            i % 2
+            scenario === "hidden-events"
               ? {
                   ...envelope,
-                  type: "agent.message",
-                  payload: { agent_id: "bench", text: `output ${String(i)}` },
-                }
-              : {
-                  ...envelope,
-                  type: "agent.step",
+                  type: "agent.status",
                   payload: {
                     agent_id: "bench",
-                    step: i + 1,
-                    tool: "read_file",
-                    summary: "Tool output",
-                    result: "ok",
-                    error: null,
-                    error_kind: null,
-                    tests: null,
-                    duration_ms: 1,
+                    change_id: "bench-change",
+                    slot: "A",
+                    state: "working",
+                    step: sample * 30 + i + 1,
+                    max_steps: 300,
+                    task: "Benchmark",
+                    model: "fake",
+                    detail: null,
+                    plan_id: null,
+                    zone: null,
+                    started_by: null,
+                    queued_task_id: null,
+                    base_commit: null,
+                    examples: null,
+                    answering: null,
                   },
-                };
+                }
+              : i % 2
+                ? {
+                    ...envelope,
+                    type: "agent.message",
+                    payload: { agent_id: "bench", text: `output ${String(i)}` },
+                  }
+                : {
+                    ...envelope,
+                    type: "agent.step",
+                    payload: {
+                      agent_id: "bench",
+                      step: i + 1,
+                      tool: "read_file",
+                      summary: "Tool output",
+                      result: "ok",
+                      error: null,
+                      error_kind: null,
+                      tests: null,
+                      duration_ms: 1,
+                    },
+                  };
           state = applyEvent(state, event);
           publish();
         }

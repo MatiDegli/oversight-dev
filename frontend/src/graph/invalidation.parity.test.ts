@@ -6,6 +6,7 @@ import { expect, it, vi } from "vitest";
 import type { ServerEvent } from "@contracts";
 import { applyEvent } from "../state";
 import type { State } from "../state";
+import type { GraphViewProps } from "./GraphView";
 import { graphElements } from "./elements";
 import { elementSnapshot } from "./elementSnapshot";
 import { foldController } from "./foldController";
@@ -137,13 +138,15 @@ it.each(Array.from({ length: 24 }, (_, i) => i + 1))(
       hiddenSnapshot = elementSnapshot();
     let state = initial();
     let visible = false;
+    const props = {};
     const updates = graphSync({
-      read: () => state,
-      apply: (value) => {
-        hiddenFolding.render(value, hiddenSnapshot(value, {}));
+      read: () => ({ state, props }),
+      apply: ({ state: value, props }) => {
+        hiddenFolding.render(value, hiddenSnapshot(value, props));
       },
       visible: () => visible,
       resize: () => undefined,
+      replace: replacePaintPublication,
     });
     try {
       for (let step = 0; step < 48; step++) {
@@ -314,6 +317,89 @@ it.each([false, true])(
       updates.dispose();
       actual.destroy();
       oracle.destroy();
+    }
+  },
+);
+
+it.each([false, true])(
+  "one hidden agent/focus flush matches 100 full graph updates (pending: %s)",
+  (pending) => {
+    vi.stubGlobal("matchMedia", () => ({ matches: true }));
+    let state = pending ? updated() : initial();
+    if (!state.graph) throw new Error("Missing graph");
+    state = {
+      ...state,
+      graph: {
+        ...state.graph,
+        positions: Object.fromEntries(
+          [
+            ...state.graph.nodes,
+            ...Object.values(state.changes).flatMap((change) => change.graph.nodes_added),
+          ].map((node, i) => [node.id, { x: i * 400, y: i * 100 }]),
+        ),
+      },
+    };
+    state = applyEvent(
+      state,
+      event(state.lastSeq + 1, "agent.focus", {
+        agent_id: a.agent_id,
+        mode: "read",
+        node_ids: ["billing:fee"],
+        ranges: [],
+      }),
+    );
+    const make = () => cytoscape({ headless: true, styleEnabled: true, style: graphStyles(theme) });
+    const actual = make(),
+      oracle = make();
+    const folding = foldController(actual),
+      oldFolding = fullFoldController(oracle);
+    const snapshot = elementSnapshot();
+    const props: GraphViewProps = {};
+    let visible = false;
+    const apply = vi.fn((input: { state: State; props: GraphViewProps }) => {
+      folding.render(input.state, snapshot(input.state, input.props));
+    });
+    const updates = graphSync({
+      read: () => ({ state, props }),
+      apply,
+      visible: () => visible,
+      resize: () => undefined,
+      replace: replacePaintPublication,
+    });
+    try {
+      folding.render(state, snapshot(state, props));
+      oldFolding.render(state, graphElements(state));
+      for (let i = 0; i < 100; i++) {
+        state = applyEvent(
+          state,
+          event(state.lastSeq + 1, "agent.status", {
+            ...a,
+            state: i % 2 ? "working" : "ready_for_review",
+            step: i + 1,
+          }),
+        );
+        state = applyEvent(
+          state,
+          event(state.lastSeq + 1, "agent.focus", {
+            agent_id: a.agent_id,
+            node_ids: ["billing:fee"],
+            ranges: [],
+            mode: i % 2 ? "read" : "edit",
+          }),
+        );
+        oldFolding.render(state, graphElements(state));
+        updates.publish();
+      }
+      expect(apply).not.toHaveBeenCalled();
+      visible = true;
+      updates.visibility();
+      expect(apply).toHaveBeenCalledOnce();
+      expect(graphReading(actual)).toEqual(graphReading(oracle));
+    } finally {
+      updates.dispose();
+      actual.destroy();
+      oracle.destroy();
+      vi.unstubAllGlobals();
     }
   },
 );

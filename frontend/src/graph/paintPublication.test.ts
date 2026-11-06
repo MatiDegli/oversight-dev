@@ -1,5 +1,6 @@
 import { expect, it, vi } from "vitest";
-import { createInitialState } from "../state";
+import { applyEvent, createInitialState } from "../state";
+import { a, event, initial } from "./graph.support";
 import { graphSync } from "./graphSync";
 import { replacePaintPublication } from "./paintPublication";
 import type { GraphViewProps } from "./GraphView";
@@ -30,7 +31,7 @@ it("applies one final pure class scope on show across many hidden publications",
 });
 
 it("retains transitions that can affect geometry, fold choices, identity or camera scope", () => {
-  const state = createInitialState();
+  const state = initial();
   const first = { state, props: {} };
   expect(replacePaintPublication(first, { state, props: { litIds: [] } })).toBe(true);
   for (const changed of [
@@ -47,6 +48,66 @@ it("retains transitions that can affect geometry, fold choices, identity or came
     { state, props: {}, revision: 1 },
   ])
     expect(replacePaintPublication(first, changed)).toBe(false);
+});
+
+it("keeps one final graph-relevant agent publication while hidden", () => {
+  let state = initial();
+  let visible = false;
+  const apply = vi.fn();
+  let props: GraphViewProps = {};
+  const updates = graphSync({
+    read: () => ({ state, props }),
+    apply,
+    visible: () => visible,
+    resize: vi.fn(),
+    replace: replacePaintPublication,
+  });
+  for (let i = 0; i < 100; i++) {
+    state = applyEvent(state, event(state.lastSeq + 1, "agent.status", { ...a, step: i + 1 }));
+    props = { field: { mode: "watch", lights: [] } };
+    updates.publish();
+  }
+  expect(apply).not.toHaveBeenCalled();
+  visible = true;
+  updates.visibility();
+  expect(apply).toHaveBeenCalledOnce();
+  expect(apply).toHaveBeenLastCalledWith({ state, props });
+});
+
+it("retains field mode changes that affect read marks", () => {
+  const state = initial();
+  expect(
+    replacePaintPublication(
+      { state, props: { field: { mode: "watch", lights: [] } } },
+      { state, props: { field: { mode: "live-diff", lights: [] } } },
+    ),
+  ).toBe(false);
+});
+
+it("collapses repeated focus nodes but retains changes to fold history", () => {
+  const state = initial();
+  const focus = {
+    agent_id: a.agent_id,
+    node_ids: ["billing:fee"],
+    mode: "read" as const,
+    ranges: [],
+  };
+  const first = { state: { ...state, focus: { [a.agent_id]: focus } }, props: {} };
+  expect(
+    replacePaintPublication(first, {
+      ...first,
+      state: { ...first.state, focus: { [a.agent_id]: { ...focus, mode: "edit" } } },
+    }),
+  ).toBe(true);
+  expect(
+    replacePaintPublication(first, {
+      ...first,
+      state: {
+        ...first.state,
+        focus: { [a.agent_id]: { ...focus, node_ids: ["billing:Bill.total"] } },
+      },
+    }),
+  ).toBe(false);
 });
 
 it("applies one final pure class scope per visible animation frame", () => {
