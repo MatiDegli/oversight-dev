@@ -10,7 +10,7 @@ from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path
 
-from oversight.workspace.errors import SourceChanged
+from oversight.workspace.errors import SourceChanged, StartupRefusal
 
 MAX_PATHS = 16384
 MAX_FILE = 4 * 1024 * 1024
@@ -55,8 +55,8 @@ def budget_scope(value: AdmissionBudgets) -> Generator[None]:
         _budget.reset(marker)
 
 
-def refuse(reason: str) -> OSError:
-    return OSError("POSIX source refused: " + reason)
+def refuse(reason: str, category: str = "other") -> OSError:
+    return StartupRefusal("POSIX source refused: " + reason, category)
 
 
 def changed(reason: str) -> SourceChanged:

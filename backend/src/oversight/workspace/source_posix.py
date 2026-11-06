@@ -30,6 +30,7 @@ from oversight.workspace.source_posix_git import (
 from oversight.workspace.source_posix_git import (
     warnings as git_warnings,
 )
+from oversight.workspace.source_posix_identity import excluded_identities
 from oversight.workspace.source_posix_io import (
     DEFAULT_BUDGETS,
     absolute,
@@ -119,42 +120,65 @@ class PosixSource:
     ide: Path
     placements: tuple[Witness, ...]
     budgets: AdmissionBudgets = DEFAULT_BUDGETS
+    excluded: tuple[Path, ...] = ()
+    source_layouts: tuple[GitLayout, ...] = ()
 
 
 def _placement(
-    source: Path, runtime: Path, ide: Path, budget: AdmissionBudgets = DEFAULT_BUDGETS
+    source: Path,
+    runtime: Path,
+    ide: Path,
+    budget: AdmissionBudgets = DEFAULT_BUDGETS,
+    excluded: tuple[Path, ...] = (),
 ) -> PosixSource:
     for path in (source, runtime, ide):
         absolute(path)
-    for other in (runtime, ide):
+    for other in (runtime,):
         if source.is_relative_to(other) or other.is_relative_to(source):
             raise refuse("source/runtime or running checkout ancestor overlap")
     source_chain, runtime_chain, ide_chain = (anchors(p) for p in (source, runtime, ide))
-    for other in (runtime_chain, ide_chain):
+    for other in (runtime_chain,):
         # Bind aliases preserve inode identity even when their lexical names differ.
         if source_chain[-1].identity[:2] in {w.identity[:2] for w in other} or (
             other[-1].identity[:2] in {w.identity[:2] for w in source_chain}
         ):
             raise refuse("filesystem alias overlaps source placement")
+    reviewed = runtime / "sources/oversight-self"
+    roots = (ide, Path(__file__).resolve().parents[4], *excluded)
+    if reviewed.exists():
+        roots += (reviewed,)
+    exclusions, layouts = excluded_identities(
+        source, roots, time.monotonic() + budget.phase_seconds
+    )
     return PosixSource(
         source,
         runtime,
         ide,
-        tuple(dict.fromkeys((*source_chain, *runtime_chain, *ide_chain))),
+        tuple(dict.fromkeys((*source_chain, *runtime_chain, *ide_chain, *exclusions))),
         budget,
+        excluded,
+        layouts,
     )
 
 
 async def prepare_source(
-    source: Path, runtime: Path, ide: Path, *, budget: AdmissionBudgets = DEFAULT_BUDGETS
+    source: Path,
+    runtime: Path,
+    ide: Path,
+    *,
+    budget: AdmissionBudgets = DEFAULT_BUDGETS,
+    excluded: tuple[Path, ...] = (),
 ) -> PosixSource:
     """No writes. Validate all three existing placements before any source inspection."""
     with budget_scope(budget):
-        return await offload(lambda: _placement(source, runtime, ide, budget))
+        return await offload(lambda: _placement(source, runtime, ide, budget, excluded))
 
 
 def recheck_source(source: PosixSource) -> None:
-    if _placement(source.root, source.runtime, source.ide, source.budgets) != source:
+    if (
+        _placement(source.root, source.runtime, source.ide, source.budgets, source.excluded)
+        != source
+    ):
         raise refuse("placement changed since validation")
 
 
