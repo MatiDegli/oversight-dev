@@ -22,9 +22,13 @@ SUPPORT = Path(__file__).resolve()
 
 def fd_table() -> Counter[str]:
     descriptors: Counter[str] = Counter()
+    # memwatch reads this process's status every 0.5 s, independently of the test.
+    own_status = f"/proc/{os.getpid()}/status"
     for name in os.listdir("/proc/self/fd"):
         with contextlib.suppress(OSError):
-            descriptors[os.readlink(f"/proc/self/fd/{name}")] += 1
+            target = os.readlink(f"/proc/self/fd/{name}")
+            if target != own_status:
+                descriptors[target] += 1
     return descriptors
 
 
