@@ -2,6 +2,7 @@
 
 import re
 from threading import RLock
+from urllib.parse import urlsplit
 
 FRAGMENT = 8  # a run of this many characters of the key is as good as the key
 REDACTED = "[redacted]"
@@ -14,6 +15,7 @@ KEY_LIKE = re.compile(
     r"|\b(?=[A-Za-z0-9]*\d)(?=[A-Za-z0-9]*[A-Za-z])[A-Za-z0-9]{24,}\b",
     re.IGNORECASE,
 )
+SECRET_NAME = re.compile(r"PASSWORD|SECRET|TOKEN|KEY|AUTH|CREDENTIAL|PRIVATE", re.IGNORECASE)
 
 
 class Redactor:
@@ -28,7 +30,7 @@ class Redactor:
         self._lock = RLock()
         self._withheld = False
         self._windows: dict[int, set[str]] = {}
-        self._values: set[str] = set()
+        self._values: dict[str, set[str]] = {}
         for text in (key, *other_keys):
             if text:
                 self.remember(text)
@@ -44,8 +46,8 @@ class Redactor:
         if not width:
             return
         with self._lock:
-            if not fragments:
-                self._values.add(text)
+            if not fragments and width == FRAGMENT:
+                self._values.setdefault(text[:FRAGMENT], set()).add(text)
                 return
             self._windows.setdefault(width, set()).update(
                 text[i : i + width] for i in range(len(text) - width + 1)
@@ -64,20 +66,33 @@ class Redactor:
             line = line.strip()
             if not line or line.startswith(("#", "-----BEGIN ", "-----END ")):
                 continue
-            match = None if pem else re.fullmatch(r"(?:export\s+)?[\w]+\s*=\s*(.*?)\s*", line)
+            match = None if pem else re.fullmatch(r"(?:export\s+)?([\w]+)\s*=\s*(.*?)\s*", line)
             if match is not None:
-                value = match[1]
+                value = match[2]
                 if value.startswith(("'", '"')):
                     value = value[1:].split(value[0], 1)[0]
                 else:
                     value = re.split(r"\s+#", value, maxsplit=1)[0].rstrip()
-                if len(value) >= FRAGMENT:
-                    self.remember(value, fragments=KEY_LIKE.search(value) is not None)
+                self._remember_assignment(match[1], value)
             elif pem or not dotenv:
                 body.append(line)
         for value in [*body, "".join(body)]:
             if len(value) >= FRAGMENT:
                 self.remember(value)
+
+    def _remember_assignment(self, name: str, value: str) -> None:
+        """Keep credentials, including URL passwords, without collecting ordinary settings."""
+        if len(value) < FRAGMENT:
+            return
+        try:
+            password = urlsplit(value).password
+        except ValueError:
+            password = None
+        shaped = KEY_LIKE.search(value) is not None
+        if SECRET_NAME.search(name) or shaped or password is not None:
+            self.remember(value, fragments=shaped and password is None)
+        if password is not None and len(password) >= FRAGMENT:
+            self.remember(password, fragments=KEY_LIKE.search(password) is not None)
 
     def __call__(self, text: str, *, preserve_hex: bool = False) -> str:
         with self._lock:
@@ -95,7 +110,11 @@ class Redactor:
                         for w, windows in self._windows.items()
                         if text[start : start + w] in windows
                     ),
-                    *(len(value) for value in self._values if text.startswith(value, start)),
+                    *(
+                        len(value)
+                        for value in self._values.get(text[start : start + FRAGMENT], ())
+                        if text.startswith(value, start)
+                    ),
                 ),
                 default=0,
             )

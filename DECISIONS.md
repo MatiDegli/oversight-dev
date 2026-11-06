@@ -5594,11 +5594,16 @@ workspace collects values from the tested tree's secret-named files,
 using the existing name policy (including its .example exemption). Before each suite, and after
 child cleanup but before reading diagnostics, it collects literal KEY=VALUE lines in every
 secret-named text file (single-line quotes, export and trailing comments supported), and
-PEM/key/SSH body lines plus their joined body. Comments and assignment names are ignored,
+PEM/key/SSH body lines plus their joined body. Comments and assignment names are not collected,
 including in files below .env* directories. Repository values shorter than eight characters
-are ignored. Whole assignment values become [redacted]; only credential-shaped assignment
-values, key bodies and provider keys also contribute eight-character windows. Ordinary
-settings therefore do not hide fragments in paths or test names.
+are ignored. Whole assignment values become [redacted] only for names containing PASSWORD,
+SECRET, TOKEN, KEY, AUTH, CREDENTIAL or PRIVATE (case-insensitive), credential-shaped values,
+or URLs containing a password. URL passwords are also remembered separately. Only
+credential-shaped values/passwords, key bodies and provider keys contribute eight-character
+windows; URLs with passwords contribute whole-value matches, not windows of their public
+host/path. Ordinary settings such as POSTGRES_USER=postgres, DB_HOST=localhost and
+ENVIRONMENT=production are not collected. Whole-value matches are indexed by their first
+eight characters so each output position checks only its matching bucket.
 Discovered material is never logged or persisted by the collector/redactor.
 
 Collection uses guarded regular-file reads: at most 128 secret files, 256 KiB per file and
@@ -5613,7 +5618,10 @@ Previously discovered values remain masked when a later test changes or removes 
 The mask precedes truncation of test stdout/stderr, failed-test lists and JUnit details, so
 run_tests history, agent-step test evidence and tests.executed events receive safe diagnostics.
 Secret-bearing parameter identifiers are withheld from per-case evidence and mark it incomplete;
-ordinary paths and test names retain their exact identity. The reviewer receives a masked diff
+unmatched paths and test names retain their exact identity. Whole secret values can still
+collide with ordinary diagnostic text: PASSWORD=postgres masks postgres in test_postgres.py
+and withholds that case. Secret protection takes precedence in those collisions.
+The reviewer receives a masked diff
 from the captured worktree and masked proposal task/summary text. Both observations and the
 review protocol explain the marker. Runtime-path removal precedes masking. Hex-only Git
 object ids and content hashes are exempt from the generic heuristic only in Workspace.redact
@@ -5628,7 +5636,8 @@ equality or a behavior difference from two masked values; unaffected rows remain
 
 This supersedes the run_tests/reviewer-diff residual in the 2026-10-31 secret-file decision.
 It is output filtering, not filesystem or exfiltration isolation. Secrets absent from a
-secret-named file and not recognized by the heuristic, values shorter than eight characters,
+secret-named file and not recognized by the heuristic, unmarked non-credential assignments
+(including secrets under ordinary setting names), values shorter than eight characters,
 encodings/escapes/interpolation the matcher does not recognize, and secrets created and removed
 entirely during child execution are not defended. The person's own file contents can still
 persist locally in their event log through existing file/change evidence; that storage is not

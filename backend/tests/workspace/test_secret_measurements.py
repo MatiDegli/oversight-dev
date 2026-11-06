@@ -38,7 +38,7 @@ async def test_measured_values_are_withheld_after_inventory_refresh(
     await tree.write_text(
         "tests/test_mod.py",
         "from pathlib import Path\nimport pytest\nfrom shop.mod import value\n"
-        f"secret = {CANARY!r}\nPath('.env').write_text('VALUE=' + secret)\n"
+        f"secret = {CANARY!r}\nPath('.env').write_text('SECRET_VALUE=' + secret)\n"
         f"@pytest.mark.parametrize('x', [1], ids=[{parameter_id}])\n"
         "def test_private(x):\n"
         + {
@@ -69,11 +69,15 @@ async def test_behavior_results_use_inventory_before_and_after_worker(workspace,
     workspace._demo_python = Path(sys.executable)
     root = workspace.main.root
     if not created_by_worker:
-        (root / ".env").write_text(f"VALUE={CANARY}\n")
+        (root / ".env").write_text(f"SECRET_VALUE={CANARY}\n")
     (root / "shop/mod.py").write_text(
         "from pathlib import Path\n"
         "def value():\n"
-        + (f"    Path('.env').write_text('VALUE={CANARY}\\n')\n" if created_by_worker else "")
+        + (
+            f"    Path('.env').write_text('SECRET_VALUE={CANARY}\\n')\n"
+            if created_by_worker
+            else ""
+        )
         + "    return {'nested': [Path('.env').read_text().split('=', 1)[1].strip()]}\n"
     )
     target = BehaviorTarget("value", "shop.mod", "value", ("((), {})",))

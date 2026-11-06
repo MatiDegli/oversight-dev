@@ -77,7 +77,7 @@ async def test_changed_dotenv_is_captured_before_stdout_and_junit(
         "def test_changed_secret():\n"
         "    old = Path('.env').read_text().split('=', 1)[1].strip()\n"
         "    new = 'twilight-' + 'oriole-9621'\n"
-        "    Path('.env').write_text('VALUE=' + new)\n"
+        "    Path('.env').write_text('SECRET_VALUE=' + new)\n"
         "    pytest.fail(old + ' ' + new)\n"
     )
     target = await tree.read_text("tests/test_secret.py")
@@ -95,7 +95,7 @@ async def test_secret_parameter_ids_are_withheld_without_inventing_case_identity
     await workspace.acquire_runtime()
     await workspace.reset()
     tree = workspace.main
-    await tree.write_text(".env", f"VALUE={CANARY}\n", expected_hash=None)
+    await tree.write_text(".env", f"SECRET_VALUE={CANARY}\n", expected_hash=None)
     await tree.write_text(
         "tests/test_parameter.py",
         "from pathlib import Path\nimport pytest\n"
@@ -150,3 +150,27 @@ async def test_non_secret_settings_preserve_failed_ids_cases_and_paths(make_work
     [case] = [case for case in run.cases if case.test_id == test_id]
     assert case.detail == "Failed: connect failed"
     assert test_id in run.output and "secret-bearing test identifiers withheld" not in run.problems
+
+
+async def test_postgres_setting_preserves_colliding_failed_id_and_case(make_workspace) -> None:
+    workspace = make_workspace(demo_python=Path(sys.executable))
+    await workspace.acquire_runtime()
+    await workspace.reset()
+    tree = workspace.main
+    await tree.write_text(
+        ".env",
+        "POSTGRES_USER=postgres\nDB_HOST=localhost\nENVIRONMENT=production\n",
+        expected_hash=None,
+    )
+    await tree.write_text(
+        "tests/test_postgres.py",
+        "import pytest\ndef test_production_settings():\n    pytest.fail('localhost refused')\n",
+        expected_hash=None,
+    )
+    run = await workspace.run_tests(tree, timeout_s=5)
+    test_id = "tests/test_postgres.py::test_production_settings"
+    assert run.result.failed_tests == [test_id]
+    [case] = [case for case in run.cases if case.test_id == test_id]
+    assert case.detail == "Failed: localhost refused"
+    assert test_id in run.output and "localhost refused" in run.output
+    assert "secret-bearing test identifiers withheld" not in run.problems

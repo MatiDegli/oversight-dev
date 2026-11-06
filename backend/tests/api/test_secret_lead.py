@@ -43,7 +43,7 @@ async def test_repository_inventory_does_not_rewrite_lead_messages(tmp_path: Pat
     ):
         agent_id = await start_idle(server)
         workspace = server.live.workspace
-        (workspace.main.root / ".env").write_text(f"VALUE={CANARY}\n")
+        (workspace.main.root / ".env").write_text(f"SECRET_VALUE={CANARY}\n")
         await workspace.run_tests(workspace.main, timeout_s=60)
         assert workspace.redact(CANARY) == "[redacted]"
         await send(server, CANARY, agent_id)
