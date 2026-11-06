@@ -479,3 +479,84 @@ button.decision-reject {
   resize: none;
   caret-color: var(--text);
 }
+
+.approval-packet {
+  margin-top: var(--spacing-md);
+  min-width: 0;
+}
+.approval-packet > summary {
+  width: fit-content;
+  cursor: pointer;
+  font-size: var(--label-size);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.packet-content {
+  display: grid;
+  gap: var(--spacing-md);
+  min-width: 0;
+  margin-top: var(--spacing-md);
+  overflow-wrap: anywhere;
+}
+.packet-content > p,
+.packet-content nav {
+  color: var(--muted);
+  font-size: var(--caption-size);
+}
+.packet-content nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm) var(--spacing-lg);
+}
+.packet-content a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.packet-content pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  min-width: 0;
+  max-height: 420px;
+  overflow-y: auto;
+  padding: var(--spacing-md);
+  background: var(--field);
+  border: 1px solid var(--control-edge);
+  border-radius: var(--radius-control);
+  font-family: var(--code-font);
+  font-size: var(--code-size);
+  user-select: text;
+  scrollbar-color: var(--control-edge) var(--field);
+}
+.packet-content pre::selection,
+.packet-content pre ::selection {
+  background: var(--text);
+  color: var(--field);
+}
+.packet-content button {
+  justify-self: start;
+  min-height: var(--button-small-height);
+  padding: var(--button-small-padding);
+  border: 1px solid var(--control-edge);
+  border-radius: var(--radius-control);
+  font-size: var(--label-size);
+  font-weight: 600;
+}
+.packet-content button:hover {
+  background: var(--raised);
+}
+.packet-content button[aria-disabled="true"] {
+  color: var(--faint);
+  cursor: progress;
+}
+.approval-packet :is(summary, button, a, pre):focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+@media (max-width: 767px) {
+  .approval-packet > summary,
+  .packet-content :is(button, a) {
+    min-height: 44px;
+    align-content: center;
+  }
+}
