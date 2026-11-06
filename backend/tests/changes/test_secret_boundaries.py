@@ -22,9 +22,12 @@ from oversight_contracts.events import ChangeProposed, SuiteExecution
 pytestmark = pytest.mark.anyio
 
 
-async def test_tests_executed_event_masks_junit_detail_before_sqlite(h: Harness) -> None:
+@pytest.mark.parametrize("name", ["PRIVATE_VALUE", "DB_PASS", "MYSQL_PWD", "GPG_PASSPHRASE"])
+async def test_tests_executed_event_masks_junit_detail_before_sqlite(h: Harness, name: str) -> None:
     tree = await h.open(1)
     await install_failure(tree)
+    secret = await tree.read_text(".env")
+    await tree.write_text(".env", f"{name}={CANARY}\n", expected_hash=secret.hash)
     run = await h.workspace.run_tests(tree, timeout_s=60)
     await h.manager.tests_executed("agent-1", run)
     [execution] = h.payloads(SuiteExecution)

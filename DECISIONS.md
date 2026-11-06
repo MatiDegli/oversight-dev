@@ -5596,8 +5596,9 @@ child cleanup but before reading diagnostics, it collects literal KEY=VALUE line
 secret-named text file (single-line quotes, export and trailing comments supported), and
 PEM/key/SSH body lines plus their joined body. Comments and assignment names are not collected,
 including in files below .env* directories. Repository values shorter than eight characters
-are ignored. Whole assignment values become [redacted] only for names containing PASSWORD,
-SECRET, TOKEN, KEY, AUTH, CREDENTIAL or PRIVATE (case-insensitive), credential-shaped values,
+are ignored. Whole assignment values become [redacted] only for names containing PASS
+(including PASSWORD, PASSWD and PASSPHRASE), PWD, DSN, SECRET, TOKEN, KEY, AUTH, CREDENTIAL or
+PRIVATE (case-insensitive), credential-shaped values,
 or URLs containing a password. URL passwords are also remembered separately. Only
 credential-shaped values/passwords, key bodies and provider keys contribute eight-character
 windows; URLs with passwords contribute whole-value matches, not windows of their public

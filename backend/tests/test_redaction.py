@@ -106,7 +106,21 @@ def test_ordinary_assignment_values_do_not_hide_diagnostics() -> None:
 
 
 @pytest.mark.parametrize(
-    "name", ["DB_PASSWORD", "SECRET", "access_token", "API_KEY", "AUTH", "CREDENTIAL", "PRIVATE"]
+    "name",
+    [
+        "DB_PASSWORD",
+        "DB_PASS",
+        "MYSQL_PWD",
+        "SMTP_PASSWD",
+        "GPG_PASSPHRASE",
+        "SENTRY_DSN",
+        "SECRET",
+        "access_token",
+        "API_KEY",
+        "AUTH",
+        "CREDENTIAL",
+        "PRIVATE",
+    ],
 )
 def test_secret_named_assignments_keep_whole_value_protection(name: str) -> None:
     redact = Redactor(None)

@@ -15,7 +15,7 @@ KEY_LIKE = re.compile(
     r"|\b(?=[A-Za-z0-9]*\d)(?=[A-Za-z0-9]*[A-Za-z])[A-Za-z0-9]{24,}\b",
     re.IGNORECASE,
 )
-SECRET_NAME = re.compile(r"PASSWORD|SECRET|TOKEN|KEY|AUTH|CREDENTIAL|PRIVATE", re.IGNORECASE)
+SECRET_NAME = re.compile(r"PASS|PWD|DSN|SECRET|TOKEN|KEY|AUTH|CREDENTIAL|PRIVATE", re.IGNORECASE)
 
 
 class Redactor:
