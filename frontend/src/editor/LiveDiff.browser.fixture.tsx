@@ -78,6 +78,8 @@ const editorSurface =
 
 export const panelTest = {
   renderFile(path: string, content: string) {
+    // FileView stretches within the production flex shell; give it the same height here.
+    host.style.display = "flex";
     const files = createFileSession({
       getFile: () => Promise.resolve({ path, content, hash: "test-hash", agent_id: null }),
       saveFile: () => Promise.reject(new Error("This test does not save")),
@@ -106,6 +108,7 @@ export const panelTest = {
     });
   },
   render(data: LiveDiffData | undefined) {
+    host.style.display = "block";
     flushSync(() => {
       root.render(
         <LiveDiff
@@ -125,6 +128,7 @@ export const panelTest = {
     });
   },
   renderReview(data: LiveDiffData) {
+    host.style.display = "block";
     const files = createFileSession({
       getFile: () =>
         Promise.resolve({
