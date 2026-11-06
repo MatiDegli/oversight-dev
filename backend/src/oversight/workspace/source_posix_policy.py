@@ -4,9 +4,11 @@ Public startup remains disabled. A later caller must persist a loosening receipt
 these leaves for execution; informational trust never substitutes for that authority.
 """
 
+import errno
 import os
 import re
 import stat
+import struct
 from collections.abc import Generator
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -59,6 +61,9 @@ class _Inspection:
     protected: tuple[Path, ...]
     warnings: set[str] = field(default_factory=lambda: set[str]())
     exposures: set[Exposure] = field(default_factory=lambda: set[Exposure]())
+    groups: dict[int, tuple[int, ...] | None] = field(
+        default_factory=lambda: dict[int, tuple[int, ...] | None]()
+    )
 
     def disclosure(self) -> Disclosure:
         return Disclosure(
@@ -133,6 +138,15 @@ def accounts_enumerable() -> bool:
 
 
 def private_group_members(gid: int) -> tuple[int, ...] | None:
+    state = _inspection.get()
+    if state is None:
+        return _private_group_members(gid)
+    if gid not in state.groups:
+        state.groups[gid] = _private_group_members(gid)
+    return state.groups[gid]
+
+
+def _private_group_members(gid: int) -> tuple[int, ...] | None:
     # Import only in POSIX leaves so Windows dispatch does not need Unix account modules.
     import grp
     import pwd
@@ -163,8 +177,24 @@ def private_group_members(gid: int) -> tuple[int, ...] | None:
         return None
 
 
+def acl_other_writers(fd: int | None) -> bool:
+    """An ACL mask is not proof that only the owning group can write."""
+    if fd is None:
+        # A stat without its pinned descriptor cannot establish ACL ownership.
+        return True
+    try:
+        data = os.getxattr(fd, "system.posix_acl_access")
+    except OSError as error:
+        return error.errno not in {errno.ENODATA, errno.ENOTSUP, errno.EOPNOTSUPP}
+    if len(data) < 4 or data[:4] != struct.pack("<I", 2) or (len(data) - 4) % 8:
+        return True
+    tags = [tag for tag, _, _ in struct.iter_unpack("<HHI", data[4:])]
+    # Only the ordinary owner/group/other entries and optional mask are safe.
+    return sorted(tags) not in ([1, 4, 32], [1, 4, 16, 32])
+
+
 def check_permissions(
-    info: os.stat_result, path: Path, *, source: bool, sticky_ancestor: bool
+    info: os.stat_result, path: Path, *, source: bool, sticky_ancestor: bool, fd: int | None = None
 ) -> None:
     root_uid = os.stat("/").st_uid
     if sticky_ancestor and info.st_uid == root_uid and info.st_mode & stat.S_ISVTX:
@@ -175,6 +205,7 @@ def check_permissions(
         info.st_uid not in {root_uid, os.geteuid()}
         or bool(info.st_mode & 0o002)
         or (bool(info.st_mode & 0o020) and members is None)
+        or (bool(info.st_mode & 0o020) and acl_other_writers(fd))
     )
     if unsafe and (state is None or not state.policy.receipt_required):
         raise StartupRefusal(

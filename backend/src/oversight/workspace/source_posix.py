@@ -88,10 +88,17 @@ __all__ = [
     "Selection",
     "StagedSource",
     "Witness",
+    "absolute",
     "cleanup_stage",
+    "directory",
+    "directory_names",
+    "identity",
     "inventory",
     "manifest_bytes",
     "prepare_source",
+    "read_file",
+    "relative",
+    "remaining",
     "stage_source",
     "validate_selection",
     "verify_stage",
@@ -134,6 +141,7 @@ class PosixSource:
     root: Path
     runtime: Path
     ide: Path
+    reviewed_checkout: Path
     placements: tuple[Witness, ...]
     budgets: AdmissionBudgets = DEFAULT_BUDGETS
     excluded: tuple[Path, ...] = ()
@@ -145,18 +153,19 @@ class PosixSource:
 
     @property
     def protected(self) -> tuple[Path, ...]:
-        return (self.runtime, self.ide, PACKAGE_ROOT, *self.excluded)
+        return (self.runtime, self.ide, PACKAGE_ROOT, self.reviewed_checkout, *self.excluded)
 
 
 def _placement(
     source: Path,
     runtime: Path,
     ide: Path,
+    reviewed_checkout: Path,
     budget: AdmissionBudgets = DEFAULT_BUDGETS,
     excluded: tuple[Path, ...] = (),
     policy: AdmissionPolicy = DEFAULT_POLICY,
 ) -> PosixSource:
-    for path in (source, runtime, ide):
+    for path in (source, runtime, ide, reviewed_checkout):
         absolute(path)
     for other in (runtime,):
         if source.is_relative_to(other) or other.is_relative_to(source):
@@ -170,10 +179,9 @@ def _placement(
             other[-1].identity[:2] in {w.identity[:2] for w in source_chain}
         ):
             raise refuse("filesystem alias overlaps source placement")
-    reviewed = runtime / "sources/oversight-self"
     roots = (ide, PACKAGE_ROOT, *excluded)
-    if reviewed.exists():
-        roots += (reviewed,)
+    if os.path.lexists(reviewed_checkout):
+        roots += (reviewed_checkout,)
     exclusions, layouts = excluded_identities(
         source, roots, time.monotonic() + budget.phase_seconds
     )
@@ -182,6 +190,7 @@ def _placement(
         source,
         runtime,
         ide,
+        reviewed_checkout,
         tuple(dict.fromkeys((*source_chain, *runtime_chain, *ide_chain, *exclusions))),
         budget,
         excluded,
@@ -217,16 +226,19 @@ async def prepare_source(
     runtime: Path,
     ide: Path,
     *,
+    reviewed_checkout: Path,
     budget: AdmissionBudgets = DEFAULT_BUDGETS,
     excluded: tuple[Path, ...] = (),
     policy: AdmissionPolicy = DEFAULT_POLICY,
 ) -> PosixSource:
-    """No writes. Validate all three existing placements before any source inspection."""
-    protected = (runtime, ide, PACKAGE_ROOT, *excluded)
+    """No writes. The caller supplies the reviewed checkout from the base runtime."""
+    protected = (runtime, ide, PACKAGE_ROOT, reviewed_checkout, *excluded)
     with budget_scope(budget), inspection(policy, protected) as state:
         try:
             prepared = await offload(
-                lambda: _placement(source, runtime, ide, budget, excluded, policy)
+                lambda: _placement(
+                    source, runtime, ide, reviewed_checkout, budget, excluded, policy
+                )
             )
         except PermissionError:
             raise refuse(
@@ -242,6 +254,7 @@ def recheck_source(source: PosixSource) -> None:
                 source.root,
                 source.runtime,
                 source.ide,
+                source.reviewed_checkout,
                 source.budgets,
                 source.excluded,
                 source.policy,
@@ -257,7 +270,15 @@ def recheck_tree(source: PosixSource, tree: Path) -> None:
     absolute(tree)
     if not tree.is_relative_to(source.runtime) or tree in {source.runtime, source.ide}:
         raise refuse("disposable tree must be inside the validated runtime")
-    _placement(source.root, tree, source.ide, source.budgets, source.excluded, source.policy)
+    _placement(
+        source.root,
+        tree,
+        source.ide,
+        source.reviewed_checkout,
+        source.budgets,
+        source.excluded,
+        source.policy,
+    )
 
 
 def selected(path: str) -> bool:

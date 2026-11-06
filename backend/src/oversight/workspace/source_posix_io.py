@@ -133,8 +133,11 @@ def secure(
     path: Path | None = None,
     source: bool = False,
     sticky_ancestor: bool = False,
+    fd: int | None = None,
 ) -> None:
-    check_permissions(info, path or Path("/"), source=source, sticky_ancestor=sticky_ancestor)
+    check_permissions(
+        info, path or Path("/"), source=source, sticky_ancestor=sticky_ancestor, fd=fd
+    )
 
 
 @dataclass(frozen=True)
@@ -154,14 +157,16 @@ def directory(path: Path) -> Generator[int]:
         fd = os.open("/", os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC)
         descriptors.append(fd)
         for part in path.parts[1:]:
-            secure(os.fstat(fd), path=current, source=source_input(path), sticky_ancestor=True)
+            secure(
+                os.fstat(fd), path=current, source=source_input(path), sticky_ancestor=True, fd=fd
+            )
             current /= part
             fd = os.open(
                 part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC, dir_fd=fd
             )
             descriptors.append(fd)
             witnesses.append(Witness(current, identity(os.fstat(fd))))
-        secure(os.fstat(fd), path=current, source=source_input(path), sticky_ancestor=True)
+        secure(os.fstat(fd), path=current, source=source_input(path), sticky_ancestor=True, fd=fd)
         yield fd
         for witness in witnesses:
             if identity(witness.path.lstat()) != witness.identity:
@@ -186,7 +191,7 @@ def read_file(
         )
         try:
             before = os.fstat(fd)
-            secure(before, path=path, source=source_input(path))
+            secure(before, path=path, source=source_input(path), fd=fd)
             if not stat.S_ISREG(before.st_mode) or (not hardlinks and before.st_nlink != 1):
                 raise refuse("nonregular or multiple-link input")
             if before.st_size > limit:
@@ -215,8 +220,8 @@ def read_file(
 
 
 def anchors(path: Path) -> tuple[Witness, ...]:
-    with directory(path):
-        secure(path.lstat(), path=path, source=source_input(path))
+    with directory(path) as fd:
+        secure(os.fstat(fd), path=path, source=source_input(path), fd=fd)
         return tuple(Witness(p, identity(p.lstat())) for p in (*reversed(path.parents), path))
 
 

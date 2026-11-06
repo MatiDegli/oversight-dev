@@ -48,7 +48,7 @@ async def repository(tmp_path: Path) -> posix.PosixSource:
     (source / "gone.py").write_text("gone\n")
     await git(source, "add", ".")
     await git(source, "commit", "-qm", "Fixture")
-    return await posix.prepare_source(source, runtime, ide)
+    return await posix.prepare_source(source, runtime, ide, reviewed_checkout=tmp_path / "reviewed")
 
 
 def test_fixture_git_waits_for_maintenance(tmp_path):
@@ -154,14 +154,18 @@ def test_posix_placement_refusals(tmp_path, kind):
         elif kind == "unsafe":
             source.chmod(0o777)
         if kind == "swap":
-            prepared = await posix.prepare_source(source, runtime, ide)
+            prepared = await posix.prepare_source(
+                source, runtime, ide, reviewed_checkout=tmp_path / "reviewed"
+            )
             source.rename(tmp_path / "old-source")
             source.mkdir()
             with pytest.raises(OSError):
                 await posix.inventory(prepared, git=GIT)
         else:
             with pytest.raises(OSError):
-                await posix.prepare_source(source, runtime, ide)
+                await posix.prepare_source(
+                    source, runtime, ide, reviewed_checkout=tmp_path / "reviewed"
+                )
         assert not tuple(runtime.glob("source-stage-*"))
 
     asyncio.run(scenario())
@@ -216,7 +220,9 @@ def test_packed_clone_inventory_and_copy(tmp_path):
         # Reflogs and objects are outside the bounded control witnesses.
         with (clone / ".git/logs/large").open("wb") as log:
             log.truncate(posix.MAX_TOTAL + 1)
-        source = await posix.prepare_source(clone, original.runtime, original.ide)
+        source = await posix.prepare_source(
+            clone, original.runtime, original.ide, reviewed_checkout=tmp_path / "reviewed"
+        )
         before = {p: posix.token(p.lstat()) for p in clone.rglob("*")}
         selection = await posix.validate_selection(await posix.inventory(source, git=GIT))
         assert selection.total_bytes == len(b"value = 1\ngone\n")
@@ -675,14 +681,16 @@ def test_posix_case_and_ancestor_policy(tmp_path):
         source, runtime, ide = (tmp_path / name for name in ("source", "SOURCE", "ide"))
         for path in (source, runtime, ide):
             path.mkdir()
-        await posix.prepare_source(source, runtime, ide)
+        await posix.prepare_source(source, runtime, ide, reviewed_checkout=tmp_path / "reviewed")
         parent = tmp_path / "unsafe-parent"
         parent.mkdir()
         nested = parent / "source"
         nested.mkdir()
         parent.chmod(0o777)
         with pytest.raises(OSError):
-            await posix.prepare_source(nested, runtime, ide)
+            await posix.prepare_source(
+                nested, runtime, ide, reviewed_checkout=tmp_path / "reviewed"
+            )
 
     asyncio.run(scenario())
 
@@ -703,7 +711,7 @@ async def main():
  result=await run_process(["/usr/bin/mount","--bind",str(source),str(alias)],cwd=ide,timeout_s=5)
  if result.returncode != 0: raise OSError(result.stderr)
  try:
-  try: await prepare_source(source,alias/"runtime",ide)
+  try: await prepare_source(source,alias/"runtime",ide,reviewed_checkout=ide/"reviewed")
   except OSError as error:
    assert "filesystem alias" in str(error), str(error)
    print("real bind alias refused")

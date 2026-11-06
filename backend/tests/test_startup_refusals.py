@@ -131,7 +131,9 @@ async def test_posix_leaf_categories_emit_once_per_attempt(tmp_path, monkeypatch
             await posix.inventory(source, git=str(tmp_path / "no-git"))
         elif category == "source-permissions":
             source.root.chmod(0o777)
-            await posix.prepare_source(source.root, source.runtime, source.ide)
+            await posix.prepare_source(
+                source.root, source.runtime, source.ide, reviewed_checkout=tmp_path / "reviewed"
+            )
         elif category == "unsafe-git-config":
             await git(source.root, "config", "include.path", "/must-not-read")
             await posix.inventory(source, git=GIT)
@@ -150,7 +152,9 @@ async def test_posix_leaf_categories_emit_once_per_attempt(tmp_path, monkeypatch
             monkeypatch.setattr(policy, "mount_for", lambda path: policy.Mount(path, "9p", True))
             policy.require_linux_state(source.runtime)
         else:
-            await posix.prepare_source(source.root, source.runtime, source.root)
+            await posix.prepare_source(
+                source.root, source.runtime, source.root, reviewed_checkout=tmp_path / "reviewed"
+            )
 
     with pytest.raises(OSError), startup_refusals(), startup_refusals():
         await fail()

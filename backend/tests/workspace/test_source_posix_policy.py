@@ -73,7 +73,9 @@ def test_private_group_umask_workflow(tmp_path, monkeypatch):
         source.ide.chmod(0o775)
         (source.root / "a.py").chmod(0o664)
         (source.root / ".git").chmod(0o775)
-        selected = await posix.prepare_source(source.root, source.runtime, source.ide)
+        selected = await posix.prepare_source(
+            source.root, source.runtime, source.ide, reviewed_checkout=tmp_path / "reviewed"
+        )
         before = witness(selected.root)
         listing = await posix.inventory(selected, git=GIT)
         selection = await posix.validate_selection(listing)
@@ -99,17 +101,27 @@ def test_writer_acceptance_scoped_to_inputs(tmp_path, placement):
             source.runtime.chmod(0o777)
             with pytest.raises(StartupRefusal) as error:
                 await posix.prepare_source(
-                    source.root, source.runtime, source.ide, policy=selected_policy
+                    source.root,
+                    source.runtime,
+                    source.ide,
+                    reviewed_checkout=tmp_path / "reviewed",
+                    policy=selected_policy,
                 )
             assert error.value.refusal_category == "source-permissions"
             return
         source.root.chmod(0o777)
         (source.root / "a.py").chmod(0o666)
         with pytest.raises(StartupRefusal) as error:
-            await posix.prepare_source(source.root, source.runtime, source.ide)
+            await posix.prepare_source(
+                source.root, source.runtime, source.ide, reviewed_checkout=tmp_path / "reviewed"
+            )
         assert error.value.refusal_category == "source-permissions"
         source = await posix.prepare_source(
-            source.root, source.runtime, source.ide, policy=selected_policy
+            source.root,
+            source.runtime,
+            source.ide,
+            reviewed_checkout=tmp_path / "reviewed",
+            policy=selected_policy,
         )
         before = witness(source.root)
         listing = await posix.inventory(source, git=GIT)
@@ -150,11 +162,14 @@ def test_drvfs_synthetic_permissions_and_advice(tmp_path, monkeypatch):
         monkeypatch.setattr(policy, "mount_for", mounts)
         source.root.chmod(0o777)
         with pytest.raises(StartupRefusal, match="metadata,umask=022"):
-            await posix.prepare_source(source.root, source.runtime, source.ide)
+            await posix.prepare_source(
+                source.root, source.runtime, source.ide, reviewed_checkout=tmp_path / "reviewed"
+            )
         source = await posix.prepare_source(
             source.root,
             source.runtime,
             source.ide,
+            reviewed_checkout=tmp_path / "reviewed",
             policy=policy.AdmissionPolicy("Person accepts DrvFs writers"),
         )
         await git(source.root, "config", "core.symlinks", "false")
@@ -246,7 +261,9 @@ def test_refusal_before_query_on_other_primary_writer(tmp_path, monkeypatch):
         )
         source.root.chmod(0o775)
         with pytest.raises(StartupRefusal):
-            await posix.prepare_source(source.root, source.runtime, source.ide)
+            await posix.prepare_source(
+                source.root, source.runtime, source.ide, reviewed_checkout=tmp_path / "reviewed"
+            )
 
     asyncio.run(scenario())
 
@@ -364,7 +381,9 @@ def test_external_git_metadata_cannot_live_in_runtime(tmp_path):
         )
         before = witness(source.root), witness(source.runtime)
         with pytest.raises(StartupRefusal) as error:
-            await posix.prepare_source(source.root, source.runtime, source.ide)
+            await posix.prepare_source(
+                source.root, source.runtime, source.ide, reviewed_checkout=tmp_path / "reviewed"
+            )
         assert error.value.refusal_category == "runtime-unavailable"
         assert before == (witness(source.root), witness(source.runtime))
 

@@ -53,7 +53,9 @@ def test_layout_copy_handoff(tmp_path, kind):
         (root / "a.py").write_bytes(b"dirty\r\n\xff\0")
         (root / "gone.py").unlink()
         (root / "untracked").write_bytes(b"untracked\0")
-        source = await posix.prepare_source(root, original.runtime, original.ide)
+        source = await posix.prepare_source(
+            root, original.runtime, original.ide, reviewed_checkout=tmp_path / "reviewed"
+        )
         before = witness(original.root), witness(root)
         listing = await posix.inventory(source, git=GIT)
         selection = await posix.validate_selection(listing)
@@ -191,7 +193,9 @@ def test_config_checked_before_repository_queries(tmp_path, where, setting):
             )
         with target.open("a") as stream:
             stream.write(f"\n[{setting.split('.')[0]}]\n{setting.split('.')[1]} = /never/read\n")
-        source = await posix.prepare_source(linked, original.runtime, original.ide)
+        source = await posix.prepare_source(
+            linked, original.runtime, original.ide, reviewed_checkout=tmp_path / "reviewed"
+        )
 
         async def spawn(argv, **kwargs):
             assert "--no-includes" in argv, "unsafe config reached repository query"
@@ -228,7 +232,9 @@ def test_git_directory_pointers_revalidated_before_queries(tmp_path, pointer):
         original = await repository(tmp_path)
         linked = tmp_path / "linked"
         await git(original.root, "worktree", "add", "--detach", str(linked))
-        source = await posix.prepare_source(linked, original.runtime, original.ide)
+        source = await posix.prepare_source(
+            linked, original.runtime, original.ide, reviewed_checkout=tmp_path / "reviewed"
+        )
         layout = control.inspect_layout(linked, time.monotonic() + 10)
         paths = {
             "marker": linked / ".git",
@@ -264,7 +270,9 @@ def test_symlink_in_pointer_parent_traversal_refused(tmp_path):
         alias.symlink_to(target.parent, target_is_directory=True)
         marker.write_text(f"gitdir: {alias}/../{target.parent.name}/{target.name}\n")
         with pytest.raises(OSError):
-            source = await posix.prepare_source(linked, original.runtime, original.ide)
+            source = await posix.prepare_source(
+                linked, original.runtime, original.ide, reviewed_checkout=tmp_path / "reviewed"
+            )
             await posix.inventory(source, git=GIT)
 
     asyncio.run(scenario())
