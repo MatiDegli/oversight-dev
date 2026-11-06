@@ -10,6 +10,7 @@ import stat
 from dataclasses import dataclass
 from pathlib import Path
 
+from oversight.workspace.errors import StartupRefusal
 from oversight.workspace.source_posix_io import (
     FileEntry,
     Witness,
@@ -40,6 +41,15 @@ def _file(path: Path, deadline: float) -> FileEntry:
         data, stamp = read_file(path, deadline, limit=budgets().max_git)
     except FileNotFoundError:
         return FileEntry(str(path), None, None, 0, 0)
+    except OSError as error:
+        if isinstance(error, StartupRefusal) and error.refusal_category != "other":
+            raise
+        if path.name in {"config", "config.worktree"}:
+            raise refuse(
+                "unsafe Git config file; replace it with a private regular file",
+                "unsafe-git-config",
+            ) from None
+        raise
     return FileEntry(
         str(path), stamp, hashlib.sha256(data).hexdigest(), len(data), stamp[2] & 0o777
     )
@@ -136,7 +146,7 @@ def _refs(base: Path, deadline: float) -> tuple[FileEntry, ...]:
                     else:
                         found.append(_file(child, deadline))
                     if len(found) + len(pending) > budgets().max_paths:
-                        raise refuse("Git ref entry budget exceeded")
+                        raise refuse("Git ref entry budget exceeded", "source-budget-exceeded")
         except FileNotFoundError:
             found.append(FileEntry(str(path), None, None, 0, 0))
         remaining(deadline)

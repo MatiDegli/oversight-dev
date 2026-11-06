@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from oversight.workspace.errors import SourceChanged, StartupRefusal
+from oversight.workspace.source_posix_policy import check_permissions, source_input
 
 MAX_PATHS = 16384
 MAX_FILE = 4 * 1024 * 1024
@@ -66,7 +67,10 @@ def changed(reason: str) -> SourceChanged:
 def remaining(deadline: float) -> float:
     left = deadline - time.monotonic()
     if left <= 0:
-        raise refuse("phase deadline exceeded")
+        raise refuse(
+            "phase deadline exceeded; stop other writers or increase the admission budget",
+            "source-budget-exceeded",
+        )
     return left
 
 
@@ -107,7 +111,10 @@ def directory_names(fd: int, deadline: float) -> tuple[str, ...]:
         for item in entries:
             remaining(deadline)
             if len(names) >= budgets().max_paths:
-                raise refuse("directory entry budget exceeded")
+                raise refuse(
+                    "directory entry budget exceeded; increase the admission path budget",
+                    "source-budget-exceeded",
+                )
             names.append(item.name)
     return tuple(sorted(names))
 
@@ -120,12 +127,14 @@ def token(info: os.stat_result) -> tuple[int, ...]:
     return (*identity(info), info.st_nlink, info.st_size, info.st_mtime_ns, info.st_ctime_ns)
 
 
-def secure(info: os.stat_result, *, sticky_ancestor: bool = False) -> None:
-    if info.st_uid not in {ROOT_UID, os.geteuid()} or (
-        info.st_mode & 0o022
-        and not (sticky_ancestor and info.st_uid == ROOT_UID and info.st_mode & stat.S_ISVTX)
-    ):
-        raise refuse("unsafe ownership or writable ancestor/input")
+def secure(
+    info: os.stat_result,
+    *,
+    path: Path | None = None,
+    source: bool = False,
+    sticky_ancestor: bool = False,
+) -> None:
+    check_permissions(info, path or Path("/"), source=source, sticky_ancestor=sticky_ancestor)
 
 
 @dataclass(frozen=True)
@@ -145,18 +154,22 @@ def directory(path: Path) -> Generator[int]:
         fd = os.open("/", os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC)
         descriptors.append(fd)
         for part in path.parts[1:]:
-            secure(os.fstat(fd), sticky_ancestor=True)
+            secure(os.fstat(fd), path=current, source=source_input(path), sticky_ancestor=True)
             current /= part
             fd = os.open(
                 part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC, dir_fd=fd
             )
             descriptors.append(fd)
             witnesses.append(Witness(current, identity(os.fstat(fd))))
-        secure(os.fstat(fd), sticky_ancestor=True)
+        secure(os.fstat(fd), path=current, source=source_input(path), sticky_ancestor=True)
         yield fd
         for witness in witnesses:
             if identity(witness.path.lstat()) != witness.identity:
                 raise changed("directory identity changed")
+    except PermissionError:
+        raise refuse(
+            "cannot read input; check directory/file permissions", "source-permissions"
+        ) from None
     finally:
         for fd in reversed(descriptors):
             os.close(fd)
@@ -173,11 +186,14 @@ def read_file(
         )
         try:
             before = os.fstat(fd)
-            secure(before)
+            secure(before, path=path, source=source_input(path))
             if not stat.S_ISREG(before.st_mode) or (not hardlinks and before.st_nlink != 1):
                 raise refuse("nonregular or multiple-link input")
             if before.st_size > limit:
-                raise refuse("file byte budget exceeded")
+                raise refuse(
+                    "file byte budget exceeded; increase the admission byte budget",
+                    "source-budget-exceeded",
+                )
             data = bytearray()
             while len(data) <= limit:
                 remaining(deadline)
@@ -200,7 +216,7 @@ def read_file(
 
 def anchors(path: Path) -> tuple[Witness, ...]:
     with directory(path):
-        secure(path.lstat())
+        secure(path.lstat(), path=path, source=source_input(path))
         return tuple(Witness(p, identity(p.lstat())) for p in (*reversed(path.parents), path))
 
 

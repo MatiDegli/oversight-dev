@@ -8,6 +8,7 @@ from collections.abc import AsyncGenerator, Callable, Mapping
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+from oversight.workspace.errors import StartupRefusal
 from oversight.workspace.locks import offload
 from oversight.workspace.runner import NtCleanupError, Spawn
 
@@ -100,6 +101,8 @@ async def check_source_config(
                 )
         except NtCleanupError:
             raise  # Keep the runner's cleanup signal intact across the COPY refusal boundary.
+        except StartupRefusal:
+            raise
         except OSError:
             raise refuse(f"{label}: cannot list Git config") from None
         time_left()  # Include process cleanup and filesystem inspection in the caller's deadline.

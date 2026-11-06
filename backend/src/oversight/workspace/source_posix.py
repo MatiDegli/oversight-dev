@@ -12,7 +12,7 @@ import re
 import stat
 import time
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from uuid import uuid4
 
@@ -65,6 +65,21 @@ from oversight.workspace.source_posix_io import (
 from oversight.workspace.source_posix_io import (
     token as token,
 )
+from oversight.workspace.source_posix_policy import (
+    DEFAULT_POLICY,
+    Disclosure,
+    Mount,
+    check_case,
+    disclosure,
+    inspect_source_mount,
+    inspection,
+)
+from oversight.workspace.source_posix_policy import (
+    AdmissionPolicy as AdmissionPolicy,
+)
+from oversight.workspace.source_posix_policy import (
+    require_linux_state as require_linux_state,
+)
 
 __all__ = [
     "FileEntry",
@@ -82,6 +97,7 @@ __all__ = [
     "verify_stage",
 ]
 
+PACKAGE_ROOT = Path(__file__).resolve().parents[4]
 PHASE_SECONDS = 10
 MAX_GIT = 8 * 1024 * 1024
 MAX_PATHS = 16384
@@ -122,6 +138,14 @@ class PosixSource:
     budgets: AdmissionBudgets = DEFAULT_BUDGETS
     excluded: tuple[Path, ...] = ()
     source_layouts: tuple[GitLayout, ...] = ()
+    policy: AdmissionPolicy = DEFAULT_POLICY
+    disclosure: Disclosure | None = field(default=None, compare=False)
+    source_mount: Mount | None = None
+    runtime_mount: Mount | None = None
+
+    @property
+    def protected(self) -> tuple[Path, ...]:
+        return (self.runtime, self.ide, PACKAGE_ROOT, *self.excluded)
 
 
 def _placement(
@@ -130,12 +154,15 @@ def _placement(
     ide: Path,
     budget: AdmissionBudgets = DEFAULT_BUDGETS,
     excluded: tuple[Path, ...] = (),
+    policy: AdmissionPolicy = DEFAULT_POLICY,
 ) -> PosixSource:
     for path in (source, runtime, ide):
         absolute(path)
     for other in (runtime,):
         if source.is_relative_to(other) or other.is_relative_to(source):
             raise refuse("source/runtime or running checkout ancestor overlap")
+    runtime_mount = require_linux_state(runtime)
+    source_mount = inspect_source_mount(source)
     source_chain, runtime_chain, ide_chain = (anchors(p) for p in (source, runtime, ide))
     for other in (runtime_chain,):
         # Bind aliases preserve inode identity even when their lexical names differ.
@@ -144,12 +171,13 @@ def _placement(
         ):
             raise refuse("filesystem alias overlaps source placement")
     reviewed = runtime / "sources/oversight-self"
-    roots = (ide, Path(__file__).resolve().parents[4], *excluded)
+    roots = (ide, PACKAGE_ROOT, *excluded)
     if reviewed.exists():
         roots += (reviewed,)
     exclusions, layouts = excluded_identities(
         source, roots, time.monotonic() + budget.phase_seconds
     )
+    _metadata_placement(layouts, runtime, runtime_chain)
     return PosixSource(
         source,
         runtime,
@@ -158,7 +186,30 @@ def _placement(
         budget,
         excluded,
         layouts,
+        policy,
+        None,
+        source_mount,
+        runtime_mount,
     )
+
+
+def _metadata_placement(
+    layouts: tuple[GitLayout, ...], runtime: Path, runtime_chain: tuple[Witness, ...]
+) -> None:
+    for layout in layouts:
+        for witness in layout.directories:
+            path = witness.path
+            if (
+                path.is_relative_to(runtime)
+                or runtime.is_relative_to(path)
+                or witness.identity[:2] in {w.identity[:2] for w in runtime_chain}
+                or runtime_chain[-1].identity[:2] in {w.identity[:2] for w in anchors(path)}
+            ):
+                raise refuse(
+                    "runtime overlaps the selected Git metadata; choose a separate "
+                    "private Linux state directory",
+                    "runtime-unavailable",
+                )
 
 
 async def prepare_source(
@@ -168,18 +219,36 @@ async def prepare_source(
     *,
     budget: AdmissionBudgets = DEFAULT_BUDGETS,
     excluded: tuple[Path, ...] = (),
+    policy: AdmissionPolicy = DEFAULT_POLICY,
 ) -> PosixSource:
     """No writes. Validate all three existing placements before any source inspection."""
-    with budget_scope(budget):
-        return await offload(lambda: _placement(source, runtime, ide, budget, excluded))
+    protected = (runtime, ide, PACKAGE_ROOT, *excluded)
+    with budget_scope(budget), inspection(policy, protected) as state:
+        try:
+            prepared = await offload(
+                lambda: _placement(source, runtime, ide, budget, excluded, policy)
+            )
+        except PermissionError:
+            raise refuse(
+                "cannot read source or placement; check directory permissions", "source-permissions"
+            ) from None
+        return replace(prepared, disclosure=state.disclosure())
 
 
 def recheck_source(source: PosixSource) -> None:
-    if (
-        _placement(source.root, source.runtime, source.ide, source.budgets, source.excluded)
-        != source
-    ):
-        raise refuse("placement changed since validation")
+    with inspection(source.policy, source.protected, source.disclosure):
+        if (
+            _placement(
+                source.root,
+                source.runtime,
+                source.ide,
+                source.budgets,
+                source.excluded,
+                source.policy,
+            )
+            != source
+        ):
+            raise changed("placement changed since validation")
 
 
 def recheck_tree(source: PosixSource, tree: Path) -> None:
@@ -188,12 +257,12 @@ def recheck_tree(source: PosixSource, tree: Path) -> None:
     absolute(tree)
     if not tree.is_relative_to(source.runtime) or tree in {source.runtime, source.ide}:
         raise refuse("disposable tree must be inside the validated runtime")
-    _placement(source.root, tree, source.ide)
+    _placement(source.root, tree, source.ide, source.budgets, source.excluded, source.policy)
 
 
 def selected(path: str) -> bool:
     parts = relative(path)
-    if ".gitmodules" in parts:
+    if any(part.casefold() == ".gitmodules" for part in parts):
         raise refuse("submodule metadata")
     return not (
         is_secret_path(path, nt=False)
@@ -206,12 +275,17 @@ def records(text: str) -> tuple[str, ...]:
     if text and (not text.endswith("\0") or "\ufffd" in text):
         raise refuse("malformed or non-UTF-8 Git output")
     rows = tuple(text[:-1].split("\0")) if text else ()
-    if any(not row for row in rows) or len(rows) > budgets().max_paths:
-        raise refuse("empty or excessive Git records")
+    if len(rows) > budgets().max_paths:
+        raise refuse(
+            "Git record budget exceeded; increase the admission path budget",
+            "source-budget-exceeded",
+        )
+    if any(not row for row in rows):
+        raise refuse("empty Git record")
     return rows
 
 
-def repository_layout(source: PosixSource, deadline: float) -> None:
+def repository_layout(source: PosixSource, deadline: float) -> frozenset[str]:
     recheck_source(source)
     for parent in source.root.parents:
         marker = parent / ".git"
@@ -224,26 +298,32 @@ def repository_layout(source: PosixSource, deadline: float) -> None:
     # Scan eligible directories, including ignored ones: a nested repository with no
     # selected files must not silently become an ordinary input after a later edit.
     pending = [source.root]
+    actual: set[str] = set()
     count = 0
     while pending:
         path = pending.pop()
         with directory(path) as fd:
-            for name in directory_names(fd, deadline):
+            names = directory_names(fd, deadline)
+            check_case(fd, names)
+            for name in names:
                 remaining(deadline)
                 count += 1
                 if count > budgets().max_paths:
-                    raise refuse("working input entry budget exceeded")
-                if name in {".git", ".gitmodules"}:
+                    raise refuse("working input entry budget exceeded", "source-budget-exceeded")
+                if name.casefold() in {".git", ".gitmodules"}:
                     if path != source.root or name != ".git":
                         raise refuse("nested repository or submodule metadata")
                     continue
                 rel = str((path / name).relative_to(source.root))
                 if selected(rel):
+                    actual.add(rel)
                     info = os.stat(name, dir_fd=fd, follow_symlinks=False)
                     if stat.S_ISDIR(info.st_mode):
                         pending.append(path / name)
                     elif not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
                         raise refuse("link, special or multiple-link working input")
+
+    return frozenset(actual)
 
 
 @dataclass(frozen=True)
@@ -256,6 +336,7 @@ class Inventory:
     deadline: float
     layout: GitLayout
     warnings: tuple[str, ...] = ()
+    disclosure: Disclosure | None = field(default=None, compare=False)
 
 
 @dataclass(frozen=True)
@@ -318,7 +399,7 @@ class _GitQuery:
         ):
             raise changed("Git metadata changed before repository query")
         output_cap = min(output_cap, budgets().max_git)
-        result = await self.spawn(
+        result = await self._spawn(
             argv,
             cwd=cwd,
             env=env,
@@ -332,8 +413,39 @@ class _GitQuery:
             or result.truncated
             or (len((result.stdout + result.stderr).encode()) > output_cap)
         ):
-            raise refuse("failed, timed-out or truncated Git query")
+            category = (
+                "source-budget-exceeded"
+                if result.timed_out or result.truncated
+                else ("unsafe-git-config" if "--no-includes" in argv else "not-standalone-repo")
+            )
+            raise refuse(
+                "failed, timed-out or truncated Git query; inspect Git configuration "
+                "or increase the admission budget",
+                category,
+            )
         return result
+
+    async def _spawn(
+        self,
+        argv: Sequence[str],
+        *,
+        cwd: Path,
+        env: Mapping[str, str] | None,
+        timeout_s: float,
+        output_cap: int,
+    ) -> ProcessResult:
+        try:
+            return await self.spawn(
+                argv, cwd=cwd, env=env, timeout_s=timeout_s, output_cap=output_cap
+            )
+        except FileNotFoundError:
+            raise refuse(
+                "Git is missing; install git inside this Linux distribution", "missing-git"
+            ) from None
+        except PermissionError:
+            raise refuse(
+                "cannot execute Git; check its executable permissions", "source-permissions"
+            ) from None
 
 
 def _config_record(key: str, value: str) -> None:
@@ -344,6 +456,7 @@ def _config_record(key: str, value: str) -> None:
         "logallrefupdates",
         "ignorecase",
         "precomposeunicode",
+        "symlinks",
         "autocrlf",
         "eol",
         "protecthfs",
@@ -359,8 +472,14 @@ def _config_record(key: str, value: str) -> None:
         )
         or key.startswith(("include.", "includeif."))
         or (key == "core.bare" and value != "false")
+        or (
+            key == "core.symlinks"
+            and value.lower() not in {"true", "false", "yes", "no", "on", "off", "1", "0", ""}
+        )
     ):
-        raise refuse("unsafe Git configuration")
+        raise refuse(
+            "unsafe Git configuration; remove unsafe settings and retry", "unsafe-git-config"
+        )
 
 
 async def _check_config(query: _GitQuery) -> None:
@@ -371,7 +490,7 @@ async def _check_config(query: _GitQuery) -> None:
             spawn=query.run,
             env=query.env,
             time_left=lambda: remaining(query.deadline),
-            refuse=refuse,
+            refuse=lambda reason: refuse(reason, "unsafe-git-config"),
             validate=_config_record,
         )
 
@@ -396,7 +515,10 @@ async def inventory(
     source: PosixSource, *, git: str, spawn: Spawn = run_process, deadline: float | None = None
 ) -> Inventory:
     """Retry changing witnesses within one deadline, before handing off a selection."""
-    with budget_scope(source.budgets):
+    with (
+        budget_scope(source.budgets),
+        inspection(source.policy, source.protected, source.disclosure),
+    ):
         until = min(
             (deadline if deadline is not None else float("inf")),
             time.monotonic() + budgets().phase_seconds,
@@ -420,7 +542,7 @@ async def _inventory(
         else (time.monotonic() + budgets().phase_seconds)
     )
     absolute(Path(git))
-    await offload(lambda: repository_layout(source, until))
+    actual = await offload(lambda: repository_layout(source, until))
     layout = await offload(lambda: inspect_layout(source.root, until))
     before = await offload(lambda: metadata(source.root, until))
     query = _GitQuery(source, git, spawn, until, layout, before)
@@ -439,10 +561,23 @@ async def _inventory(
         raise refuse("incomplete selected Git output")
     if await offload(lambda: metadata(source.root, until)) != before:
         raise changed("Git metadata changed during inventory")
+    await offload(lambda: _representable(source.root, paths, actual))
     notices = await offload(lambda: git_warnings(layout, until))
+    report = disclosure()
+    notices = tuple(sorted(set(notices) | set(report.warnings if report else ())))
     return Inventory(
-        source, head.strip(), tuple(sorted(paths)), tracked, before, until, layout, notices
+        source, head.strip(), tuple(sorted(paths)), tracked, before, until, layout, notices, report
     )
+
+
+def _representable(root: Path, paths: set[str], actual: frozenset[str]) -> None:
+    for name in paths - actual:
+        if os.path.lexists(root / name):
+            raise refuse(
+                "Git path case differs from actual source names; normalize the index "
+                "and working tree before retrying",
+                "unsupported-location",
+            )
 
 
 @dataclass(frozen=True)
@@ -451,6 +586,7 @@ class Selection:
     entries: tuple[FileEntry, ...]
     directories: tuple[Witness, ...]
     total_bytes: int
+    disclosure: Disclosure | None = field(default=None, compare=False)
 
 
 def _validate(listing: Inventory) -> Selection:
@@ -480,20 +616,24 @@ def _validate(listing: Inventory) -> Selection:
                     raise refuse("untracked parent disappeared") from None
                 break
         item = entry(source.root, name, until, missing=name in listing.tracked)
-        if item.sha256 is not None and Path(name).name == ".gitattributes":
+        if item.sha256 is not None and Path(name).name.casefold() == ".gitattributes":
             _attributes(read_file(source.root / name, until)[0])
         total += item.size
         if total > budgets().max_total or len(directories) + len(entries) >= budgets().max_paths:
-            raise refuse("selected paths or bytes exceed budget")
+            raise refuse("selected paths or bytes exceed budget", "source-budget-exceeded")
         entries.append(item)
     for path, stamp in directories.items():
         with directory(path):
             if token(path.lstat()) != stamp:
-                raise refuse("source directory changed")
+                raise changed("source directory changed")
     if metadata(source.root, until) != listing.metadata:
         raise changed("Git metadata changed during validation")
     return Selection(
-        listing, tuple(entries), tuple(Witness(p, t) for p, t in sorted(directories.items())), total
+        listing,
+        tuple(entries),
+        tuple(Witness(p, t) for p, t in sorted(directories.items())),
+        total,
+        disclosure(),
     )
 
 
@@ -517,7 +657,10 @@ def _attributes(data: bytes) -> None:
 
 
 async def validate_selection(listing: Inventory) -> Selection:
-    with budget_scope(listing.source.budgets):
+    with (
+        budget_scope(listing.source.budgets),
+        inspection(listing.source.policy, listing.source.protected, listing.disclosure),
+    ):
         return await offload(lambda: _validate(listing))
 
 
@@ -529,6 +672,7 @@ class StagedSource:
     manifest: Path
     owned: tuple[Witness, ...]
     files: tuple[FileEntry, ...]
+    disclosure: Disclosure | None = field(default=None, compare=False)
 
 
 def manifest_bytes(selection: Selection) -> bytes:
@@ -581,7 +725,7 @@ def _copy(selection: Selection, root: Path, owned: list[Witness], deadline: floa
             continue
         data, stamp = read_file(selection.inventory.source.root / item.path, deadline)
         if stamp != item.identity or hashlib.sha256(data).hexdigest() != item.sha256:
-            raise refuse("selected file changed during COPY")
+            raise changed("selected file changed during COPY")
         parts = relative(item.path)
         for i in range(1, len(parts)):
             name = "/".join(parts[:i])
@@ -674,12 +818,15 @@ def _verify(stage: StagedSource, deadline: float) -> None:
 
 async def verify_stage(stage: StagedSource, *, deadline: float | None = None) -> None:
     """Independently verify membership, inode identities, hashes and manifest before use."""
-    until = (
-        min(deadline, time.monotonic() + budgets().phase_seconds)
-        if deadline is not None
-        else (time.monotonic() + budgets().phase_seconds)
+    source = stage.selection.inventory.source
+    until = min(
+        deadline if deadline is not None else float("inf"),
+        time.monotonic() + source.budgets.phase_seconds,
     )
-    with budget_scope(stage.selection.inventory.source.budgets):
+    with (
+        budget_scope(source.budgets),
+        inspection(source.policy, source.protected, stage.disclosure),
+    ):
         await offload(lambda: _verify(stage, until))
 
 
@@ -699,16 +846,16 @@ async def _stage_source(
     owned: list[Witness] = []
     try:
         if await validate_selection(listing) != expected:
-            raise refuse("selection changed before COPY")
+            raise changed("selection changed before COPY")
         again = await inventory(listing.source, git=git, spawn=spawn, deadline=until)
         if replace(again, deadline=until) != listing:
-            raise refuse("Git selection changed before COPY")
+            raise changed("Git selection changed before COPY")
         stage = await offload(lambda: _copy(expected, root, owned, until))
         if await validate_selection(listing) != expected:
-            raise refuse("source changed during COPY")
+            raise changed("source changed during COPY")
         again = await inventory(listing.source, git=git, spawn=spawn, deadline=until)
         if replace(again, deadline=until) != listing:
-            raise refuse("Git selection changed during COPY")
+            raise changed("Git selection changed during COPY")
         await verify_stage(stage, deadline=until)
         return stage
     except BaseException:
@@ -719,5 +866,16 @@ async def _stage_source(
 async def stage_source(
     selection: Selection, *, git: str, spawn: Spawn = run_process
 ) -> StagedSource:
-    with budget_scope(selection.inventory.source.budgets):
-        return await _stage_source(selection, git=git, spawn=spawn)
+    source = selection.inventory.source
+    with (
+        budget_scope(source.budgets),
+        inspection(source.policy, source.protected, selection.disclosure),
+    ):
+        try:
+            stage = await _stage_source(selection, git=git, spawn=spawn)
+        except FileExistsError:
+            raise refuse(
+                "snapshot names collide in staging; choose a case-sensitive Linux runtime",
+                "unsupported-location",
+            ) from None
+        return replace(stage, disclosure=disclosure())

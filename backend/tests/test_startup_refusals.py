@@ -103,3 +103,58 @@ def test_settings_failure_prints_category_only_for_server_startup(command, monke
     with pytest.raises(ValueError, match=r"^invalid settings$"):
         cli.main()
     assert capsys.readouterr().err == ("OVERSIGHT_REFUSAL=other\n" if command == "serve" else "")
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "category",
+    [
+        "missing-git",
+        "source-permissions",
+        "unsafe-git-config",
+        "source-changed",
+        "source-budget-exceeded",
+        "runtime-unavailable",
+        "running-oversight-source",
+    ],
+)
+async def test_posix_leaf_categories_emit_once_per_attempt(tmp_path, monkeypatch, capsys, category):
+    from workspace.test_source_posix import GIT, git, repository
+
+    from oversight.workspace import source_posix as posix
+    from oversight.workspace import source_posix_policy as policy
+
+    source = await repository(tmp_path)
+
+    async def fail():
+        if category == "missing-git":
+            await posix.inventory(source, git=str(tmp_path / "no-git"))
+        elif category == "source-permissions":
+            source.root.chmod(0o777)
+            await posix.prepare_source(source.root, source.runtime, source.ide)
+        elif category == "unsafe-git-config":
+            await git(source.root, "config", "include.path", "/must-not-read")
+            await posix.inventory(source, git=GIT)
+        elif category == "source-changed":
+            listing = await posix.inventory(source, git=GIT)
+            head = source.root / ".git/HEAD"
+            data = head.read_bytes()
+            head.write_text("changed")
+            try:
+                await posix.validate_selection(listing)
+            finally:
+                head.write_bytes(data)
+        elif category == "source-budget-exceeded":
+            await posix.inventory(source, git=GIT, deadline=-1)
+        elif category == "runtime-unavailable":
+            monkeypatch.setattr(policy, "mount_for", lambda path: policy.Mount(path, "9p", True))
+            policy.require_linux_state(source.runtime)
+        else:
+            await posix.prepare_source(source.root, source.runtime, source.root)
+
+    with pytest.raises(OSError), startup_refusals(), startup_refusals():
+        await fail()
+    assert capsys.readouterr().err == f"OVERSIGHT_REFUSAL={category}\n"
+    with pytest.raises(OSError), startup_refusals():
+        await fail()
+    assert capsys.readouterr().err == f"OVERSIGHT_REFUSAL={category}\n"
