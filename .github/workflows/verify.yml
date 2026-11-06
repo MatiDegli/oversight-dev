@@ -462,6 +462,10 @@ jobs:
           path: .runtime/python-tests/
           include-hidden-files: true
           retention-days: 7
+      - name: tracked files
+        run: |
+          status=$(git status --porcelain --untracked-files=no)
+          test -z "$status"
 
   secrets:
     name: secrets

@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 from tools.python_shards import parse_shard, shard_for_file
-from tools.tests.test_verify_workflow import WORKFLOWS, mapping, steps
+from tools.tests.test_verify_workflow import TRACKED, WORKFLOWS, mapping, steps
 
 ROOT = Path(__file__).resolve().parents[2]
 TESTPATHS = "contracts/tests backend/tests tools/tests tools/eval/tests"
@@ -195,6 +195,9 @@ def test_workflow_shards_keep_setup_evidence_and_independent_failure_results(fil
     check_steps = steps(mapping(jobs["check"])["steps"])
     check_index = check_steps.index({"run": "make check-ci"})
     shard_steps = steps(job["steps"])
+    if filename == "verify.yml":
+        assert shard_steps[-1] == TRACKED
+        shard_steps = shard_steps[:-1]
     assert shard_steps[:-2] == check_steps[:check_index]
     assert shard_steps[-2] == {
         "name": "Python tests",

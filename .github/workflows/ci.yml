@@ -242,6 +242,92 @@ jobs:
               raise SystemExit(1)
           PY
 
+  browser:
+    name: browser tests (${{ matrix.shard }}/4)
+    # Browser suites time out on Ubuntu 26.04; Ubuntu 24.04 matches the check job.
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    # Each shard keeps the 1200 s test bound; 25 minutes also covers setup.
+    # Exceeding the cap on a fast runner is a test defect, not a reason to raise it.
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - run: make install
+      - uses: ./.github/actions/setup-gitleaks
+      # The Chromium build is the one the pinned @playwright/test (frontend/package.json) names.
+      - name: Install Playwright's Chromium and its system libraries
+        run: pnpm -C frontend exec playwright install --with-deps chromium
+      # Cache the repository-root fixture directories, separately for each shard.
+      # Vite validates its own cache hash and rebundles stale restored dependencies.
+      - name: Cache browser fixture dependencies
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: .shots/*-vite-cache
+          key: browser-vite-${{ runner.os }}-${{ runner.arch }}-${{ matrix.shard }}-of-4-${{ hashFiles('frontend/pnpm-lock.yaml', 'frontend/vite.config.ts', 'frontend/**/*.support.ts') }}
+          restore-keys: |
+            browser-vite-${{ runner.os }}-${{ runner.arch }}-${{ matrix.shard }}-of-4-
+      - name: Monaco and graph tests in Chromium
+        run: make test-browser BROWSER_SHARD=${{ matrix.shard }}/4
+      - name: Upload browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: browser-failure-evidence-${{ matrix.shard }}-of-4
+          path: |
+            frontend/test-results/
+            frontend/playwright-report/
+          retention-days: 7
+
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    # Green CI: e2e took 3m58s; 15 minutes covers setup and a slow runner with margin.
+    # Exceeding the cap on a fast runner is a test defect, not a reason to raise it.
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - run: make install
+      - uses: ./.github/actions/setup-gitleaks
+      # The Chromium build is the one the pinned @playwright/test (frontend/package.json) names.
+      - name: Install Playwright's Chromium and its system libraries
+        run: pnpm -C frontend exec playwright install --with-deps chromium
+      - name: Playwright over the static replay build
+        run: make e2e
+      - name: Upload e2e failure evidence
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: e2e-failure-evidence
+          path: |
+            frontend/test-results/
+            frontend/playwright-report/
+          retention-days: 7
+
   python-tests:
     name: python tests (${{ matrix.shard }}/2)
     # Match the check job's validated preview boundary and managed Python.
@@ -461,90 +547,4 @@ jobs:
           name: python-test-evidence-${{ matrix.shard }}-of-2
           path: .runtime/python-tests/
           include-hidden-files: true
-          retention-days: 7
-
-  browser:
-    name: browser tests (${{ matrix.shard }}/4)
-    # Browser suites time out on Ubuntu 26.04; Ubuntu 24.04 matches the check job.
-    runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3, 4]
-    # Each shard keeps the 1200 s test bound; 25 minutes also covers setup.
-    # Exceeding the cap on a fast runner is a test defect, not a reason to raise it.
-    timeout-minutes: 25
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        with:
-          package_json_file: frontend/package.json
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 24
-      - run: make install
-      - uses: ./.github/actions/setup-gitleaks
-      # The Chromium build is the one the pinned @playwright/test (frontend/package.json) names.
-      - name: Install Playwright's Chromium and its system libraries
-        run: pnpm -C frontend exec playwright install --with-deps chromium
-      # Cache the repository-root fixture directories, separately for each shard.
-      # Vite validates its own cache hash and rebundles stale restored dependencies.
-      - name: Cache browser fixture dependencies
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        with:
-          path: .shots/*-vite-cache
-          key: browser-vite-${{ runner.os }}-${{ runner.arch }}-${{ matrix.shard }}-of-4-${{ hashFiles('frontend/pnpm-lock.yaml', 'frontend/vite.config.ts', 'frontend/**/*.support.ts') }}
-          restore-keys: |
-            browser-vite-${{ runner.os }}-${{ runner.arch }}-${{ matrix.shard }}-of-4-
-      - name: Monaco and graph tests in Chromium
-        run: make test-browser BROWSER_SHARD=${{ matrix.shard }}/4
-      - name: Upload browser failure evidence
-        if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: browser-failure-evidence-${{ matrix.shard }}-of-4
-          path: |
-            frontend/test-results/
-            frontend/playwright-report/
-          retention-days: 7
-
-  e2e:
-    name: e2e
-    runs-on: ubuntu-latest
-    # Green CI: e2e took 3m58s; 15 minutes covers setup and a slow runner with margin.
-    # Exceeding the cap on a fast runner is a test defect, not a reason to raise it.
-    timeout-minutes: 15
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        with:
-          package_json_file: frontend/package.json
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 24
-      - run: make install
-      - uses: ./.github/actions/setup-gitleaks
-      # The Chromium build is the one the pinned @playwright/test (frontend/package.json) names.
-      - name: Install Playwright's Chromium and its system libraries
-        run: pnpm -C frontend exec playwright install --with-deps chromium
-      - name: Playwright over the static replay build
-        run: make e2e
-      - name: Upload e2e failure evidence
-        if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: e2e-failure-evidence
-          path: |
-            frontend/test-results/
-            frontend/playwright-report/
           retention-days: 7
