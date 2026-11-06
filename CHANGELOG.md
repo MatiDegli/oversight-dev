@@ -6,6 +6,7 @@ its "Built during the hackathon" section.
 
 ## Unreleased
 
+- Judge dependency licenses by their terms, accepting permissive licenses, public-domain dedications and MPL-2.0; other named exceptions remain the maintainer's decision, with tooling unchanged pending its follow-up front.
 - Made dependency choices replaceable through measured tradeoffs and maintainer scope decisions, while retaining the architecture's operational properties.
 - Set the policy to follow the newest stable CPython once every dependency supports it, without changing the pinned version.
 - Widened the CPython PSF-2.0 exception to the desktop distribution's embedded Windows runtime and downloaded WSL runtime payload, without a version restriction.

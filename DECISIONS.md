@@ -5810,3 +5810,62 @@ with an embedded Python](#package-a-windows-installer-with-an-embedded-python-20
 Third-party components retain their own licenses, inventory and notice requirements; CPython's
 license does not cover them. All other terms of the earlier packaging decision remain intact.
 This approval changes no runtime payload or pinned version and makes no delivery claim.
+
+## 2026-11-06 — License policy by terms
+
+The maintainer approved: "Si, cambia la regla." ("Yes, change the rule.")
+
+Dependency licenses are judged by their terms rather than a closed list of identifiers.
+OSI-approved permissive licenses, including MIT, Apache-2.0, BSD, ISC, 0BSD, Zlib, PSF-2.0 and
+BlueOak-1.0.0, public-domain dedications such as Unlicense and CC0-1.0, and MPL-2.0 are accepted.
+Fonts may also use SIL OFL 1.1. Strong copyleft, commercial and source-available licenses require
+a named exception decided by the maintainer, with the actual terms recorded here. The rule
+against copying code from GPL projects remains. Acceptance does not waive notice, attribution,
+source availability or other obligations of the selected license.
+
+This follows [No dependency is an invariant](#2026-11-06--no-dependency-is-an-invariant): a
+dependency is evaluated on its measured tradeoffs, not rejected merely because its permissive
+license has a different identifier. In the product criteria's order:
+
+1. The most comfortable option for the person using Oversight: assess useful dependencies on
+   their benefits and obligations instead of an arbitrary list.
+2. How the maintainer and their agents actually work, or better: review the actual terms and
+   record the reasons, keeping the existing dependency inventory and notices.
+3. Highly controllable and configurable, where appropriate and viable: the maintainer decides
+   named exceptions with visible terms; agents gain no authority to approve them.
+
+For example, the tldraw SDK is source-available under its own license, whose default terms
+permit development use and require a trial, commercial or hobby license and an active key for
+production ([tldraw's license documentation](https://tldraw.dev/community/license)). Choosing it
+would require a named exception recording the applicable terms, including production rights,
+costs, restrictions and obligations. This decision grants no tldraw exception and adds no dependency.
+
+PSF-2.0 is now accepted by default. The typing-extensions exception in [Dependency licenses](#dependency-licenses)
+and both CPython approvals in [Package a Windows installer with an embedded Python](#package-a-windows-installer-with-an-embedded-python-2026-11-04)
+and [CPython license scope for the desktop distribution](#2026-11-06--cpython-license-scope-for-the-desktop-distribution)
+remain history. The same-day desktop-distribution scope (embedded Windows runtime and downloaded
+WSL runtime payload) remains recorded and is now subsumed by the general license rule.
+
+The repository's `desktop/packaging/licenses/cpython-windows.txt` retains PSF-2.0 (:73), BeOpen
+(:123), CNRI (:173) and CWI (:244); the historical grants also appear in THIRD_PARTY_NOTICES.md.
+All four are permissive: they allow use, modification and redistribution without requiring
+disclosure of derivative source. Notice retention, change summaries where required, nonendorsement
+and applicable choice-of-law terms still bind. The file's GPL-compatibility history does not mean
+Python is licensed under the GPL. The complete Windows payload is not wholly permissive:
+the same file's additional Windows conditions (:283) impose Microsoft Distributable Code
+restrictions, also identified by `desktop/packaging/licenses.py:181`. Those components and all
+other incorporated software retain their own terms and notices; PSF-2.0 does not relicense them.
+
+Enforcement remains stricter than this rule until a follow-up tooling front widens it after the
+license-gate front lands. No checker, gate, grant or notice is changed here. The current controls are:
+
+- `tools/notices.py:27`: ALLOWED contains only MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause and ISC.
+- `tools/notices.py:29` and :30: the exact typing-extensions/PSF-2.0 exception and two named font
+  packages; :65 adds OFL-1.1 only for those fonts.
+- `tools/notices.py:53`: the exact target-lexicon version, lockfile and license-expression grant.
+- `desktop/packaging/licenses.py:20`: GRANTS restricts MPL-2.0, Zlib and Unicode-3.0 to named crates.
+  Its :50 guard refuses active target-lexicon; :57 separately accepts unicode-ident's exact combined
+  expression, and :53 delegates other expressions to the general checker.
+
+That follow-up must reconcile these allowlists with the terms-based policy; the new rule does
+not authorize bypassing their current refusals.
