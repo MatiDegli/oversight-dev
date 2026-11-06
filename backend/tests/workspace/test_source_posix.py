@@ -15,8 +15,9 @@ import pytest
 from backend.tests.workspace.workspace_helpers import fixture_git
 
 from oversight.workspace import source_posix as posix
-from oversight.workspace.locks import offload
 from oversight.workspace.runner import ProcessResult, run_process
+
+from .preview_connector_support import assert_no_new_descriptors, fd_baseline
 
 GIT = shutil.which("git") or "/usr/bin/git"
 
@@ -700,14 +701,14 @@ def test_inventory_budgets(tmp_path, monkeypatch, budget):
 def test_descriptor_closure(tmp_path):
     async def scenario():
         source = await repository(tmp_path)
-        before = await offload(lambda: len(tuple(Path("/proc/self/fd").iterdir())))
+        before = await fd_baseline()
         for _ in range(3):
             stage = await posix.stage_source(
                 await posix.validate_selection(await posix.inventory(source, git=GIT)), git=GIT
             )
             await posix.verify_stage(stage)
             await posix.cleanup_stage(stage)
-        assert await offload(lambda: len(tuple(Path("/proc/self/fd").iterdir()))) == before
+        assert_no_new_descriptors(before)
 
     asyncio.run(scenario())
 
@@ -755,7 +756,7 @@ def test_runner_pid_publication_is_atomic(tmp_path):
 
 async def runner_cleanup_witness(tmp_path, operation, mode):
     marker = tmp_path / "child-pid"
-    descriptors = await offload(lambda: len(tuple(Path("/proc/self/fd").iterdir())))
+    descriptors = await fd_baseline()
     entered = asyncio.Event()
 
     async def spawn(argv, **kwargs):
@@ -782,7 +783,7 @@ async def runner_cleanup_witness(tmp_path, operation, mode):
     assert marker.exists()
     with pytest.raises(ProcessLookupError):
         os.kill(int(marker.read_text()), 0)
-    assert await offload(lambda: len(tuple(Path("/proc/self/fd").iterdir()))) == descriptors
+    assert_no_new_descriptors(descriptors)
 
 
 @pytest.mark.parametrize("phase", ["inventory", "stage"])
