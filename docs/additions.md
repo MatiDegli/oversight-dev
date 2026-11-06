@@ -800,6 +800,18 @@ receipt behavior. `show_view` is advertised and dispatched with the moved prompt
 prompt validation, a real recording and bundle replacement. The verified Oct 27 public bundle
 stays in place. Merge rehearsal has its own one-page plan outside this slice.
 
+### Lead browser size rationale
+
+chatLeads.browser.test.ts (1311 lines) and chatLeads.browser.fixture.tsx (641 lines) stay
+together because the six-lead scene table and lifecycle proofs are inherently tabular. The
+fixture keeps valid event sequences beside their scene definitions; the browser suite keeps
+Stop, cap, density and capture assertions together so their shared lifecycle evidence can be
+reviewed in context. Added reference-card proofs stay beside the shared lifecycle and capture
+harness. In leadViews.browser.fixture.tsx, viewScenario (93 lines) keeps the graph, measured
+behavior, long files and ordered Chat events in one auditable production-fold sequence.
+These size exceptions remain for reviewer judgment. Update these counts and reasons here
+when the sources change; DEVLOG.md is frozen history.
+
 ### Saved agent flows
 
 After the lead, extend package 12's shipped Start an agent here with a short list of repository
