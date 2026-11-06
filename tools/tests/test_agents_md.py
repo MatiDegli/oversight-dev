@@ -25,6 +25,24 @@ def test_agents_md_contains_only_durable_rules() -> None:
     )
 
 
+def test_agent_rules_are_compact_and_contain_no_milestone_transitions():
+    instructions = (Path(__file__).resolve().parents[2] / "AGENTS.md").read_text()
+    assert len(instructions.splitlines()) <= 90
+    for obsolete in (
+        *(f"M{number}" for number in range(1, 10)),
+        "The new-since-kickoff requirement ends",
+        "demo path",
+        "harmless before submission",
+        "docs/proposal.md, section 7",
+        "maintainer and his",
+    ):
+        assert obsolete not in instructions
+    assert instructions.count("cross-provider review") == 1
+    mechanism = [line for line in instructions.splitlines() if line.startswith("Agents never")]
+    assert len(mechanism) == 1
+    assert 'DECISIONS.md "Agents can suggest, prepare and apply settings"' in mechanism[0]
+
+
 def test_configurable_limits_are_a_design_rule_and_written_limits_still_bind() -> None:
     document = (Path(__file__).resolve().parents[2] / "AGENTS.md").read_text(encoding="utf-8")
     settings = " ".join(

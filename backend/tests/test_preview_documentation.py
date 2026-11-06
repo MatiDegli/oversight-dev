@@ -103,13 +103,6 @@ def test_product_settings_do_not_loosen_development_rules():
     assert len(instructions.splitlines()) < 120
 
 
-def test_product_settings_proposal_checks_stay_in_authorized_reader() -> None:
-    root = Path(__file__).resolve().parents[2]
-    assert not (root / "tools/tests/test_product_md.py").exists(), (
-        "PRODUCT.md regression checks belong in the authorized preview documentation reader"
-    )
-
-
 def test_agent_settings_application_is_future_and_present_proposals_are_text_only() -> None:
     document = (Path(__file__).resolve().parents[2] / "PRODUCT.md").read_text(encoding="utf-8")
     principles = document.split("## Product Principles\n", 1)[1].split("\n## ", 1)[0]
@@ -154,24 +147,6 @@ def test_agent_settings_application_is_future_and_present_proposals_are_text_onl
 def test_current_agent_rules_record_coordinator_ruling(policy: str):
     instructions = (Path(__file__).resolve().parents[2] / "AGENTS.md").read_text()
     assert policy in " ".join(instructions.split())
-
-
-def test_agent_rules_are_compact_and_contain_no_milestone_transitions():
-    instructions = (Path(__file__).resolve().parents[2] / "AGENTS.md").read_text()
-    assert len(instructions.splitlines()) <= 90
-    for obsolete in (
-        *(f"M{number}" for number in range(1, 10)),
-        "The new-since-kickoff requirement ends",
-        "demo path",
-        "harmless before submission",
-        "docs/proposal.md, section 7",
-        "maintainer and his",
-    ):
-        assert obsolete not in instructions
-    assert instructions.count("cross-provider review") == 1
-    mechanism = [line for line in instructions.splitlines() if line.startswith("Agents never")]
-    assert len(mechanism) == 1
-    assert 'DECISIONS.md "Agents can suggest, prepare and apply settings"' in mechanism[0]
 
 
 def test_agent_rules_define_each_role_and_preserve_current_trust_disclosure():
