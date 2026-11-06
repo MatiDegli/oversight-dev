@@ -6,6 +6,9 @@ its "Built during the hackathon" section.
 
 ## Unreleased
 
+- Made dependency choices replaceable through measured tradeoffs and maintainer scope decisions, while retaining the architecture's operational properties.
+- Set the policy to follow the newest stable CPython once every dependency supports it, without changing the pinned version.
+- Widened the CPython PSF-2.0 exception to the desktop distribution's embedded Windows runtime and downloaded WSL runtime payload, without a version restriction.
 - Added the approved post-hackathon roadmap and its decisions, with milestone gates separating
   current capabilities from future language, provider, harness, platform and IDE work.
 - Revised agent rules and product documentation for the post-hackathon baseline. Ended the

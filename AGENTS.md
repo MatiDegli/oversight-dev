@@ -34,7 +34,7 @@ Reviewers and researchers are read-only; every claim cites evidence (path:line o
 - Development agents may use Muse Code with its own stored credential: never the product's .env key, never exported in the shell, never the product's credits.
 - API keys live only in .env (.env and .env.* are gitignored; *.example files are kept). gitleaks runs in pre-commit and CI.
 - Hooks always run, never --no-verify; only the coordinator's landing step may skip the pre-push make check, and only for the exact tree whose full verification just passed.
-- Dependencies are MIT, Apache-2.0, BSD or ISC; fonts may be SIL OFL 1.1. Named exceptions: typing-extensions under PSF-2.0 (DECISIONS.md, "Dependency licenses"); CPython under PSF-2.0 for the Windows installer only (DECISIONS.md, "Package a Windows installer with an embedded Python"). Never copy code from GPL projects.
+- Dependencies are MIT, Apache-2.0, BSD or ISC; fonts may be SIL OFL 1.1. Named exceptions: typing-extensions under PSF-2.0 (DECISIONS.md, "Dependency licenses"); CPython under PSF-2.0 for Oversight's desktop distribution: the runtime embedded in the Windows installer and the WSL runtime payload the app downloads (DECISIONS.md, "CPython license scope for the desktop distribution"). Never copy code from GPL projects.
 - contracts/ is the source of truth (Pydantic, with generated JSON Schema and TypeScript checked byte for byte in CI). Never change it; propose the change to the maintainer.
 - The public submission repository stays frozen until the maintainer lifts it (no pushes or activity there); development pushes go to the development mirror.
 - One front per agent: one cohesive change, one worktree and branch, small PRs with tests. Never git stash or rebase; merge main to follow it.
@@ -47,11 +47,11 @@ Reviewers and researchers are read-only; every claim cites evidence (path:line o
 - Full verification always runs at landing on the merged tree; targeted checks do not replace it or bypass the hook rule above.
 
 ## Architecture invariants
-- Git through its CLI, never GitPython. Model calls use the official OpenAI SDK at the provider's endpoint behind the small client interface; no LiteLLM. Every git command and test run is an asyncio subprocess with a timeout; never a blocking subprocess.run.
+- No dependency is an invariant; each library is a current choice with its reasons in DECISIONS.md, replaceable when a measured tradeoff favors it, judged by the product criteria in order. Model calls go through the small client interface at the provider's endpoint. Git operations go through the git command line; every git command and test run is an asyncio subprocess with a timeout; never a blocking subprocess.run.
 - Events: append-only SQLite (WAL, busy_timeout, one writer task, strictly increasing seq), streamed over SSE at /events with seq as the id and Last-Event-ID resume. Never one event per token: batch model text and writes.
 - One lock for git operations on main and one per worktree. Approve merges into main; when main moved since the agent's base, combined tests run first on the combined result.
 - Model calls: retries with exponential backoff and jitter on 429 and 5xx; the reasoning mode is set on every call; missing token usage is unknown, never zero; the spending brake refuses new runs above the person's configured share of the credits, 90% by default.
-- Frontend: Cytoscape.js and fcose without a React wrapper; Monaco from the local package, never a CDN; one pure event reducer shared by live runs and replay. The static build plays a bundled recorded run, always labeled as real.
+- Frontend: code and assets load from local packages, never a CDN; one pure event reducer shared by live runs and replay. The static build plays a bundled recorded run, always labeled as real.
 - Product agents use disposable worktrees under .runtime/worktrees/; nested agents use .runtime/previews/<id>/state/worktrees/. Sources are demo-repo, a pinned profile or the person’s selected repository. Agents never work in development worktrees of the running Oversight or in the selected original.
 
 ## Product agent safety
@@ -71,6 +71,7 @@ Reviewers and researchers are read-only; every claim cites evidence (path:line o
 - Design work follows DESIGN.md with Impeccable 4.5.2 (allowed: shape, harden, onboard, audit, critique, polish, clarify, typeset, layout). Where Impeccable clashes with DESIGN.md or this file, ours wins and DECISIONS.md records it.
 
 ## Quality and environment
+Oversight follows the newest stable CPython as soon as every dependency supports it.
 ruff, pyright and pytest; tsc strict, eslint, prettier and vitest; import-linter; recorded events validated against the schema; Playwright over replay. make check runs them all; CI runs them on every push.
 Verified environment: WSL on the Linux filesystem; the UI is opened and recorded in the Windows browser.
 Platform status and acceptance: docs/additions.md.

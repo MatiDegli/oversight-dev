@@ -74,7 +74,7 @@ the agents' lights, the diff) is where this happens, not the pitch.
 - Live diff (read-only) and file view share the review panel; there is no third screen.
 - Current models are Muse Spark through the Meta Model API and Muse Spark Open through Baseten.
   Calls use the official OpenAI SDK today; M2 adds native Anthropic/Google SDKs behind the same
-  client contract, with no LiteLLM. Real calls are deliberate Oversight runs only; tests and
+  client contract; LiteLLM is not currently chosen. Real calls are deliberate Oversight runs only; tests and
   `make check` use scripted fake models and spend no credits for every provider. Tools are list_files, read_file, search, edit_file, run_tests and finish, plus find_symbol
   (read-only Python navigation) when the harness pack is on, the default. There is no shell tool.
 - Native-agent create/rename/delete are M1 work. The native shell is M4 work, policy-gated and
