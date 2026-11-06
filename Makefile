@@ -184,9 +184,9 @@ BOUNDARIES := tools/tests/test_eslint_boundaries.py
 # interleave. Make lets the jobs already started finish after a failure, starts no other, and exits
 # 2: the first failure still fails the whole target. Inside a group lint runs before tests, so a
 # lint error ends the group before its tests start. CI has no gitleaks in its check job (the history is
-# scanned in a job of its own), so it runs check-ci, which is check without check-secrets. Both
-# derive from the one GATES list, so a new gate added there lands in both (check-ci only ever
-# filters out check-secrets).
+# scanned in a job of its own), and Python tests have a separate matrix job. check-ci maps
+# check-python to lint-python and filters out check-secrets; both derive from the one GATES list
+# so a new gate added there lands in both.
 GATES := check-python check-contracts check-frontend check-secrets check-notices
 PARALLEL := --no-print-directory -j4 --output-sync=target
 
@@ -203,17 +203,22 @@ check-desktop: ## standalone portable desktop fmt/tests; seed Cargo online first
 check: ## every gate, in parallel groups; tests capped at 10G, 120 s each and 15 min in all; no credits
 	@$(MAKE) $(PARALLEL) $(GATES)
 
-check-ci: ## check without gitleaks, for CI, where the history is scanned in its own job
-	@$(MAKE) $(PARALLEL) $(filter-out check-secrets,$(GATES))
+check-ci: ## CI gates; gitleaks and Python tests run in separate jobs
+	@$(MAKE) $(PARALLEL) $(filter-out check-secrets check-python,$(GATES)) $(if $(filter check-python,$(GATES)),lint-python)
 
 check-fast: lint-python check-contracts lint-frontend ## lint, types, boundaries and contract drift; no tests
 
 # Keep the bounded pytest command intact: its safety tests pin that invocation. Extend only
 # this gate's discovery and the non-failing hang dump, leaving the separately run frontend
 # boundary tests in their own group.
-check-python: export PYTEST_ADDOPTS := $(PYTEST_ADDOPTS) -o 'testpaths=contracts/tests backend/tests tools/tests tools/eval/tests' -o faulthandler_timeout=400
+check-python check-python-shard: export PYTEST_ADDOPTS := $(PYTEST_ADDOPTS) -o 'testpaths=contracts/tests backend/tests tools/tests tools/eval/tests' -o faulthandler_timeout=400
 check-python: lint-python frontend-deps
 	$(PYTEST_RUN) $(XDIST) --ignore=$(BOUNDARIES)
+
+# CI only: select after collection, keeping local check-python and its bounded command intact.
+.PHONY: check-python-shard
+check-python-shard: frontend-deps
+	$(PYTEST_RUN) $(XDIST) --ignore=$(BOUNDARIES) -o pythonpath=. -p tools.python_shards --python-shard=$(PYTHON_SHARD)
 
 lint-python:
 	$(UV) ruff check .

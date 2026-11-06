@@ -237,7 +237,6 @@ def test_check_runs_every_group_and_only_check_scans_for_secrets(
         "ruff check .",
         "pyright",
         "lint-imports",
-        "uv run --frozen pytest -n 8",
         "generate.py --check",
         "typecheck",
         "format:check",
@@ -245,12 +244,13 @@ def test_check_runs_every_group_and_only_check_scans_for_secrets(
         f"pytest {BOUNDARIES_FILE}",
     ):
         assert command in lines, f"{target} does not run {command!r}"
+    assert ("uv run --frozen pytest -n 8" in lines) is (target == "check")
     assert ("gitleaks git" in lines) is with_secrets
 
 
 def test_check_and_check_ci_derive_from_the_one_gates_list() -> None:
     """A gate added to GATES lands in both: overriding GATES to one gate runs only that gate
-    in both, and check-ci only ever filters check-secrets out of the same list."""
+    in both; check-ci filters secrets and maps Python tests to their lint gate."""
     for target in ("check", "check-ci"):
         lines = "\n".join(make_dry_run("GATES=check-contracts", target=target))
         assert "generate.py --check" in lines, target

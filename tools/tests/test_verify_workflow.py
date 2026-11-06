@@ -293,7 +293,7 @@ def assert_verify_policy(verify: str, ci: str) -> None:
     assert workflow["permissions"] == "{}"
     assert_ci_triggers(ci)
     jobs = mapping(workflow["jobs"])
-    assert set(jobs) == {"check", "secrets"}
+    assert set(jobs) == {"check", "python-tests", "secrets"}
     ci_jobs = mapping(mapping(ci)["jobs"])
     parsed_steps: dict[str, list[dict[str, str]]] = {}
     for job_id, timeout in (("check", "20"), ("secrets", "10")):

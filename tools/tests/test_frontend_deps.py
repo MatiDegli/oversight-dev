@@ -43,9 +43,11 @@ def test_every_frontend_reader_in_the_check_graph_waits_for_frontend_deps() -> N
     dependencies, recipes = make_rules()
     gates = re.search(r"^GATES := (.+)$", (ROOT / "Makefile").read_text(), re.MULTILINE)
     assert gates is not None
-    # check/check-ci invoke the same gates through recursive make; check-fast has normal edges.
+    # Recursive make maps Python to lint in CI; check-fast has normal edges.
     dependencies["check"] = set(gates[1].split())
-    dependencies["check-ci"] = dependencies["check"] - {"check-secrets"}
+    dependencies["check-ci"] = dependencies["check"] - {"check-secrets", "check-python"} | {
+        "lint-python"
+    }
     graph = set().union(
         *(reachable(root, dependencies) for root in ("check", "check-ci", "check-fast"))
     )
