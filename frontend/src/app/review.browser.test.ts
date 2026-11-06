@@ -303,24 +303,23 @@ it("never approves from the keyboard in the comment box; the click waits for cha
   });
 }, 60_000);
 
-it("approves only on a pointer click: Tab then Enter or Space sends nothing and shows why", async () => {
+it("refuses taps and Tab then Space, describes held Enter, and preserves pointer approval", async () => {
   await withPage(false, async (page) => {
     await page.getByRole("button", { name: /^Decisions:/ }).click();
     const approve = panel(page).getByRole("button", { name: "Approve and merge" });
     const comment = panel(page).getByRole("textbox", {
       name: "Comment for the agent",
     });
-    const caption = panel(page).getByText("Approve with a click: it merges into main");
+    const description = "Hold Enter for 1 second to approve and merge. Release early to cancel.";
     await browserExpect(approve).toBeEnabled();
     await comment.click();
     await page.keyboard.type("Looks right");
     await page.keyboard.press("Tab");
     await browserExpect(approve).toBeFocused();
-    await browserExpect(caption).toHaveCount(0);
+    await browserExpect(approve).toHaveAccessibleDescription(new RegExp(description));
     for (const key of ["Enter", "Space"]) {
       await page.keyboard.press(key);
-      await browserExpect(caption).toHaveCount(1);
-      await browserExpect(caption).toBeVisible();
+      await browserExpect(approve).toHaveAccessibleDescription(new RegExp(description));
       expect(await page.evaluate(() => window.reviewTest.decisions.length)).toBe(0);
       await browserExpect(approve).toBeEnabled();
       // Pressing a key does not move focus either.
@@ -333,7 +332,7 @@ it("approves only on a pointer click: Tab then Enter or Space sends nothing and 
     expect(await page.evaluate(() => window.reviewTest.decisions.length)).toBe(0);
 
     await approve.click();
-    await browserExpect(caption).toHaveCount(0);
+    await browserExpect(approve).toHaveAccessibleDescription(new RegExp(description));
     const sent = await page.evaluate(() => window.reviewTest.decisions);
     expect(sent).toHaveLength(1);
     expect(sent[0]).toMatchObject({
@@ -344,7 +343,7 @@ it("approves only on a pointer click: Tab then Enter or Space sends nothing and 
   });
 }, 60_000);
 
-it.skipIf(process.env.DESIGN_AUDIT_SHOTS !== "1")("pointer click caption", async () => {
+it.skipIf(process.env.DESIGN_AUDIT_SHOTS !== "1")("held Enter description", async () => {
   const source = new URL("../../../fixtures/events/recorded-demo.jsonl", import.meta.url);
   const jsonl = logForScene(await readFile(source, "utf8"), { log: "proposed" }) ?? "";
   const stream = createServer((_request, response) => {
@@ -382,7 +381,9 @@ it.skipIf(process.env.DESIGN_AUDIT_SHOTS !== "1")("pointer click caption", async
         await panel(page).locator(".line-insert").first().waitFor();
         await panel(page).getByRole("button", { name: "Approve and merge" }).focus();
         await page.keyboard.press("Enter");
-        await panel(page).getByText("Approve with a click: it merges into main").waitFor();
+        await browserExpect(
+          panel(page).getByRole("button", { name: "Approve and merge" }),
+        ).toHaveAccessibleDescription(/Hold Enter for 1 second/);
         await browserExpect
           .poll(async () => (await camera(page, "shop.pricing:compute_price")).animating)
           .toBe(false);

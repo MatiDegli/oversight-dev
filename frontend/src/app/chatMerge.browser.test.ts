@@ -160,7 +160,7 @@ it.each([false, true])(
     }
   },
 );
-it("does not approve by keyboard after the opened review receives a new proposal", async () => {
+it("cancels a hold on a new Chat proposal and requires a fresh focused hold", async () => {
   const { page, mutations } = await open({ app: true });
   try {
     await page.route("**/files?*", (route) =>
@@ -194,15 +194,33 @@ it("does not approve by keyboard after the opened review receives a new proposal
     });
     const approve = page.getByRole("button", { name: "Approve and merge", exact: true });
     await check(approve).toBeEnabled();
+    const clockStart = new Date("2026-11-06T13:00:00Z");
+    await page.clock.install({ time: clockStart });
+    await page.clock.pauseAt(new Date(clockStart.getTime() + 1_000));
+    await approve.focus();
+    await page.keyboard.down("Enter");
+    await page.clock.runFor(500);
+    await check(page.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "50");
+    await page.evaluate(() => {
+      window.chatMergeTest.repropose();
+    });
+    await page.keyboard.down("Enter");
+    await page.clock.runFor(1_100);
+    await check(page.getByRole("progressbar")).toHaveCount(0);
+    await page.keyboard.up("Enter");
     await approve.focus();
     await page.keyboard.press("Enter");
     await page.keyboard.press("Control+Enter");
     await check(approve).toBeFocused();
-    await check(
-      page.getByText("Approve with a click: it merges into main", { exact: true }),
-    ).toBeVisible();
+    await check(approve).toHaveAccessibleDescription(
+      /Hold Enter for 1 second to approve and merge/,
+    );
     expect(mutations).toEqual([]);
-    await approve.click();
+    await page.keyboard.down("Enter");
+    await page.clock.runFor(999);
+    expect(mutations).toEqual([]);
+    await page.clock.runFor(1);
+    await page.keyboard.up("Enter");
     await check.poll(() => mutations.length).toBe(1);
     expect(mutations[0]).toContain("/changes/change-1/approve");
   } finally {
