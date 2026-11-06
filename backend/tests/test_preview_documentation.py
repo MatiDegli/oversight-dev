@@ -136,8 +136,13 @@ def test_agent_settings_application_is_future_and_present_proposals_are_text_onl
         "combined tests run first on the combined result",
         "Agents never widen their own or another agent's authority",
         "an agent proposes a setting change to the maintainer in text",
-        "typing-extensions under PSF-2.0",
-        "CPython under PSF-2.0 for the Windows installer only",
+        "Dependencies are judged by their license terms: OSI-approved permissive licenses "
+        "(such as MIT, Apache-2.0, BSD, ISC, 0BSD, Zlib, PSF-2.0, BlueOak-1.0.0), "
+        "public-domain dedications (Unlicense, CC0-1.0) and MPL-2.0 are accepted; "
+        "fonts may also be SIL OFL 1.1",
+        "Strong copyleft, commercial and source-available licenses require a named exception "
+        "decided by the maintainer, with its terms recorded in DECISIONS.md "
+        '("License policy by terms"). Never copy code from GPL projects',
         "The public submission repository stays frozen until the maintainer lifts it "
         "(no pushes or activity there); development pushes go to the development mirror",
         "never the product's credits",
@@ -154,6 +159,57 @@ def test_agent_settings_application_is_future_and_present_proposals_are_text_onl
 def test_current_agent_rules_record_coordinator_ruling(policy: str):
     instructions = (Path(__file__).resolve().parents[2] / "AGENTS.md").read_text()
     assert policy in " ".join(instructions.split())
+
+
+def test_license_policy_retains_historical_psf_grants_and_current_gates() -> None:
+    decisions = (Path(__file__).resolve().parents[2] / "DECISIONS.md").read_text()
+    historical = decisions.split("## Dependency licenses\n", 1)[1].split("\n## ", 1)[0]
+    assert "Named typing-extensions exception (decided by the maintainer, 2026-10-27)" in historical
+    assert "typing-extensions uses PSF-2.0" in historical
+    assert "THIRD_PARTY_NOTICES.md retains the PSF-2.0 declaration" in historical
+
+    current = decisions.split("## 2026-11-06 — License policy by terms\n", 1)[1]
+    current = " ".join(current.split("\n## ", 1)[0].split())
+    assert "PSF-2.0 is now accepted by default" in current
+    assert "typing-extensions exception in [Dependency licenses](#dependency-licenses)" in current
+    assert "remain history" in current
+    assert "subsumed by the general license rule" in current
+    assert "No checker, gate, grant or notice is changed here" in current
+    assert "does not authorize bypassing their current refusals" in current
+
+
+def test_cpython_approval_retains_both_desktop_payloads_and_third_party_terms() -> None:
+    decisions = (Path(__file__).resolve().parents[2] / "DECISIONS.md").read_text()
+    historical = decisions.split(
+        "## Package a Windows installer with an embedded Python (2026-11-04)\n", 1
+    )[1].split("\n## ", 1)[0]
+    historical = " ".join(historical.split())
+    assert "CPython 3.12 under PSF-2.0 is approved **only for the desktop installer**" in historical
+    assert (
+        "components retain their own licenses and need individual inventory and notice texts"
+    ) in historical
+    scope_link = (
+        "[CPython license scope for the desktop distribution]"
+        "(#2026-11-06--cpython-license-scope-for-the-desktop-distribution)"
+    )
+    assert "installer-only CPython approval is superseded by " + scope_link in historical
+
+    scope = decisions.split(
+        "## 2026-11-06 — CPython license scope for the desktop distribution\n", 1
+    )[1].split("\n## ", 1)[0]
+    scope = " ".join(scope.split())
+    assert (
+        "CPython under PSF-2.0 is approved for Oversight's desktop distribution: the runtime "
+        "embedded in the Windows installer and the WSL runtime payload the app downloads. "
+        "The approval has no version number."
+    ) in scope
+    assert (
+        "Third-party components retain their own licenses, inventory and notice requirements; "
+        "CPython's license does not cover them."
+    ) in scope
+
+    current = decisions.split("## 2026-11-06 — License policy by terms\n", 1)[1]
+    assert scope_link in current.split("\n## ", 1)[0]
 
 
 def test_agent_rules_are_compact_and_contain_no_milestone_transitions():
