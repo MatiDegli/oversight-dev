@@ -22,7 +22,7 @@ async def test_message_masks_both_configured_keys_but_delivers_original(tmp_path
     # Synthetic, test-only material, assembled here rather than a stored credential fixture.
     keys = ["test-only-provider-" + name * 2 for name in ("first", "second")]
     plain = "Please check plain prose, checkout-slug and field_name."
-    shaped = ["Bearer " + "a1" * 12, "sk-" + "b2" * 12, "c3" * 12]
+    shaped = ["Bearer " + "a1" * 12, "sk-" + "b2" * 12, "g3" * 12]
     fragments = [key[-8:] for key in keys]
     text = " ".join([plain, *shaped, *fragments])
     model = HeldScript()

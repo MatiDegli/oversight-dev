@@ -21,6 +21,7 @@ from typing import Any, cast
 from oversight.limits import MAX_REPORT_BYTES, MAX_REPORT_LINE_BYTES, SizeLimitError
 from oversight.test_output import retain_failure
 from oversight.workspace._platform import unlink_retry
+from oversight.workspace.errors import WorkspaceError
 from oversight.workspace.junit import MAX_XML_BYTES, parse_junit
 from oversight.workspace.locks import offload
 from oversight.workspace.measured_report import CallReport, CallTarget, read_calls
@@ -401,6 +402,7 @@ async def run_suite(
     timeout_s: float,
     redact: Callable[[str], str],
     spawn: Spawn,
+    refresh_secrets: Callable[[], None] | None = None,
     case_ids: tuple[str, ...] = (),
     pytest_targets: tuple[str, ...] = (),
     pytest_options: tuple[str, ...] = (),
@@ -425,6 +427,7 @@ async def run_suite(
         env.update(OVERSIGHT_CALL_TARGETS=str(request), OVERSIGHT_CALL_REPORT=str(recording))
     argv = _pytest_argv(python, junit, case_ids, pytest_targets, pytest_options)
     failure: OSError | asyncio.CancelledError | None = None
+    inventory_failed = False
     try:
         if _own_prepare is not None:
             assert deadline is not None
@@ -457,6 +460,12 @@ async def run_suite(
             tally, report_found, report_error = Tally(), False, "Windows Job cleanup is unverified"
             cases, problems, measured = (), (report_error,), None
         else:
+            if refresh_secrets is not None:
+                try:
+                    await offload(refresh_secrets)
+                except WorkspaceError:
+                    # The shared redactor now withholds text. Still consume/delete reports.
+                    inventory_failed = True
             take_tally = _take_tally if _own_prepare is None else _take_own_tally
             tally, report_found, report_error = await offload(lambda: take_tally(report))
             cases, problems = await offload(lambda: _take_cases(junit, redact))
@@ -500,6 +509,10 @@ async def run_suite(
         report_found=report_found,
         duration_ms=process.duration_ms,
     )
+    result = result.model_copy(update={"failed_tests": [redact(t) for t in result.failed_tests]})
+    if inventory_failed:
+        result = result.model_copy(update={"outcome": "error"})
+        problems += ("secret inventory unavailable",)
     if unavailable is not None:
         result = result.model_copy(
             update={"outcome": "error", "cases": [], "cases_complete": False}
@@ -554,14 +567,19 @@ def _take_cases(
             unlink_retry(path, missing_ok=True, nt=True)
         else:
             path.unlink(missing_ok=True)
+    private_ids = {key for key in parsed.outcomes if redact(key) != key}
     return (
         tuple(
             CaseResult(
-                test_id=key, outcome=value, detail=_safe_detail(parsed.details.get(key), redact)
+                test_id=key,
+                outcome=value,
+                detail=_safe_detail(parsed.details.get(key), redact),
             )
             for key, value in sorted(parsed.outcomes.items())
+            if key not in private_ids
         ),
-        tuple(p.code for p in parsed.problems),
+        tuple(p.code for p in parsed.problems)
+        + (("secret-bearing test identifiers withheld",) if private_ids else ()),
     )
 
 

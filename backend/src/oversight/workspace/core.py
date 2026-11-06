@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from oversight.workspace.source import SourceInventory
 
 from oversight.limits import bounded_text
+from oversight.redaction import Redactor
 from oversight.workspace._platform import (
     acquire_lock,
     ensure_lifetime_job,
@@ -283,6 +284,7 @@ class Workspace:
         own_source: NtSource | None = None,
         source_inventory: "SourceInventory | None" = None,
         require_demo_python: bool = False,
+        redactor: Redactor | None = None,
     ) -> None:
         if own_source is not None and not _nt_source_bytes:
             raise ValueError("own source requires the raw-byte policy")
@@ -312,6 +314,7 @@ class Workspace:
         self._byte_bootstrap = False
         self._literal_initial_add = False
         self._root = runtime_root
+        self.redactor = redactor if redactor is not None else Redactor(None)
         self._template = template
         self.source_inventory = source_inventory
         if (require_demo_python or source_inventory is not None) and demo_python is None:
@@ -421,7 +424,8 @@ class Workspace:
         return Author(agent_id, f"{agent_id}@oversight.invalid")
 
     def redact(self, text: str) -> str:
-        """Remove the runtime directory's location from text that may reach an event."""
+        """Mask known secrets and the runtime location before model/event boundaries."""
+        text = self.redactor(text)
         if sys.platform == "win32":
             slash = str(self._root).replace("\\", "/")
             back = slash.replace("/", "\\")
