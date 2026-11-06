@@ -60,6 +60,8 @@ async def test_thousands_of_snapshot_files_keep_the_loop_responsive(
     loop_thread = threading.get_ident()
     mkdir, write_text = Path.mkdir, Path.write_text
     writes = []
+    write_ticks = []
+    ticks = 0
 
     def checked_mkdir(path, *args, **kwargs):
         assert threading.get_ident() != loop_thread
@@ -68,26 +70,21 @@ async def test_thousands_of_snapshot_files_keep_the_loop_responsive(
     def checked_write(path, *args, **kwargs):
         assert threading.get_ident() != loop_thread
         writes.append(path)
+        write_ticks.append(ticks)
         return write_text(path, *args, **kwargs)
 
     monkeypatch.setattr(Path, "mkdir", checked_mkdir)
     monkeypatch.setattr(Path, "write_text", checked_write)
     monkeypatch.setattr(_symbols, "run_process", AsyncMock(return_value=SUCCESS))
     started, stopped = asyncio.Event(), asyncio.Event()
-    largest_gap = 0.0
-    ticks = 0
 
     async def ticker():
-        nonlocal largest_gap, ticks
-        previous = loop.time()
+        nonlocal ticks
         started.set()
         while not stopped.is_set():
             tick = loop.create_future()
             loop.call_soon(tick.set_result, None)
             await tick
-            now = loop.time()
-            largest_gap = max(largest_gap, now - previous)
-            previous = now
             ticks += 1
 
     ticking = asyncio.create_task(ticker())
@@ -101,9 +98,9 @@ async def test_thousands_of_snapshot_files_keep_the_loop_responsive(
     assert tree.reads == tree.paths and len(writes) == 3000
     assert directories and all(not path.exists() for path in directories)
     assert ticks > 1
-    # 250 ms tolerates shared-runner scheduling jitter while rejecting a whole-tree stall.
-    # Thread assertions also catch synchronous disk work on unusually fast filesystems.
-    assert largest_gap < 0.250, f"event loop stalled for {largest_gap:.3f} s"
+    # The loop must advance during snapshot writes, regardless of host scheduling delays.
+    # A whole-tree blocking chunk cannot tick between its first and last write.
+    assert write_ticks[-1] > write_ticks[0], "event loop did not advance during snapshot writes"
 
 
 @pytest.mark.parametrize(

@@ -64,12 +64,14 @@ it.each([
   },
 );
 
-it("keeps the retained browser size rationale accurate and covers the added view proofs", () => {
-  const devlog = readFileSync(new URL("../../../../DEVLOG.md", import.meta.url), "utf8");
+it("keeps the living browser size rationale accurate and covers the added view proofs", () => {
+  const additions = readFileSync(new URL("../../../../docs/additions.md", import.meta.url), "utf8");
+  const rationale = additions.split("### Lead browser size rationale\n")[1]?.split("\n### ")[0];
+  expect(rationale).toBeDefined();
   for (const name of ["chatLeads.browser.test.ts", "chatLeads.browser.fixture.tsx"]) {
     const source = readFileSync(new URL(`../../app/${name}`, import.meta.url), "utf8");
     const lines = source.trimEnd().split("\n").length;
-    expect(devlog).toContain(`${name} (${String(lines)} lines)`);
+    expect(rationale).toContain(`${name} (${String(lines)} lines)`);
   }
   const fixture = readFileSync(
     new URL("../../app/leadViews.browser.fixture.tsx", import.meta.url),
@@ -78,6 +80,13 @@ it("keeps the retained browser size rationale accurate and covers the added view
   const scenario = fixture.split("export function viewScenario()")[1]?.split("\nlet player:")[0];
   expect(scenario).toBeDefined();
   const lines = scenario?.trimEnd().split("\n").length;
-  expect(devlog).toContain(`viewScenario (${String(lines)} lines)`);
-  expect(devlog).toContain("reference-card proofs");
+  expect(rationale).toContain(`viewScenario (${String(lines)} lines)`);
+  for (const reason of [
+    "six-lead scene table",
+    "valid event sequences beside their scene definitions",
+    "Stop, cap, density and capture assertions",
+    "reference-card proofs",
+    "one auditable production-fold sequence",
+  ])
+    expect(rationale).toContain(reason);
 });

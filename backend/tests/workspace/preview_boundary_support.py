@@ -76,9 +76,13 @@ async def result(handle: Any) -> dict[str, Any]:
 
 def fd_snapshot() -> set[int]:
     result: set[int] = set()
+    # Exclude only memwatch's transient read of this process's status.
+    own_status = f"/proc/{os.getpid()}/status"
     for name in Path("/proc/self/fd").iterdir():
         try:
             os.fstat(int(name.name))
+            if os.readlink(name) == own_status:
+                continue
         except OSError:
             continue
         result.add(int(name.name))
