@@ -17,7 +17,7 @@ from backend.tests.workspace.workspace_helpers import fixture_git
 from oversight.workspace import source_posix as posix
 from oversight.workspace.runner import ProcessResult, run_process
 
-from .preview_connector_support import assert_no_new_descriptors, fd_baseline
+from .preview_connector_support import fd_baseline, fd_table
 
 GIT = shutil.which("git") or "/usr/bin/git"
 
@@ -708,7 +708,8 @@ def test_descriptor_closure(tmp_path):
             )
             await posix.verify_stage(stage)
             await posix.cleanup_stage(stage)
-        assert_no_new_descriptors(before)
+        after = fd_table()
+        assert after == before, f"descriptors left open: {dict(after - before)}"
 
     asyncio.run(scenario())
 
@@ -783,7 +784,8 @@ async def runner_cleanup_witness(tmp_path, operation, mode):
     assert marker.exists()
     with pytest.raises(ProcessLookupError):
         os.kill(int(marker.read_text()), 0)
-    assert_no_new_descriptors(descriptors)
+    after = fd_table()
+    assert after == descriptors, f"descriptors left open: {dict(after - descriptors)}"
 
 
 @pytest.mark.parametrize("phase", ["inventory", "stage"])
