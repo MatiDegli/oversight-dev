@@ -204,6 +204,14 @@ function sessionFixture(candidate?: StartPreview) {
   };
 }
 type SessionFixture = ReturnType<typeof sessionFixture>;
+async function waitForStartupPrefix(page: Page, events: ServerEvent[]) {
+  // A lead row can precede its view/reply. Wait for this live fixture's startup
+  // prefix before selection; Node-side polling leaves the lifecycle clock alone.
+  const through = events.at(-1)?.seq ?? 0;
+  await check
+    .poll(() => page.evaluate(() => window.coldStartTrace.state.lastSeq), { intervals: [50] })
+    .toBeGreaterThanOrEqual(through);
+}
 async function prepareSession(context: BrowserContext, input?: ServerEvent[]) {
   if (input)
     await context.addInitScript(() => {
@@ -522,6 +530,8 @@ class ChatSupport {
     await page.evaluate(() => document.fonts.ready);
     const lead = page.locator(".chat-lead-row");
     if (!extra.includes("panelFixture") && !input) {
+      if (!this.real && !extra.includes("replay=true"))
+        await waitForStartupPrefix(page, this.events);
       await check(lead).toHaveCount(1);
       await lead.click();
       await check(page.getByRole("button", { name: "Preview app", exact: true })).toBeVisible();
