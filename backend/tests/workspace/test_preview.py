@@ -60,7 +60,11 @@ async def test_shop_refuses_unsupported_parent_before_reservation(workspace, mon
     monkeypatch.setattr(h.manager, "resolve_candidate", resolve)
     try:
         with pytest.raises(
-            PreviewError, match="Shop preview requires a localhost parent"
+            PreviewError,
+            match=(
+                r"Shop preview is unavailable at this address\. "
+                r"Open Oversight at localhost on the same port, then try again\."
+            ),
         ) as caught:
             await h.manager.start(
                 run_id="run-20261103-000000",

@@ -53,7 +53,11 @@ async def test_explicit_numeric_shop_parent_refuses_before_ownership_or_launch(
         monkeypatch.setattr(h.manager, "resolve_candidate", forbidden)
         monkeypatch.setattr(h.manager, "process_factory", forbidden)
         with pytest.raises(
-            PreviewError, match="Shop preview requires a localhost parent"
+            PreviewError,
+            match=(
+                r"Shop preview is unavailable at this address\. "
+                r"Open Oversight at localhost on the same port, then try again\."
+            ),
         ) as caught:
             await h.manager.start(
                 run_id="run-20261103-000000",
