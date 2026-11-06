@@ -8,9 +8,10 @@
   position: absolute;
   inset-inline: 6px;
   bottom: 3px;
-  height: 3px;
+  height: 0;
   border-radius: 1px;
-  background: var(--page);
+  /* Borders retain system contrast when forced colors replace background fills. */
+  border-block-end: 3px solid var(--page);
   transform: scaleX(var(--approval-progress, 0));
   transform-origin: left;
   pointer-events: none;

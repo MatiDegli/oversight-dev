@@ -29,6 +29,54 @@ afterAll(async () => {
 const calls = (page: Page) => page.evaluate(() => window.approvalTest.calls);
 
 it.each(["bar", "card", "grant"] as const)(
+  "%s keeps progress distinct from the button in forced colors",
+  async (surface) => {
+    const page = await browser.newPage({
+      forcedColors: "active",
+      reducedMotion: "reduce",
+      viewport: { width: 390, height: 844 },
+    });
+    try {
+      await page.route("**/", (route) => route.fulfill({ contentType: "text/html", body: html }));
+      await page.goto(url);
+      await page.waitForFunction(() => "approvalTest" in window);
+      await page.evaluate((surface) => {
+        window.approvalTest.mount(surface);
+      }, surface);
+      const clockStart = new Date("2026-11-06T13:00:00Z");
+      await page.clock.install({ time: clockStart });
+      await page.clock.pauseAt(new Date(clockStart.getTime() + 1_000));
+      const approve = page.getByRole("button", {
+        name: surface === "grant" ? "Approve" : "Approve and merge",
+        exact: true,
+      });
+      await approve.focus();
+      await page.keyboard.down("Enter");
+      await page.clock.runFor(500);
+      await check(page.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "50");
+      const paint = await approve.evaluate((button) => {
+        const progress = getComputedStyle(button, "::after");
+        return {
+          background: getComputedStyle(button).backgroundColor,
+          progress:
+            parseFloat(progress.borderBottomWidth) > 0 && progress.borderBottomStyle !== "none"
+              ? progress.borderBottomColor
+              : progress.backgroundColor,
+        };
+      });
+      expect(paint.progress).not.toBe(paint.background);
+      await check(approve).toBeFocused();
+      await page.keyboard.up("Enter");
+      await page.clock.runFor(1_000);
+      await check(page.getByRole("progressbar")).toHaveCount(0);
+      expect(await calls(page)).toEqual([]);
+    } finally {
+      await page.close();
+    }
+  },
+);
+
+it.each(["bar", "card", "grant"] as const)(
   "%s shares focused hold, interruptions and exactly-once dispatch",
   async (surface) => {
     const page = await browser.newPage();
