@@ -693,8 +693,9 @@ gradients belong to theme tokens; control boundaries use control-edge and focus 
   Ctrl backtick toggles the bottom dock; Alt+W or Esc closes the active focus tab; Esc also
   dismisses the current overlay. Shell shortcuts pause while typing; Esc in the review comment
   only leaves the box. Ctrl/Cmd+S saves in the file view and the editable review editor. The rail
-  opens the shortcuts sheet. There is no Approve key, including Ctrl+Enter, and no Approve
-  command in Ctrl K.
+  opens the shortcuts sheet. Approve has no global shortcut, including Ctrl+Enter, and no command
+  in Ctrl K. Only a fresh, unmodified Enter held on the focused, enabled Approve for one second
+  approves; a tap or Space does nothing.
 - **Attention:** a proposal updates the queue and agent card, never opens or selects a tab. The
   status line reports the spending brake. A failed command shows an inline line with an X icon and role="alert".
 - **Graph overlays** sit 24px from the graph's edges: heading top left in watch only, cone card top
@@ -759,7 +760,8 @@ gradients belong to theme tokens; control boundaries use control-edge and focus 
   The graph owns the possibly affected list; the panel keeps its lead and comparison summary.
 - "Approve" and "Reject" share equal 48px containers. In f, the rule caption sits above them;
   in f-b, Approve is enabled and there is no dock caption. "1 of 2 answered" stays only in f's lead.
-  Approve has no keyboard shortcut and does not require opening the diff.
+  Approve supports focused held Enter for one second and does not require opening the diff;
+  it has no global shortcut.
 - The desktop states at 1280px and wider follow the review anatomy below.
 
 ## Elevation & Depth
@@ -855,7 +857,7 @@ Gently rounded rectangles throughout; nothing pill-shaped except status pills, b
 - **Focus:** the focus ring above.
 - **Task box model choice:** show the offered model labels in neutral controls, without runtime seat letters. Keep the visible selected mark, `aria-pressed`, disabled behavior and the holder’s agent label.
 - **The comment box** serves Approve and Request changes alike, so no key in it triggers a
-  decision: Approve has no shortcut, not even Ctrl+Enter.
+  decision. Only the focused Approve owns its held-Enter gesture; Ctrl+Enter never approves.
 
 ### Navigation
 
@@ -1266,10 +1268,20 @@ The graph stays visible and keeps positions.
    Exactly one 13px caption line, 8px below. While any answer is open or not Yes, Approve is
    locked with a lock icon and faint label: "Approve opens when every answer is Yes."
    Otherwise: "If main moved since the agent started, the tests run again on the combined result
-   before the merge." Approve answers only a pointer click: keyboard and screen-reader users
-   cannot approve. Activating it without a pointer shows "Approve with a click: it merges into
-   main" in that caption instead, explaining why nothing happened without moving focus. A
-   pointer click hides it. Approve has no keyboard shortcut.
+   before the merge." Approve accepts a pointer click or a fresh, unmodified Enter held
+   continuously for 1,000 ms on the focused, enabled button. Keep its accessible name and always
+   associate: "Hold Enter for 1 second to approve and merge. Release early to cancel." The
+   description supplements existing disabled reasons and merge warnings. A measured progress
+   underline uses theme tokens, leaves the text and focus ring clear, and exposes a progressbar
+   without live per-frame announcements. Reduced motion uses discrete quarter-second updates,
+   without animation or transitions. Release, focus departure, window blur, page hiding, unmount,
+   ineligibility, pending state or run/candidate revision/head changes cancel and reset progress.
+   Pointer activation clears the hold. At completion recheck focus, eligibility and candidate;
+   approve once, requiring a fresh press after release. Repeats never restart or shorten the hold.
+   Suppress native keyboard activation and reject zero-detail clicks. Taps, Space (including
+   Tab+Space from comments), modified Enter, composition and keys elsewhere never approve.
+   No global approval shortcut or Ctrl K command exists. Focused held Enter ships enabled with
+   a fixed one-second duration; disabling it and adjusting duration await recorded settings work.
 
 Body side padding is 24px; sections start 24px apart. The header keeps its still grain and top
 light. Its matte gradient uses matte-top to matte-bottom, day-matte-top to day-matte-bottom in
@@ -1904,7 +1916,8 @@ C–F letters on their dark graphic fills (`on-agent`): C 6.81:1, D 9.06:1, E 10
   open entry of the decisions inbox (steady and dimmer, never moving), or one decided in the last
   90 seconds lights the graph.
 - **Don't** move nodes between modes.
-- **Don't** give Approve a keyboard shortcut, Ctrl+Enter included.
+- **Don't** give Approve a global shortcut, Ctrl+Enter or a Ctrl K command; only its focused
+  held-Enter gesture may start keyboard approval.
 - **Don't** use uppercase outside group labels, or Mono as decoration.
 - **Don't** copy sketch implementation into product code; the approved v4 images are design references.
 

@@ -65,7 +65,9 @@ Reviewers and researchers are read-only; every claim cites evidence (path:line o
 
 ## UI invariants
 - The repository graph stays visible in the Oversight view; Chat loads it on the first switch. Other graph views, such as a workflow canvas, may sit beside it. The panels change with what the person does. Never steal focus.
-- Approve has no keyboard shortcut, not even Ctrl+Enter.
+- Approve accepts a pointer click or a fresh, unmodified Enter held continuously on the focused,
+  enabled Approve control for one second. Taps, Space and comment typing never approve. Global
+  approval shortcuts, Ctrl+Enter and approval commands in Ctrl K are forbidden.
 - A dashed node border means only a pending change, in its team's color.
 - Color is a team or a state, never alone and never amber; every color comes from a theme token. A team is the plan's lead, else the plan, else the agent; a lead's agents carry the lead's color and a label such as A·1.
 - Design work follows DESIGN.md with Impeccable 4.5.2 (allowed: shape, harden, onboard, audit, critique, polish, clarify, typeset, layout). Where Impeccable clashes with DESIGN.md or this file, ours wins and DECISIONS.md records it.
