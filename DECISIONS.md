@@ -5572,3 +5572,12 @@ disclosed and verified cleanup of processes, ports and temporary state. Shell, n
 reach agents only through the sandbox and policy. Blocking all execution until M3 qualifies was
 rejected so M1/M2 can serve trusted repositories earlier, as native Windows does (docs/isolation.md:221).
 M1 replaces the informational, nonblocking trust prompt in docs/own-repository.md:32 with explicit trust.
+
+## 2026-11-06 — Filter credential-shaped names from every child environment (F1-A)
+
+After merging caller extras, `child_env` removes names case-insensitively when they end in
+`_API_KEY`, `_TOKEN`, `_SECRET`, `_PASSWORD` or `_CREDENTIALS` (including `META_API_KEY` and
+`BASETEN_API_KEY`), or start with `OVERSIGHT_SESSION` or `OVERSIGHT_AUTH`, on every platform.
+This closes the extras bypass and keeps a future per-launch backend credential out of test,
+preview and shop environments; existing callers need no matching names. It does not defend
+against code reading files or process memory as the same user; isolation is a later front.
