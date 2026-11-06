@@ -5592,7 +5592,7 @@ docs/own-repository.md:32 with explicit trust.
 The maintainer set three criteria for every product decision, in this order:
 
 1. The most comfortable option for the person using Oversight.
-2. How the maintainer and his agents actually work, or better.
+2. How the maintainer and their agents actually work, or better.
 3. Highly controllable and configurable, where that is appropriate and viable.
 
 Every proposal or brief recommending a product option states how it meets each criterion, in

@@ -18,7 +18,7 @@ Plans go to docs/roadmap.md, status and inventory to docs/additions.md, decision
 docs/roadmap.md plans product changes; a front that changes a rule edits it here.
 Only two product rules are fixed: authority comes only from the person; every loosening is visible, recorded in the event log and reversible.
 Design every other product limit as a setting with a safe default, so a person accepting more risk can choose it; provider terms, law, licenses and unavailable capabilities still bind; each limit written in this file holds as written (DECISIONS.md "Only the person's authority is fixed; other limits are settings").
-Agents never widen their own or another agent's authority; an agent proposes a setting change to the maintainer in text (details: DECISIONS.md "Agents can suggest, prepare and apply settings", docs/roadmap.md).
+Agents never widen their own or another agent's authority; an agent proposes a setting change to the person in text (details: DECISIONS.md "Agents can suggest, prepare and apply settings", docs/roadmap.md).
 
 ## Roles
 The coordinator plans, briefs, integrates and alone merges.
@@ -30,7 +30,7 @@ Reviewers and researchers are read-only; every claim cites evidence (path:line o
   No code from the maintainer's other projects; never mention or link them.
 - Keep README.md's "Built during the hackathon" section as history. DEVLOG.md is frozen history; update CHANGELOG.md per release, keeping Unreleased for landed work.
 - Product profiles are Muse Spark through the Meta Model API (Contributor mode) and Muse Spark Open through Baseten.
-- Every provider's API is called only by Oversight itself and by runs started on purpose (the API probe, recording a demo run). Tests and make check use the scripted fake model and spend no credits for every provider.
+- Every provider's API is called only by Oversight itself and by runs started on purpose (the API probe, recording a demo run). Tests and make check use the scripted fake model and spend no credits with any provider.
 - Development agents may use Muse Code with its own stored credential: never the product's .env key, never exported in the shell, never the product's credits.
 - API keys live only in .env (.env and .env.* are gitignored; *.example files are kept). gitleaks runs in pre-commit and CI.
 - Hooks always run, never --no-verify; only the coordinator's landing step may skip the pre-push make check, and only for the exact tree whose full verification just passed.

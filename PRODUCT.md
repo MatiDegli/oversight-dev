@@ -25,13 +25,12 @@ web
 Oversight is a small, focused web IDE for agentic development. Today it works on Python projects;
 broader language support comes through M1. The repository is shown as a live graph of modules,
 classes, functions and methods parsed from source. Coding agents currently use Muse Spark through
-the Meta Model API (Contributor mode) and Muse Spark Open through Baseten, each in its own git worktree.
-More providers arrive through M2 behind one client contract. The approved destination is in
-docs/roadmap.md. Success is a person who can
-let several agents work in parallel and still know, at any moment, what each one is touching and
-what a change may affect. A change reaches main only with your approval or by meeting rules you set; its
-review then shows the rules and grants that let it in, and Revert undoes it in one step when it
-applies cleanly.
+the Meta Model API (Contributor mode) and Muse Spark Open through Baseten, each in its own git
+worktree. More providers arrive through M2 behind one client contract. The approved destination is
+in docs/roadmap.md. Success is a person who can let several agents work in parallel and still know,
+at any moment, what each one is touching and what a change may affect. A change reaches main only
+with your approval or by meeting rules you set; its review then shows the rules and grants that
+let it in, and Revert undoes it in one step when it applies cleanly.
 
 Status, 2026-11-01: rules activation is open following the maintainer's approval. Each fresh run
 starts in Ask me; the person explicitly selects Merge alone when safe. Selection requires session
@@ -55,10 +54,11 @@ the agents' lights, the diff) is where this happens, not the pitch.
 
 - Built during the Meta Global AI Developer Hackathon, Oct 26 to Nov 4, 2026.
 - Development used WSL; the UI is opened and recorded in a Windows browser on localhost.
-- The hackathon demo runs against a small Python project of our own (`demo-repo/`), copied to a fresh runtime
-  workspace on every start.
-- The submission was designed for judges to see the demo video and a static replay build. The build plays the bundled
-  real two-agent recording, labeled from its provenance (see Evidence on Hand).
+- The hackathon demo runs against a small Python project of our own (`demo-repo/`), copied to a
+  fresh runtime workspace on every start.
+- The submission was designed for judges to see the demo video and a static replay build. The
+  build plays the bundled real two-agent recording, labeled from its provenance (see Evidence on
+  Hand).
 
 ## Capabilities and Constraints
 
@@ -75,8 +75,9 @@ the agents' lights, the diff) is where this happens, not the pitch.
 - Current models are Muse Spark through the Meta Model API and Muse Spark Open through Baseten.
   Calls use the official OpenAI SDK today; M2 adds native Anthropic/Google SDKs behind the same
   client contract, with no LiteLLM. Real calls are deliberate Oversight runs only; tests and
-  `make check` use scripted fake models and spend no credits for every provider. Tools are list_files, read_file, search, edit_file, run_tests and finish, plus find_symbol
-  (read-only Python navigation) when the harness pack is on, the default. There is no shell tool.
+  `make check` use scripted fake models and spend no credits with any provider. Tools are
+  list_files, read_file, search, edit_file, run_tests and finish, plus find_symbol (read-only Python
+  navigation) when the harness pack is on, the default. There is no shell tool.
 - Native-agent create/rename/delete are M1 work. The native shell is M4 work, policy-gated and
   defaulting to ask: inside a sandbox once M3 qualifies the platform, or labeled "unsandboxed" in
   a repository the person explicitly trusts through M1. MCP is M6; a general plugin API is M9
@@ -105,8 +106,9 @@ the agents' lights, the diff) is where this happens, not the pitch.
   Windows browser is the verified environment. macOS follows its M3 sandbox qualification.
 - The person's terminal is future M4 work after its security-plan review: unsandboxed by default,
   with a sandboxed option once M3 qualifies and remote access only later, labeled. It retains
-  shared authority, 127.0.0.1, session token, Host/Origin checks, unsafe-HTTP/WebSocket authentication
-  and same-authority checks, and server-owned cleanup. Capture waits for the bounded log and Secrets.
+  shared authority, 127.0.0.1, session token, Host/Origin checks, unsafe-HTTP/WebSocket
+  authentication and same-authority checks, and server-owned cleanup. Capture waits for the
+  bounded log and Secrets.
 - The impact cone is bounded and always presented as "possibly affected", never as complete.
 - Hackathon scope used the levels in docs/proposal.md, section 5, with level 3 and day mode subject
   to the event deadline. Post-hackathon scope follows docs/roadmap.md; the submission freeze stays
@@ -142,14 +144,14 @@ the agents' lights, the diff) is where this happens, not the pitch.
 
 - The person decides: a change reaches main only with their approval or by meeting rules they set.
 - Every product recommendation explains, in order: the most comfortable option for the person
-  using Oversight; how the maintainer and his agents actually work, or better; highly controllable
+  using Oversight; how the maintainer and their agents actually work, or better; highly controllable
   and configurable, where that is appropriate and viable (the exact criteria are in AGENTS.md).
 - Authority comes only from the person; no agent widens its own or another agent's configured
   authority. Every loosening is visible, logged and reversible. Other limits become settings with
   safe defaults as their fronts land; provider terms, law, licenses and unavailable capabilities
   still constrain them, with reasons. Today's gates stay until those settings are delivered.
 - From a later M5 front, agents can suggest, prepare and apply settings within the person's grants,
-  never widening their own authority. Today an agent proposes a setting change to the maintainer
+  never widening their own authority. Today an agent proposes a setting change to the person
   in text. The M5 front adds typed, revision-bound proposals: an Oversight-rendered card
   shows the exact change, scope, loosening and indicator without stealing focus. The person accepts
   by a click or their own chat message bound to that visible proposal, never repository text,

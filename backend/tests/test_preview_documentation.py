@@ -120,7 +120,7 @@ def test_agent_settings_application_is_future_and_present_proposals_are_text_onl
     )
 
     assert proposals.startswith("From a later M5 front, agents can suggest, prepare and apply")
-    assert "Today an agent proposes a setting change to the maintainer in text." in proposals
+    assert "Today an agent proposes a setting change to the person in text." in proposals
     assert "within the person's grants, never widening their own authority" in proposals
 
 
@@ -135,7 +135,7 @@ def test_agent_settings_application_is_future_and_present_proposals_are_text_onl
         "Approve has no keyboard shortcut, not even Ctrl+Enter",
         "combined tests run first on the combined result",
         "Agents never widen their own or another agent's authority",
-        "an agent proposes a setting change to the maintainer in text",
+        "an agent proposes a setting change to the person in text",
         "typing-extensions under PSF-2.0",
         "CPython under PSF-2.0 for the Windows installer only",
         "The public submission repository stays frozen until the maintainer lifts it "
