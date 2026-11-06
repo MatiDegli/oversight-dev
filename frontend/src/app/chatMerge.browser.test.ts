@@ -54,6 +54,7 @@ async function open({
   theme = "dark",
 } = {}) {
   const page = await browser.newPage({
+    timezoneId: "UTC",
     viewport: { width, height: width === 1920 ? 1080 : 800 },
     reducedMotion: "reduce",
   });

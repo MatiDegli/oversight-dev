@@ -43,6 +43,7 @@ async function open(
   readonly = false,
 ) {
   const page = await browser.newPage({
+    timezoneId: "UTC",
     viewport: { width, height: width === 390 ? 844 : 1000 },
     reducedMotion: "reduce",
   });

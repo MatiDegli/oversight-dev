@@ -196,7 +196,7 @@ async function captureComparison(
   );
   const browser = page.context().browser();
   if (!browser) throw new Error("Missing browser");
-  const report = await browser.newPage();
+  const report = await browser.newPage({ timezoneId: "America/Argentina/Buenos_Aires" });
   try {
     await report.setViewportSize({ width: 2400, height: 1400 });
     await report.setContent(

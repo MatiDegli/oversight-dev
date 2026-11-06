@@ -158,6 +158,7 @@ export async function main(args?: string[], captureScenes = scenes): Promise<num
         await writeFile(join(out, `${scene.name}.events`), liveLog);
       }
       const context = await browser.newContext({
+        timezoneId: "America/Argentina/Buenos_Aires",
         viewport: scene?.viewport ?? VIEWPORT,
         deviceScaleFactor: 1,
       });

@@ -33,6 +33,7 @@ afterAll(async () => {
 async function withPage(test: (page: Page) => Promise<void>) {
   if (!browser || !server) throw new Error("Browser fixture did not start");
   const page = await browser.newPage({
+    timezoneId: "UTC",
     viewport: { width: 1920, height: 1080 },
     reducedMotion: "reduce",
   });

@@ -512,7 +512,11 @@ class ChatSupport {
       this.events =
         input ?? (extra.includes("replyLate") ? chatEvents().slice(0, 9) : chatEvents());
     this.deliveries = [];
-    const context = await this.browser.newContext({ viewport, reducedMotion: "reduce" });
+    const context = await this.browser.newContext({
+      timezoneId: "UTC",
+      viewport,
+      reducedMotion: "reduce",
+    });
     context.setDefaultTimeout(7_000);
     await prepareSession(context, input);
     const fixture = sessionFixture(this.candidate);

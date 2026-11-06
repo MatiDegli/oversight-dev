@@ -56,6 +56,7 @@ it.each(
   ["New task", "New lead"].flatMap((action) => ["Escape", "Alt+w"].map((key) => ({ action, key }))),
 )("$action keeps hidden shared tabs through $key", async ({ action, key }) => {
   const page = await browser.newPage({
+    timezoneId: "UTC",
     viewport: { width: 1280, height: 800 },
     reducedMotion: "reduce",
   });

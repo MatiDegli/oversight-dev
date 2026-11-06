@@ -1,17 +1,12 @@
+import { useClock } from "../../../timeZone";
 import { presentationFor, presentationStyle } from "../../../teams/presentation";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import { Check, CircleAlert } from "lucide-react";
 import type { State } from "../../../state";
 import { agentLetter, duration, LOG_LIMIT, selectActivity } from "./selectors";
 
-const clock = new Intl.DateTimeFormat("en-GB", {
-  timeZone: "America/Argentina/Buenos_Aires",
-  hour: "2-digit",
-  minute: "2-digit",
-  second: "2-digit",
-});
-
 export function Activity({ state }: { state: State }) {
+  const clock = useClock();
   const { entries, omitted } = useMemo(() => selectActivity(state), [state]);
   const viewport = useRef<HTMLDivElement>(null);
   const following = useRef(true);
@@ -62,7 +57,7 @@ export function Activity({ state }: { state: State }) {
                 )}
                 {entry.time ? (
                   <time className="dock-number" dateTime={entry.time}>
-                    {clock.format(new Date(entry.time))} ART
+                    {clock(entry.time, { seconds: true, label: true })}
                   </time>
                 ) : (
                   <span className="dock-note">No time</span>

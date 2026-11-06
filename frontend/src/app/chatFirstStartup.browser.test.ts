@@ -71,7 +71,7 @@ afterAll(async () => {
 it.each(["explicit open", "idle prefetch"])(
   "unblocks %s in a fresh Chat-first App",
   async (mode) => {
-    const page = await browser.newPage();
+    const page = await browser.newPage({ timezoneId: "UTC" });
     const requested: string[] = [];
     page.on("request", (request) => requested.push(new URL(request.url()).pathname));
     await page.addInitScript(() => {

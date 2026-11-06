@@ -155,6 +155,7 @@ for (const width of [1920, 1280])
         `keeps %s evidence, diff, decisions and focus at ${String(width)} in ${theme}, summary ${String(summary)}`,
         async (label) => {
           const page = await browser.newPage({
+            timezoneId: "America/Argentina/Buenos_Aires",
             viewport: { width, height: width === 1920 ? 1080 : 800 },
             deviceScaleFactor: 1,
             reducedMotion: "reduce",

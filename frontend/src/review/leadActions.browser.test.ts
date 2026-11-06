@@ -140,7 +140,11 @@ it.each([
 ] as const)(
   "event-owned plan actions at %s × %s, %s",
   async (width, height, theme) => {
-    const page = await browser.newPage({ viewport: { width, height }, reducedMotion: "reduce" });
+    const page = await browser.newPage({
+      timezoneId: "America/Argentina/Buenos_Aires",
+      viewport: { width, height },
+      reducedMotion: "reduce",
+    });
     const requests: { path: string; body: unknown }[] = [],
       loaded: string[] = [],
       errors: string[] = [];
@@ -453,7 +457,10 @@ it.each([
 );
 
 it("keeps plan pieces readable through App's replay path without mutation requests", async () => {
-  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  const page = await browser.newPage({
+    timezoneId: "America/Argentina/Buenos_Aires",
+    viewport: { width: 1280, height: 800 },
+  });
   const sent: string[] = [];
   let releaseChunk = () => {};
   const chunkGate = new Promise<void>((resolve) => {

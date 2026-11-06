@@ -39,6 +39,7 @@ const shots = fileURLToPath(new URL("../../../.shots/review-lead/", import.meta.
 it.each(["d2", "c", "merged"] as const)("shows approved words for %s at 1920", async (name) => {
   if (!browser) throw new Error("Missing browser");
   const page = await browser.newPage({
+    timezoneId: "America/Argentina/Buenos_Aires",
     viewport: { width: 1920, height: 1080 },
     reducedMotion: "reduce",
   });
@@ -110,7 +111,10 @@ it.each(["d2", "c", "merged"] as const)("shows approved words for %s at 1920", a
       const sketch = await readFile(
         new URL(`../../../docs/sketches/review/${key}.png`, import.meta.url),
       );
-      const report = await browser.newPage({ viewport: { width: 3840, height: 1080 } });
+      const report = await browser.newPage({
+        timezoneId: "America/Argentina/Buenos_Aires",
+        viewport: { width: 3840, height: 1080 },
+      });
       await report.setContent(
         `<style>body{margin:0;display:flex}img{width:1920px;height:1080px;object-fit:contain}</style><img alt="Product: hand-written fixture" src="data:image/png;base64,${product.toString("base64")}"><img alt="Approved sketch" src="data:image/png;base64,${sketch.toString("base64")}">`,
       );
@@ -126,6 +130,7 @@ it.each(["b", "c"] as const)(
   async (name) => {
     if (!browser) throw new Error("Missing browser");
     const page = await browser.newPage({
+      timezoneId: "America/Argentina/Buenos_Aires",
       viewport: { width: 1920, height: 1080 },
       reducedMotion: "reduce",
     });
@@ -343,7 +348,10 @@ it.each(cases)(
             [1920, "day"],
           ] as const)
         : ([[1920, "dark"]] as const)) {
-      const page = await browser.newPage({ viewport: { width, height: 1080 } });
+      const page = await browser.newPage({
+        timezoneId: "America/Argentina/Buenos_Aires",
+        viewport: { width, height: 1080 },
+      });
       const errors: string[] = [];
       page.on("pageerror", (error) => errors.push(error.message));
       page.on("console", (message) => {
@@ -436,7 +444,10 @@ it.each(cases)(
                 `<tr><td>${k}</td><td>${String(v)}</td><td>${String(target[k as keyof typeof target])}</td></tr>`,
             )
             .join("");
-          const report = await browser.newPage({ viewport: { width: width * 2, height: 1400 } });
+          const report = await browser.newPage({
+            timezoneId: "America/Argentina/Buenos_Aires",
+            viewport: { width: width * 2, height: 1400 },
+          });
           await report.setContent(
             `<style>body{margin:0;background:#eee;color:#111;font:16px sans-serif}.pair{display:flex;gap:24px}td{padding:2px 16px}img{object-fit:contain;object-position:top left}</style><p>Product · hand-written fixture / docs/sketches/review/${key}.png · DESIGN.md items 2–5</p><div class="pair"><img width="${String(width === 1280 ? 608 : 880)}" src="data:image/png;base64,${product.toString("base64")}"><img width="${String(width)}" src="data:image/png;base64,${sketch.toString("base64")}"></div><table><tr><th>Measurement</th><th>Product</th><th>DESIGN</th></tr>${rows}</table>`,
           );
@@ -508,7 +519,10 @@ it.each([1280, 1920])(
   async (width) => {
     if (!browser) throw new Error("Missing browser");
     for (const recorded of [true, false]) {
-      const page = await browser.newPage({ viewport: { width, height: 1080 } });
+      const page = await browser.newPage({
+        timezoneId: "America/Argentina/Buenos_Aires",
+        viewport: { width, height: 1080 },
+      });
       try {
         await page.route("**/", (route) => route.fulfill({ contentType: "text/html", body: html }));
         await page.goto(url);
@@ -561,7 +575,10 @@ it.each(["a", "b", "c"] as const)(
   "wraps long %s evidence losslessly at ordinary size and 200%% zoom",
   async (name) => {
     if (!browser) throw new Error("Missing browser");
-    const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+    const page = await browser.newPage({
+      timezoneId: "America/Argentina/Buenos_Aires",
+      viewport: { width: 1920, height: 1080 },
+    });
     try {
       await page.route("**/", (route) => route.fulfill({ contentType: "text/html", body: html }));
       await page.goto(url);
@@ -628,7 +645,10 @@ it.each([1, 2])(
   "uses the compared input count's number in the panel caption: %i",
   async (count) => {
     if (!browser) throw new Error("Missing browser");
-    const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+    const page = await browser.newPage({
+      timezoneId: "America/Argentina/Buenos_Aires",
+      viewport: { width: 1920, height: 1080 },
+    });
     try {
       await page.route("**/", (route) => route.fulfill({ contentType: "text/html", body: html }));
       await page.goto(url);
@@ -656,7 +676,10 @@ it.each([1, 2])(
 
 it("keeps the keyboard focus outline inside an open diff card", async () => {
   if (!browser) throw new Error("Missing browser");
-  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+  const page = await browser.newPage({
+    timezoneId: "America/Argentina/Buenos_Aires",
+    viewport: { width: 1920, height: 1080 },
+  });
   try {
     await page.route("**/", (route) => route.fulfill({ contentType: "text/html", body: html }));
     await page.goto(url);
@@ -684,7 +707,10 @@ it.each(["default", "opened", "closed"])(
   "recomputes d to a until a person chooses: %s",
   async (choice) => {
     if (!browser) throw new Error("Missing browser");
-    const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+    const page = await browser.newPage({
+      timezoneId: "America/Argentina/Buenos_Aires",
+      viewport: { width: 1920, height: 1080 },
+    });
     try {
       await page.route("**/", (route) => route.fulfill({ contentType: "text/html", body: html }));
       await page.goto(url);

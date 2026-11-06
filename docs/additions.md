@@ -802,7 +802,7 @@ stays in place. Merge rehearsal has its own one-page plan outside this slice.
 
 ### Lead browser size rationale
 
-chatLeads.browser.test.ts (1311 lines) and chatLeads.browser.fixture.tsx (641 lines) stay
+chatLeads.browser.test.ts (1312 lines) and chatLeads.browser.fixture.tsx (641 lines) stay
 together because the six-lead scene table and lifecycle proofs are inherently tabular. The
 fixture keeps valid event sequences beside their scene definitions; the browser suite keeps
 Stop, cap, density and capture assertions together so their shared lifecycle evidence can be

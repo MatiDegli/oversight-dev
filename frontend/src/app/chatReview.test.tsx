@@ -1,3 +1,11 @@
+import { applyTimeZone, AUTOMATIC } from "../timeZone";
+import { beforeEach as beforeZone, afterEach as afterZone } from "vitest";
+beforeZone(() => {
+  applyTimeZone("UTC");
+});
+afterZone(() => {
+  applyTimeZone(AUTOMATIC);
+});
 function required<T>(value: T | null | undefined): T {
   if (value == null) throw new Error("Missing fixture evidence");
   return value;

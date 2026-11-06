@@ -34,6 +34,7 @@ afterAll(async () => {
 
 async function open(width: number, theme: string, seq = 21, folded = false, deviceScaleFactor = 1) {
   const page = await browser.newPage({
+    timezoneId: "UTC",
     viewport: { width: 1920, height: 1080 },
     reducedMotion: "reduce",
     deviceScaleFactor,
@@ -141,7 +142,10 @@ async function compare(sketch: string, capture: string) {
       (await readFile(path)).toString("base64"),
     ),
   );
-  const page = await browser.newPage({ viewport: { width: 3840, height: 1080 } });
+  const page = await browser.newPage({
+    timezoneId: "UTC",
+    viewport: { width: 3840, height: 1080 },
+  });
   try {
     await page.setContent(
       `<body style="margin:0;display:flex">${sources.map((src) => `<img width="1920" height="1080" src="data:image/png;base64,${src}">`).join("")}</body>`,
@@ -156,7 +160,7 @@ async function compare(sketch: string, capture: string) {
 }
 
 it("observes all four measured words drawn to a canvas", async () => {
-  const page = await browser.newPage();
+  const page = await browser.newPage({ timezoneId: "UTC" });
   try {
     await page.route("**/", (route) => route.fulfill({ contentType: "text/html", body: html }));
     await page.goto(url);

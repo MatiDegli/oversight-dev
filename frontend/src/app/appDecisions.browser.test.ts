@@ -46,7 +46,10 @@ it.each([
 ] as const)(
   "App sends the rendered target when %s races with a newer proposal",
   async (action, label) => {
-    const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+    const page = await browser.newPage({
+      timezoneId: "UTC",
+      viewport: { width: 1920, height: 1080 },
+    });
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
     try {
