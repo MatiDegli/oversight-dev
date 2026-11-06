@@ -6,6 +6,8 @@ setting on every call, and retries transport errors, 429 and 5xx with backoff an
 Usage the API does not report stays `None`, never 0.
 """
 
+from __future__ import annotations
+
 import asyncio
 import math
 import random
@@ -15,18 +17,20 @@ from contextvars import ContextVar
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
-from typing import Any, Literal, Protocol, cast
+from typing import TYPE_CHECKING, Any, Literal, Protocol, cast
 from urllib.parse import urlparse
 from uuid import uuid4
 
 import httpx2 as httpx
-import openai
-from openai.types.chat import ChatCompletion, ChatCompletionMessage
 
 from oversight.agents._attempts import FailedAttempt, notify_failed_attempt
 from oversight.agents._trace_http import exchange_span, request_ready
 from oversight.telemetry import CURRENT, annotate, response_fields, span
 from oversight_contracts.events import ModelProfile
+
+if TYPE_CHECKING:
+    import openai
+    from openai.types.chat import ChatCompletion, ChatCompletionMessage
 
 type Message = dict[str, object]
 """One Chat Completions message, as JSON."""
@@ -165,6 +169,8 @@ class ContextLengthError(ModelAPIError):
 
 
 def _context_length_error(error: openai.APIError) -> bool:
+    import openai
+
     if not isinstance(error, openai.APIStatusError) or error.status_code not in {400, 413}:
         return False
     if error.code == "context_length_exceeded":
@@ -217,6 +223,8 @@ class RetryPolicy:
 
 
 def _retryable(error: openai.APIError) -> bool:
+    import openai
+
     if isinstance(error, openai.APIConnectionError):
         return True  # includes APITimeoutError
     if isinstance(error, openai.APIStatusError):
@@ -225,6 +233,8 @@ def _retryable(error: openai.APIError) -> bool:
 
 
 def _retry_after(error: openai.APIError) -> float | None:
+    import openai
+
     if not isinstance(error, openai.APIStatusError):
         return None
     value = error.response.headers.get("retry-after")
@@ -315,6 +325,9 @@ class OpenAIClient:
         jitter: Callable[[], float] = random.random,
         timeout_s: float = 120.0,
     ) -> None:
+        # Scripted clients share this module; only real client use loads the SDK.
+        import openai
+
         self._profile = profile
         self._max_output_tokens = max_output_tokens
         self._retry = retry or RetryPolicy()
@@ -375,6 +388,8 @@ class OpenAIClient:
     async def complete(
         self, messages: Sequence[Message], tools: Sequence[ToolSchema]
     ) -> ModelReply:
+        import openai
+
         with span("request_parameters"):
             params = self.params(messages, tools)
         attempt = 0
@@ -489,14 +504,16 @@ class OpenAIClient:
             if len(completion.choices) != 1:
                 raise ValueError("decision requires exactly one choice")
             # SDK construction may retain null despite the declared non-null response type.
-            message = cast(ChatCompletionMessage | None, completion.choices[0].message)
+            message = cast("ChatCompletionMessage | None", completion.choices[0].message)
             if message is None or message.refusal or message.function_call is not None:
                 raise ValueError("decision cannot contain a refusal or legacy tool call")
         return completion
 
     async def _completion(self, params: dict[str, object]) -> ChatCompletion:
+        import openai
+
         if CURRENT.get() is None:
-            return cast(ChatCompletion, await self._create(**params))
+            return cast("ChatCompletion", await self._create(**params))
         with exchange_span() as fields:
             try:
                 raw = await self._create_raw(**params)
@@ -510,7 +527,7 @@ class OpenAIClient:
                 fields["request_bytes"] = len(error.request.content)
                 raise
         with span("decoding"):
-            return cast(ChatCompletion, raw.parse())
+            return cast("ChatCompletion", raw.parse())
 
     async def _unanswered(self) -> None:
         scope = CALL_SCOPE.get()
@@ -519,6 +536,8 @@ class OpenAIClient:
 
 
 def _describe(error: openai.APIError, attempts: int) -> str:
+    import openai
+
     status = error.status_code if isinstance(error, openai.APIStatusError) else None
     kind = f"HTTP {status}" if status is not None else type(error).__name__
     tries = f" after {attempts} attempts" if attempts > 1 else ""

@@ -1,13 +1,16 @@
 """Best-effort failed-attempt diagnostics, independent of retry and accounting policy."""
 
+from __future__ import annotations
+
 import logging
 from collections.abc import Awaitable, Callable
-from typing import Literal, TypedDict
-
-import openai
+from typing import TYPE_CHECKING, Literal, TypedDict
 
 from oversight.events import EventPayload
 from oversight_contracts.events import ModelAttemptFailed, ModelProfile
+
+if TYPE_CHECKING:
+    import openai
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +55,8 @@ async def notify_failed_attempt(
     wait_s: float | None,
     final: Literal["attempts_used", "not_retryable", "deadline"] | None,
 ) -> None:
+    import openai
+
     cause: Literal["timeout", "connection", "rate_limited", "server_error", "refused"]
     status: int | None = None
     if isinstance(error, openai.APITimeoutError):
