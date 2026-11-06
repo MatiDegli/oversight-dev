@@ -10,10 +10,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/typecheck.tsbuildinfo",
     "lint": "eslint --max-warnings 0 .",
     "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format:check": "prettier --check . --cache --cache-strategy content --cache-location node_modules/.cache/prettier-check",
     "test": "vitest run --project unit --passWithNoTests && node --test \"shots/*.test.ts\"",
     "test:browser": "vitest run --project browser",
     "shots": "node shots/capture.ts"

@@ -21,7 +21,9 @@ let html: string;
 beforeAll(async () => {
   server = await createServer({
     root: fileURLToPath(new URL("../../../", import.meta.url)),
-    cacheDir: `${out}vite-cache`,
+    cacheDir: fileURLToPath(
+      new URL("../../../node_modules/.vite-browser-tests/field-cost", import.meta.url),
+    ),
     server: {
       host: "127.0.0.1",
       port: 0,
