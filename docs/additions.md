@@ -304,8 +304,9 @@ new candidate work waits for the maintainer’s order.
     `/pause`, `/resume`, `/stop`, `/revert` (only where Revert applies cleanly). Contract decisions,
     not proposed now: `/goal` (done-condition; status comes from tool calls), `/model` (Muse Spark vs
     Muse Spark Open), `/compact` (little value with per-run threads lost on server restart; DECISIONS.md,
-    “Lead thread lifetime and restart”). No `/approve`: Approve has no keyboard shortcut; a typed command
-    is the same thing. Chat adds no events, contracts or endpoints today.
+    “Lead thread lifetime and restart”). No `/approve`: Approve has no global shortcut or typed
+    command; only a pointer click or focused held Enter approves. Chat adds no events, contracts
+    or endpoints today.
   - Standing instructions and lessons from reviews: see Repository memory's refinements below,
     extending the Lead agent and Next's "Text rules attached to areas of the repository".
   - Retrospective: building on item 1's facts from events, a failed run, merge conflict, rejection

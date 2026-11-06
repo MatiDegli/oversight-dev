@@ -398,6 +398,9 @@ it.each(measuredSources)(
     const { page } = session;
     try {
       await page.waitForFunction(() => Boolean(window.coldStartPlayer));
+      // The player is exposed before its lazy React controls mount and reconcile the view.
+      // Measure idle renders only after that public UI has committed.
+      await check(page.getByRole("region", { name: "Replay controls" })).toBeVisible();
       const duration = await page.evaluate(
         () => window.coldStartPlayer?.getSnapshot().duration ?? 0,
       );

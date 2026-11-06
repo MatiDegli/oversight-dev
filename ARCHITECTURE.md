@@ -324,7 +324,8 @@ Cytoscape/fcose; only editor imports Monaco. State cannot import React or React 
   per-agent spend, task entry, Pause/Resume and Stop and discard.
 - [Review](frontend/src/review/index.ts) presents proposals, impact and the three decisions.
   Accepted decisions stay pending until an event or error settles them. Unsaved review edits
-  block Approve and Request changes until saved or discarded. Approve has no keyboard shortcut.
+  block Approve and Request changes until saved or discarded. Approve accepts a pointer click or
+  focused held Enter for one second, with no global shortcut or Ctrl K command.
   One lazy read-only plan card serves inbox and lead-thread callbacks in both layouts. It joins
   subtasks to changes by assigned agent ID, projects waves and current-revision gate evidence,
   and shares app-owned Queue/Reject/cancel attempts. Running plans do not count as decisions.

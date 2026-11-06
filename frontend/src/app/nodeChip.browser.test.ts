@@ -330,6 +330,10 @@ it("keeps placement and dismissal subscriptions stable across usage ticks", asyn
       window.nodeChipTest.emit(21);
     });
     await page.getByRole("button", { name: "Review change", exact: true }).click();
+    // The review fallback shares the panel header; wait for its lazy controls before measuring.
+    await check(
+      panel(page).getByRole("button", { name: "Approve and merge", exact: true }),
+    ).toBeVisible();
     await chip(page).click();
     await check(samples(page)).toBeVisible();
     await ready(page);
