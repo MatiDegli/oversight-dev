@@ -2,7 +2,8 @@
 
 Secret-boundary hardening (2026-11-06): implemented on backend/secrets-boundary — run-scoped
 provider/tested-tree masking for run_tests observations and test events, reviewer diffs and
-proposal task/summary; synthetic canary regressions, hex-id preservation and bounded inventory.
+proposal task/summary and measured/behavior evidence; workspace-only inventory failure, whole
+setting masks, shared hex-token masking and repository hex-id preservation have regressions.
 See DECISIONS.md, “Mask tested-tree secrets at model and test-event boundaries”, for limits.
 
 ## Three proofs

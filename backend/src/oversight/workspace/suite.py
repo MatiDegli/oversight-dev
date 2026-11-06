@@ -24,7 +24,7 @@ from oversight.workspace._platform import unlink_retry
 from oversight.workspace.errors import WorkspaceError
 from oversight.workspace.junit import MAX_XML_BYTES, parse_junit
 from oversight.workspace.locks import offload
-from oversight.workspace.measured_report import CallReport, CallTarget, read_calls
+from oversight.workspace.measured_report import CallReport, CallTarget, read_calls, redact_calls
 from oversight.workspace.runner import NtCleanupRunner, ProcessResult, Spawn
 from oversight.workspace.source_nt import OwnEnvironment
 from oversight_contracts.events import CaseResult, SuiteExecution, SuiteResult
@@ -464,7 +464,7 @@ async def run_suite(
                 try:
                     await offload(refresh_secrets)
                 except WorkspaceError:
-                    # The shared redactor now withholds text. Still consume/delete reports.
+                    # The workspace redactor now withholds text. Still consume/delete reports.
                     inventory_failed = True
             take_tally = _take_tally if _own_prepare is None else _take_own_tally
             tally, report_found, report_error = await offload(lambda: take_tally(report))
@@ -472,7 +472,9 @@ async def run_suite(
             measured = None
             if measured_targets is not None:
                 try:
-                    measured = await offload(lambda: read_calls(recording, measured_targets))
+                    measured = await offload(
+                        lambda: redact_calls(read_calls(recording, measured_targets), redact)
+                    )
                 finally:
                     if sys.platform == "win32":
                         try:

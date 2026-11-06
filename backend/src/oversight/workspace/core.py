@@ -425,7 +425,6 @@ class Workspace:
 
     def redact(self, text: str) -> str:
         """Mask known secrets and the runtime location before model/event boundaries."""
-        text = self.redactor(text)
         if sys.platform == "win32":
             slash = str(self._root).replace("\\", "/")
             back = slash.replace("/", "\\")
@@ -445,10 +444,11 @@ class Workspace:
                 )
                 text = re.sub(root + sep, ".runtime/", text, flags=re.IGNORECASE)
                 text = re.sub(root, ".runtime", text, flags=re.IGNORECASE)
-            return text
+            return self.redactor(text, preserve_hex=True)
         root = re.escape(str(self._root))
         text = re.sub(rf"{root}/(?:workspace|worktrees/agent-[1-9][0-9]*)(?:/|(?![\w-]))", "", text)
-        return text.replace(f"{self._root}/", ".runtime/").replace(str(self._root), ".runtime")
+        text = text.replace(f"{self._root}/", ".runtime/").replace(str(self._root), ".runtime")
+        return self.redactor(text, preserve_hex=True)
 
     # --- Processes and git ------------------------------------------------------------------
 

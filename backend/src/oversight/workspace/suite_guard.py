@@ -59,7 +59,7 @@ def _secret_files(root: Path) -> Iterator[str]:
                     yield relative
 
 
-def _remember_secrets(workspace: "Workspace", tree: "Tree") -> None:
+def remember_secrets(workspace: "Workspace", tree: "Tree") -> None:
     """Bound private inventory; refuse execution rather than silently skip unreadable secrets."""
     try:
         tree.verify_root()
@@ -99,7 +99,7 @@ async def guarded_suite(
     snapshot = await offload(partial(take_snapshot, tree.git_identity, state, timeout_s))
     runner: Spawn = NtCleanupRunner(spawn) if sys.platform == "win32" else spawn
     try:
-        await offload(partial(_remember_secrets, workspace, tree))
+        await offload(partial(remember_secrets, workspace, tree))
         before = await offload(partial(file_stamp, tree.root))
         tested_tree, tested_commit = await capture_test_tree(
             tree.root,
@@ -117,7 +117,7 @@ async def guarded_suite(
                 tree_root=tree.root,
                 timeout_s=timeout_s,
                 redact=workspace.redact,
-                refresh_secrets=partial(_remember_secrets, workspace, tree),
+                refresh_secrets=partial(remember_secrets, workspace, tree),
                 spawn=runner,
                 case_ids=case_ids,
                 pytest_targets=pytest_targets,

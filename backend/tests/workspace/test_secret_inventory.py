@@ -129,3 +129,24 @@ async def test_invalid_inventory_after_child_cleans_reports_and_withholds_output
     assert "secret inventory unavailable" in run.problems
     assert not list(workspace.tmp_dir.glob("*.xml"))
     assert not list(workspace.tmp_dir.glob("*.jsonl"))
+
+
+async def test_non_secret_settings_preserve_failed_ids_cases_and_paths(make_workspace) -> None:
+    workspace = make_workspace(demo_python=Path(sys.executable))
+    await workspace.acquire_runtime()
+    await workspace.reset()
+    tree = workspace.main
+    await tree.write_text(
+        ".env", "DATABASE_URL=postgresql://localhost/test_db\n", expected_hash=None
+    )
+    await tree.write_text(
+        "tests/test_db.py",
+        "import pytest\ndef test_connect():\n    pytest.fail('connect failed')\n",
+        expected_hash=None,
+    )
+    run = await workspace.run_tests(tree, timeout_s=5)
+    test_id = "tests/test_db.py::test_connect"
+    assert run.result.failed_tests == [test_id]
+    [case] = [case for case in run.cases if case.test_id == test_id]
+    assert case.detail == "Failed: connect failed"
+    assert test_id in run.output and "secret-bearing test identifiers withheld" not in run.problems
