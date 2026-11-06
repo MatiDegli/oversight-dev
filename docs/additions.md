@@ -351,6 +351,10 @@ new candidate work waits for the maintainer’s order.
 
 ## Next
 
+- **Planned, approved 2026-11-06 — ordered per-role model fallback (M2):** person-configured order for no capacity, quota exhausted or persistent 5xx; wait or stop when exhausted, default wait. Cross-provider review stays the default; unavailable cross-provider review may become same-provider only by the person's visible, event-logged, reversible choice.
+- **Planned, approved 2026-11-06 — diff scan before Approve (Secrets, M2):** default-on checks for secrets, private paths and repository-configurable forbidden markers; approval-card warnings, not blocks. Turning it off is person-owned, visible, recorded in the event log and reversible; especially relevant once repository application or PR opening exists.
+- **Planned, approved 2026-11-06 — the person's CI as evidence (M10, large/later):** push the agent branch, dispatch the workflow and feed failed-job log tails into revisions. Per repository local/CI/both, default local; outward push requires explicit person authority and an event-log record, with dispatch under that authority. Verification loosening stays visible, event-logged and reversible.
+- **Planned, approved 2026-11-06 — versioned gates and workflows (M5):** one-click return to the previous version per repository or workflow, current version by default. Rollback is a person-owned loosening, visible, recorded in the event log and reversible; agents cannot grant themselves authority. All four capabilities await implementation; see [roadmap](roadmap.md#milestones) and the November 6 decisions for scope and C/H/K criteria.
 - Hidden test sets: extend beyond the external hidden grading already present in `tools/eval`.
 - A red agent to look for counterexamples to a proposed change.
 - A specialist engine for checks that need a dedicated tool.

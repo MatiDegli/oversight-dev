@@ -5929,3 +5929,35 @@ This retains AGENTS.md:61's network/PID isolation and filesystem-isolation resid
 Blocked namespaces leave the graph open and tests unavailable, with a diagnosed remedy; AppArmor guidance includes sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 and restoration of the previous value (.github/workflows/ci.yml:225).
 Comfort comes from an actionable diagnosis; practice from whole-repository test discovery; control from person-owned timeout/policy, in that order (AGENTS.md:60).
 The approved own-repository documentation update lands with the integration slice; neither the trust prompt nor this plan changes execution authority today.
+
+## 2026-11-06 — Ordered per-role model fallback
+
+The maintainer approved ordered model fallback per role, planned and available from M2: no capacity, quota exhausted or persistent 5xx tries the next eligible model in the person's list.
+When none is left, the person selects wait or stop, default wait; existing spending and authority controls still apply.
+Cross-provider review stays the default; when its reviewer is unavailable, same-provider review is a person-authorized loosening, visible, recorded in the event log and reversible. Agents cannot authorize it.
+C: fewer manual model changes; H: keep the maintainer's parallel agents moving across roles; K: person-owned ordering per role, exhaustion policy and reversible review exception.
+This extends “Use native provider SDKs behind one contract” and “Roadmap limits become person settings with safe defaults”; provider changes await implementation, and development-review rules remain unchanged.
+
+## 2026-11-06 — Diff scan before Approve
+
+The maintainer approved scanning the agent's diff for secrets, private paths and the person's forbidden markers before Approve, planned and available from M2's cross-cutting Secrets work.
+Default on; findings appear on the approval card as warnings, not blocks, with forbidden markers configurable per repository.
+Turning it off is the person's loosening: visible, recorded in the event log and reversible; agents cannot widen authority.
+C: exposure warnings at the decision; H: check the maintainer's agent changes before repository application or PR opening; K: repository-specific markers and a reversible person-owned switch.
+This extends “Refuse obvious secret files at model tool boundaries” and the roadmap's Secrets section with content scanning; it replaces neither filename refusal nor redaction and grants no outward action.
+
+## 2026-11-06 — The person's CI as verification evidence
+
+The maintainer approved pushing the agent branch, dispatching the person's workflow and feeding failed-job log tails into the next revision, planned as large, later M10 evidence work.
+Per repository, the person selects local, CI or both; default local preserves today's behavior until implementation.
+The push is an outward action requiring the person's explicit authority and an event-log record; workflow dispatch follows that authority too. Any verification loosening is visible, recorded in the event log and reversible; agents cannot widen authority.
+C: no manual copying of CI logs; H: verify the maintainer's agent changes through the repository's own workflow; K: local/CI/both per repository and explicit authority over outward actions.
+This extends M10's “Repository hooks and formatter diffs as evidence” and “Roadmap limits become person settings with safe defaults”; it changes no development verification or push rule.
+
+## 2026-11-06 — Versioned gates and workflows with one-click rollback
+
+The maintainer approved versioned gates and workflows, planned and available from M5: the person returns to the previous version in one action, per repository or per workflow.
+The current version is the safe default; returning to an earlier version is a loosening, visible, recorded in the event log and reversible.
+Authority stays with the person; agents cannot grant themselves a rollback.
+C: no waiting when a new gate fails; H: give the maintainer and his parallel agents a direct return to the previous working version; K: repository/workflow selection with the current version as default.
+This extends M5's “Workflows as versioned repository files” and the settings-history/Restore scope of “Roadmap limits become person settings with safe defaults”; it changes no development gate today.

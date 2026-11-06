@@ -6,6 +6,7 @@ its "Built during the hackathon" section.
 
 ## Unreleased
 
+- Recorded the approved plans for per-role model fallback (M2), pre-Approve diff scanning (Secrets, M2), the person's CI as evidence (M10), and versioned gates/workflows with one-click rollback (M5); implementation remains pending.
 - Recorded the approved canvas, WSL and Linux own-repository admission plans and decisions, including engine A, the M6 composition gate and the CPython 3.8 venv floor; implementation and acceptance remain pending.
 
 - Added the approved post-hackathon roadmap and its decisions, with milestone gates separating
