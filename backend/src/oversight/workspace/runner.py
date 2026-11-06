@@ -9,6 +9,7 @@ between is counted, not kept, and the pipes are always drained.
 import asyncio
 import contextlib
 import os
+import re
 import signal
 import sys
 import time
@@ -187,16 +188,17 @@ def child_env(extra: Mapping[str, str] | None) -> dict[str, str]:
             for key in ("SYSTEMROOT", "WINDIR", "COMSPEC", "PATHEXT")
             if key in os.environ
         }
-        base |= dict(extra or {})
+    base |= dict(extra or {})
+    if sys.platform == "win32":
         base["PYTHONUTF8"] = "1"
         if home := (extra or {}).get("HOME"):
             base |= dict.fromkeys(("TEMP", "TMP", "USERPROFILE"), home)
-        return {
-            key: value
-            for key, value in base.items()
-            if key.casefold() not in {"meta_api_key", "baseten_api_key"}
-        }
-    return base | dict(extra or {})
+    # Filter extras too: provider keys (including Meta/Baseten) and future backend session/auth
+    # credentials must never reach test, preview or shop children on any platform.
+    credential_name = re.compile(
+        r"(?:_(?:api_key|token|secret|password|credentials)\Z|\Aoversight_(?:session|auth))"
+    )
+    return {key: value for key, value in base.items() if not credential_name.search(key.casefold())}
 
 
 def _killpg(pgid: int, sig: signal.Signals) -> None:

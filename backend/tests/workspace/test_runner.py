@@ -18,6 +18,20 @@ pytestmark = pytest.mark.anyio
 type GateFactory = Callable[[str], Any]
 type WaitGone = Callable[[int], None]
 PYTHON = sys.executable
+CREDENTIAL_ENV_NAMES = (
+    "META_API_KEY",
+    "BASETEN_API_KEY",
+    "SERVICE_API_KEY",
+    "SERVICE_TOKEN",
+    "SERVICE_SECRET",
+    "SERVICE_PASSWORD",
+    "SERVICE_CREDENTIALS",
+    "OVERSIGHT_SESSION",
+    "OVERSIGHT_SESSION_ID",
+    "OVERSIGHT_SESSIONKEY",
+    "OVERSIGHT_AUTH",
+    "OVERSIGHT_AUTHORIZATION",
+)
 
 
 def script(*parts: str) -> list[str]:
@@ -195,6 +209,36 @@ async def test_cancel_during_launch_still_reaches_the_cleanup(
     wait_gone(pids[0])
 
 
+@pytest.mark.parametrize("platform", ["linux", "win32"])
+@pytest.mark.parametrize(
+    "name_case", [str.upper, str.lower, str.title], ids=["upper", "lower", "mixed"]
+)
+def test_child_env_filters_credentials_after_extra_on_every_platform(
+    monkeypatch: pytest.MonkeyPatch, platform: str, name_case: Callable[[str], str]
+) -> None:
+    monkeypatch.setenv("PATH", "/allowed/path")
+    system = dict.fromkeys(("SYSTEMROOT", "WINDIR", "COMSPEC", "PATHEXT"), "system-value")
+    for name, value in system.items():
+        monkeypatch.setenv(name, value)
+    monkeypatch.setenv("OVERSIGHT_NOT_ALLOWED", "private")
+    ordinary = {
+        "HOME": "/caller/home",
+        "VISIBLE_SETTING": "kept",
+        "SERVICE_TOKEN_FILE": "token-path",
+        "TOKEN": "ordinary",
+        "OVERSIGHT_RUNTIME_DIR": "/caller/runtime",
+    }
+    extra = dict.fromkeys(map(name_case, CREDENTIAL_ENV_NAMES), "synthetic") | ordinary
+    expected = {"PATH": "/allowed/path", "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8", "TZ": "UTC"}
+    if platform == "win32":
+        expected |= system | {"PYTHONUTF8": "1"}
+        expected |= dict.fromkeys(("TEMP", "TMP", "USERPROFILE"), ordinary["HOME"])
+    with monkeypatch.context() as platform_patch:
+        platform_patch.setattr(sys, "platform", platform)
+        seen = runner.child_env(extra=extra)
+    assert seen == expected | ordinary
+
+
 async def test_the_child_environment_has_no_secrets(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -205,10 +249,13 @@ async def test_the_child_environment_has_no_secrets(
         script("import json; print(json.dumps(dict(os.environ)))"),
         cwd=tmp_path,
         timeout_s=30,
-        env={"HOME": "/tmp/home"},
+        env=dict.fromkeys(CREDENTIAL_ENV_NAMES, "from-extra")
+        | {"sErViCe_ToKeN": "from-extra", "HOME": "/tmp/home", "VISIBLE_SETTING": "kept"},
     )
+    assert result.returncode == 0
     seen = json.loads(result.stdout)
-    assert set(seen) <= {"PATH", "LANG", "LC_ALL", "TZ", "HOME"}
+    assert set(seen) <= {"PATH", "LANG", "LC_ALL", "TZ", "HOME", "VISIBLE_SETTING"}
+    assert seen["VISIBLE_SETTING"] == "kept"
     assert seen["HOME"] == "/tmp/home"
     assert (seen["LANG"], seen["TZ"]) == ("C.UTF-8", "UTC")
 
