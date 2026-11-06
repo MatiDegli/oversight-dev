@@ -6,6 +6,8 @@ its "Built during the hackathon" section.
 
 ## Unreleased
 
+- Recorded the approved canvas, WSL and Linux own-repository admission plans and decisions, including engine A, the M6 composition gate and the CPython 3.8 venv floor; implementation and acceptance remain pending.
+
 - Added the approved post-hackathon roadmap and its decisions, with milestone gates separating
   current capabilities from future language, provider, harness, platform and IDE work.
 - Revised agent rules and product documentation for the post-hackathon baseline. Ended the
