@@ -223,7 +223,7 @@ jobs:
           PY
       - name: Allow unprivileged user namespaces
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-      - run: make check-ci
+      - run: make check-ci-no-python
       - run: make smoke
       - name: Report network isolation probe
         run: |

@@ -109,24 +109,24 @@ def test_unknown_new_file_is_selected_once_and_xdist_runs_all_its_cases(tmp_path
     assert Counter(shards[0]) + Counter(shards[1]) == Counter(whole)
     assert set(shards[0]).isdisjoint(shards[1])
     assert sorted(map(len, shards)) == [0, 3]
-    index = next(i for i, ids in enumerate(shards, start=1) if ids)
-    code, output = run(
-        str(Path(sys.executable).with_name("pytest")),
-        "-c",
-        str(ROOT / "pyproject.toml"),
-        f"--rootdir={tmp_path}",
-        "-o",
-        "pythonpath=.",
-        str(new),
-        "-n",
-        "2",
-        "--max-worker-restart=0",
-        "-p",
-        "tools.python_shards",
-        f"--python-shard={index}/2",
-    )
-    assert code == 0, output
-    assert "3 passed" in output
+    for index, ids in enumerate(shards, start=1):
+        code, output = run(
+            str(Path(sys.executable).with_name("pytest")),
+            "-c",
+            str(ROOT / "pyproject.toml"),
+            f"--rootdir={tmp_path}",
+            "-o",
+            "pythonpath=.",
+            str(new),
+            "-n",
+            "2",
+            "--max-worker-restart=0",
+            "-p",
+            "tools.python_shards",
+            f"--python-shard={index}/2",
+        )
+        assert code == (0 if ids else 5), output
+        assert ("3 passed" if ids else "no tests ran") in output
 
 
 @pytest.mark.parametrize("value", ["", "0/2", "3/2", "1/0", "1", "1/2/3", "-1/2", "01/2"])
@@ -193,7 +193,7 @@ def test_workflow_shards_keep_setup_evidence_and_independent_failure_results(fil
     assert mapping(job["permissions"]) == {"contents": "read"}
     assert mapping(job["strategy"]) == {"fail-fast": "false", "matrix": "shard: [1, 2]"}
     check_steps = steps(mapping(jobs["check"])["steps"])
-    check_index = check_steps.index({"run": "make check-ci"})
+    check_index = check_steps.index({"run": "make check-ci-no-python"})
     shard_steps = steps(job["steps"])
     if filename == "verify.yml":
         assert shard_steps[-1] == TRACKED

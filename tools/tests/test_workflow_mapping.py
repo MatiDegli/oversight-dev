@@ -41,9 +41,17 @@ def test_comments_do_not_hide_duplicate_keys_or_unsupported_yaml(text: str, reas
         mapping(text)
 
 
-@pytest.mark.parametrize("filename", ["ci.yml", "verify.yml", "verify-frontend.yml"])
-def test_supported_job_hosts_and_check_namespace_setup(filename: str) -> None:
+@pytest.mark.parametrize(
+    "filename,target",
+    [
+        ("ci.yml", "check-ci-no-python"),
+        ("verify.yml", "check-ci-no-python"),
+        ("verify-frontend.yml", "check-ci"),
+    ],
+)
+def test_supported_job_hosts_and_check_namespace_setup(filename: str, target: str) -> None:
     jobs = mapping(mapping((WORKFLOWS / filename).read_text())["jobs"])
+    assert ("python-tests" in jobs) is (target == "check-ci-no-python")
     for job_id, body in jobs.items():
         job = mapping(body)
         assert job["runs-on"] == (
@@ -61,7 +69,7 @@ def test_supported_job_hosts_and_check_namespace_setup(filename: str) -> None:
             else "ubuntu-latest"
         )
     check_steps = steps(mapping(jobs["check"])["steps"])
-    check_index = check_steps.index({"run": "make check-ci"})
+    check_index = check_steps.index({"run": f"make {target}"})
     assert check_index > 0
     assert check_steps[check_index - 1] == {
         "name": "Allow unprivileged user namespaces",

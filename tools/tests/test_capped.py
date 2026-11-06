@@ -227,10 +227,11 @@ def test_the_boundaries_test_runs_alone_in_the_frontend_group_not_the_python_one
 
 
 @pytest.mark.parametrize(
-    ("target", "with_secrets"), [("check", True), ("check-ci", False)], ids=["check", "check-ci"]
+    ("target", "with_secrets", "with_python_tests"),
+    [("check", True, True), ("check-ci", False, True), ("check-ci-no-python", False, False)],
 )
 def test_check_runs_every_group_and_only_check_scans_for_secrets(
-    target: str, with_secrets: bool
+    target: str, with_secrets: bool, with_python_tests: bool
 ) -> None:
     lines = "\n".join(make_dry_run(target=target))
     for command in (
@@ -244,26 +245,30 @@ def test_check_runs_every_group_and_only_check_scans_for_secrets(
         f"pytest {BOUNDARIES_FILE}",
     ):
         assert command in lines, f"{target} does not run {command!r}"
-    assert ("uv run --frozen pytest -n 8" in lines) is (target == "check")
+    assert ("uv run --frozen pytest -n 8" in lines) is with_python_tests
     assert ("gitleaks git" in lines) is with_secrets
 
 
 def test_check_and_check_ci_derive_from_the_one_gates_list() -> None:
-    """A gate added to GATES lands in both: overriding GATES to one gate runs only that gate
-    in both; check-ci filters secrets and maps Python tests to their lint gate."""
-    for target in ("check", "check-ci"):
+    """Every entry point follows GATES; only the sharded lane maps Python tests to lint."""
+    for target in ("check", "check-ci", "check-ci-no-python"):
         lines = "\n".join(make_dry_run("GATES=check-contracts", target=target))
         assert "generate.py --check" in lines, target
         assert "ruff check ." not in lines, target
         assert "gitleaks git" not in lines, target
+        python = "\n".join(make_dry_run("GATES=check-python", target=target))
+        assert "ruff check ." in python, target
+        assert ("uv run --frozen pytest -n 8" in python) is (target != "check-ci-no-python")
     check = "\n".join(make_dry_run("GATES=check-secrets", target="check"))
     check_ci = "\n".join(make_dry_run("GATES=check-secrets", target="check-ci"))
     assert "gitleaks git" in check
     assert "gitleaks git" not in check_ci
+    sharded_ci = "\n".join(make_dry_run("GATES=check-secrets", target="check-ci-no-python"))
+    assert "gitleaks git" not in sharded_ci
 
 
 def test_check_runs_its_groups_in_parallel_with_their_output_kept_together() -> None:
     text = (ROOT / "Makefile").read_text()
     assert "-j4 --output-sync=target" in text
     ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text()
-    assert "run: make check-ci" in ci, "CI does not run the groups the way make check does"
+    assert "run: make check-ci-no-python" in ci, "CI does not run the groups in parallel"

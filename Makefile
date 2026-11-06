@@ -10,7 +10,7 @@ NO_KEYS := env -u META_API_KEY -u BASETEN_API_KEY -u GIT_DIR -u GIT_WORK_TREE -u
 UV := $(NO_KEYS) uv run --frozen
 PNPM := $(NO_KEYS) pnpm -C frontend
 
-.PHONY: help install frontend-deps setup dev check check-ci check-fast check-python lint-python check-frontend \
+.PHONY: help install frontend-deps setup dev check check-ci check-ci-no-python check-fast check-python lint-python check-frontend \
 	lint-frontend contracts check-contracts check-contract-tuples check-secrets demo-repo-check replay shots smoke layout \
 	test-browser demo demo-setup-check demo-check e2e record record-level2 record-rules rules-check manifest notices check-notices audit \
 	workspace-fetch-boltons workspace-graph-boltons
@@ -184,9 +184,9 @@ BOUNDARIES := tools/tests/test_eslint_boundaries.py
 # interleave. Make lets the jobs already started finish after a failure, starts no other, and exits
 # 2: the first failure still fails the whole target. Inside a group lint runs before tests, so a
 # lint error ends the group before its tests start. CI has no gitleaks in its check job (the history is
-# scanned in a job of its own), and Python tests have a separate matrix job. check-ci maps
-# check-python to lint-python and filters out check-secrets; both derive from the one GATES list
-# so a new gate added there lands in both.
+# scanned in a job of its own). check-ci filters out only check-secrets. Workflows with a separate
+# Python test matrix use check-ci-no-python, which also maps check-python to lint-python. All
+# three derive from the one GATES list so a new gate added there lands in all three.
 GATES := check-python check-contracts check-frontend check-secrets check-notices
 PARALLEL := --no-print-directory -j4 --output-sync=target
 
@@ -203,7 +203,10 @@ check-desktop: ## standalone portable desktop fmt/tests; seed Cargo online first
 check: ## every gate, in parallel groups; tests capped at 10G, 120 s each and 15 min in all; no credits
 	@$(MAKE) $(PARALLEL) $(GATES)
 
-check-ci: ## CI gates; gitleaks and Python tests run in separate jobs
+check-ci: ## every gate except gitleaks, which runs in its own job
+	@$(MAKE) $(PARALLEL) $(filter-out check-secrets,$(GATES))
+
+check-ci-no-python: ## CI gates; gitleaks and Python tests run in separate jobs
 	@$(MAKE) $(PARALLEL) $(filter-out check-secrets check-python,$(GATES)) $(if $(filter check-python,$(GATES)),lint-python)
 
 check-fast: lint-python check-contracts lint-frontend ## lint, types, boundaries and contract drift; no tests

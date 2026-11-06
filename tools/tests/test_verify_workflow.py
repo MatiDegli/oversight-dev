@@ -342,7 +342,7 @@ def assert_verify_policy(verify: str, ci: str) -> None:
         "name": "Allow unprivileged user namespaces",
         "run": "sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0",
     }
-    assert check[7:9] == [{"run": "make check-ci"}, {"run": "make smoke"}]
+    assert check[7:9] == [{"run": "make check-ci-no-python"}, {"run": "make smoke"}]
     assert check[9]["name"] == "Report network isolation probe"
 
     secrets = parsed_steps["secrets"]
@@ -709,7 +709,7 @@ exec({script!r})
         ),
         ("make install", "uv sync --frozen"),
         ("./.github/actions/setup-gitleaks", "some-owner/setup-gitleaks@main"),
-        ("make check-ci", "make check-ci || true"),
+        ("make check-ci-no-python", "make check-ci-no-python || true"),
         ("make smoke", "make smoke\n        continue-on-error: true"),
         ('{"confirmed", "unavailable"}', '{"confirmed", "unavailable", "failed"}'),
         (' --log-opts="HEAD"', ""),
