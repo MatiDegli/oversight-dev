@@ -757,6 +757,45 @@ async def test_boundary_spawn_and_descriptor_cleanup(
     assert not await asyncio.to_thread(lambda: list(roots.scratch.iterdir()))
 
 
+async def test_process_disappearing_during_death_check_is_verified(
+    roots: Inputs, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    handle = await boundary.launch_boundary(config("import signal; signal.pause()"), roots)
+    checked: list[int] = []
+
+    def disappeared(pid: int) -> boundary.ProcessIdentity:
+        checked.append(pid)
+        raise ProcessLookupError(errno.ESRCH, "injected exit during identity read")
+
+    monkeypatch.setattr(boundary, "_identity", disappeared)
+    await handle.stop_verified()
+    assert handle.verified_dead
+    assert checked == [identity.pid for identity in handle.processes.values()]
+    await handle.wait()
+    await handle.stop_verified()
+
+
+async def test_identity_read_error_keeps_death_unverified(
+    roots: Inputs, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    handle = await boundary.launch_boundary(config("import signal; signal.pause()"), roots)
+    uncertainty = OSError(errno.EIO, "injected identity read uncertainty")
+
+    def unreadable(pid: int) -> boundary.ProcessIdentity:
+        assert pid in {identity.pid for identity in handle.processes.values()}
+        raise uncertainty
+
+    monkeypatch.setattr(boundary, "_identity", unreadable)
+    with pytest.raises(boundary.BoundaryUnavailable, match="boundary death is unverified") as error:
+        await handle.stop_verified()
+    assert error.value.__cause__ is uncertainty
+    assert not handle.verified_dead
+    with pytest.raises(boundary.BoundaryUnavailable, match="boundary death is unverified"):
+        await handle.wait()
+    with pytest.raises(boundary.BoundaryUnavailable, match="boundary death is unverified"):
+        await handle.stop_verified()
+
+
 async def test_unverified_death_raises(roots: Inputs, monkeypatch: pytest.MonkeyPatch) -> None:
     handle = await boundary.launch_boundary(config("import time; time.sleep(20)"), roots)
 

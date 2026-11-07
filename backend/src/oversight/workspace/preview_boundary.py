@@ -580,7 +580,7 @@ def _still_present(identities: tuple[ProcessIdentity, ...]) -> bool:
         try:
             if _identity(identity.pid) == identity:
                 return True
-        except FileNotFoundError:
+        except (FileNotFoundError, ProcessLookupError):
             pass
     return False
 
