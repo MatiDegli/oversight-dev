@@ -73,7 +73,11 @@ class AcceptanceSupport {
   async session(viewport = sizes[0], theme = "dark") {
     if (!this.browser || !viewport || !this.candidate)
       throw new Error("Acceptance browser is unavailable");
-    const context = await this.browser.newContext({ viewport, reducedMotion: "reduce" });
+    const context = await this.browser.newContext({
+      timezoneId: "UTC",
+      viewport,
+      reducedMotion: "reduce",
+    });
     context.setDefaultTimeout(5_000);
     this.contexts.add(context);
     const errors: string[] = [];
@@ -181,6 +185,7 @@ class AcceptanceSupport {
       [before, after].map((frame) => readFile(`${directory}${frame.path}`)),
     );
     const page = await this.browser.newPage({
+      timezoneId: "UTC",
       viewport: { width: before.viewport.width * 2, height: before.viewport.height + 44 },
     });
     try {

@@ -300,10 +300,29 @@ def test_environment_under_runtime_inside_ide(tmp_path):
         source.runtime.rename(source.ide / "runtime")
         from oversight.workspace.source_posix import prepare_source
 
-        prepared_source = await prepare_source(source.root, source.ide / "runtime", source.ide)
+        prepared_source = await prepare_source(
+            source.root, source.ide / "runtime", source.ide, reviewed_checkout=tmp_path / "reviewed"
+        )
         await env.prepare_environment(prepared_source, source.ide / "runtime/tree")
 
     asyncio.run(scenario())
+
+
+def test_environment_io_helpers_are_exported_by_admission():
+    from oversight.workspace import source_posix as posix
+
+    # Environment validation shares these leaves through the admission module's API.
+    helpers = {
+        "absolute",
+        "directory",
+        "directory_names",
+        "identity",
+        "read_file",
+        "relative",
+        "remaining",
+    }
+    assert helpers.issubset(posix.__all__)
+    assert all(callable(getattr(posix, name)) for name in helpers)
 
 
 @pytest.mark.parametrize("mode", ["timeout", "cancel"])

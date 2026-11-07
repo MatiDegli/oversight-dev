@@ -43,12 +43,14 @@ def test_every_frontend_reader_in_the_check_graph_waits_for_frontend_deps() -> N
     dependencies, recipes = make_rules()
     gates = re.search(r"^GATES := (.+)$", (ROOT / "Makefile").read_text(), re.MULTILINE)
     assert gates is not None
-    # check/check-ci invoke the same gates through recursive make; check-fast has normal edges.
+    # Recursive make maps Python to lint only in the sharded lane; check-fast has normal edges.
     dependencies["check"] = set(gates[1].split())
     dependencies["check-ci"] = dependencies["check"] - {"check-secrets"}
-    graph = set().union(
-        *(reachable(root, dependencies) for root in ("check", "check-ci", "check-fast"))
-    )
+    dependencies["check-ci-no-python"] = dependencies["check-ci"] - {"check-python"} | {
+        "lint-python"
+    }
+    roots = {"check", "check-ci", "check-ci-no-python", "check-fast"}
+    graph = set().union(*(reachable(root, dependencies) for root in roots))
     readers = {
         target
         for target in graph
@@ -62,11 +64,11 @@ def test_every_frontend_reader_in_the_check_graph_waits_for_frontend_deps() -> N
     # Indirect readers: pytest runs TS/schema controls, generate.py invokes json2ts, and
     # notices.py inspects the installed lock and invokes pnpm licenses/list.
     readers |= {"check-python", "check-contracts", "check-notices"}
-    for target in sorted(readers | {"check", "check-ci", "check-fast"}):
+    for target in sorted(readers | roots):
         assert "frontend-deps" in reachable(target, dependencies), target
 
 
-@pytest.mark.parametrize("target", ["check", "check-ci", "check-fast"])
+@pytest.mark.parametrize("target", ["check", "check-ci", "check-ci-no-python", "check-fast"])
 def test_each_check_entry_point_installs_once_offline_and_frozen(target: str) -> None:
     env = {k: v for k, v in os.environ.items() if not k.startswith(("MAKE", "MFLAGS"))}
     done = subprocess.run(

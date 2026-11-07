@@ -302,7 +302,10 @@ async function captureReviewMerge(page: Page, theme: string, out: string, geomet
   await page.clock.runFor(600);
   await page.screenshot({ path: `${out}${theme}-1.5s.png` });
   if (!browser) throw new Error("Browser was not started");
-  const comparison = await browser.newPage({ viewport: { width: 3840, height: 1080 } });
+  const comparison = await browser.newPage({
+    timezoneId: "UTC",
+    viewport: { width: 3840, height: 1080 },
+  });
   try {
     const images = [
       fileURLToPath(new URL("../../../docs/sketches/life/merge-mid.png", import.meta.url)),

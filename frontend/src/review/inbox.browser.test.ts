@@ -30,6 +30,7 @@ it.each(["dark", "day"])(
   "keeps inbox, answers and grants inside the %s shell without commands",
   async (theme) => {
     const page = await browser.newPage({
+      timezoneId: "America/Argentina/Buenos_Aires",
       viewport: { width: 1920, height: 1080 },
       reducedMotion: "reduce",
     });

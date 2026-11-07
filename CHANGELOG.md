@@ -6,6 +6,7 @@ its "Built during the hackathon" section.
 
 ## Unreleased
 
+- Recorded the approved canvas, WSL and Linux own-repository admission plans and decisions, including engine A, the M6 composition gate and the CPython 3.8 venv floor; implementation and acceptance remain pending.
 - Judge dependency licenses by their terms, accepting permissive licenses, public-domain dedications and MPL-2.0; other named exceptions remain the maintainer's decision, with tooling unchanged pending its follow-up front.
 - Made dependency choices replaceable through measured tradeoffs and maintainer scope decisions, while retaining the architecture's operational properties.
 - Set the policy to follow the newest stable CPython once every dependency supports it, without changing the pinned version.
@@ -23,3 +24,4 @@ its "Built during the hackathon" section.
 - Hardened four load-sensitive tests and corrected dot-field test measurements and thresholds.
 - Gave the Vite development server the backend's preview port pool, with launcher and
   configuration regression coverage.
+- Masked tested-tree secrets in model observations, test events and reviewer inputs while preserving Git hashes.

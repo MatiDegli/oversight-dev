@@ -51,7 +51,7 @@ afterAll(async () => {
 async function open(replay = false, width = 1920, height = 1080, theme = "dark") {
   const entry = entries[replay ? 1 : 0];
   if (!entry) throw new Error("Missing server");
-  const page = await browser.newPage({ viewport: { width, height } });
+  const page = await browser.newPage({ timezoneId: "UTC", viewport: { width, height } });
   await page.route("**/", (r) => r.fulfill({ contentType: "text/html", body: entry.html }));
   await page.goto(entry.url);
   await openOversight(page);
@@ -86,8 +86,12 @@ const rules = (page: Page) =>
 async function disabledCards(page: Page) {
   const cards = page
     .getByRole("region", { name: "Merge mode", exact: true })
-    .locator("button[aria-pressed]");
+    .getByRole("button", { name: /^(Ask me|Merge alone when safe)/u });
   await check(cards).toHaveCount(2);
+  // Browser preferences remain available while server commands wait or are unavailable.
+  const timeZone = page.getByRole("region", { name: "Time zone", exact: true });
+  await check(timeZone.getByRole("button", { name: "Automatic", exact: true })).toBeEnabled();
+  await check(timeZone.getByRole("button", { name: "Apply time zone", exact: true })).toBeEnabled();
   for (const card of await cards.all()) {
     await check(card).toBeDisabled();
     await page.mouse.move(0, 0);

@@ -115,6 +115,7 @@ export class StartupBrowser {
   async open(scenario: StartupScenario): Promise<StartupSession> {
     if (!this.browser) throw new Error("Missing startup fixture browser");
     const page = await this.browser.newPage({
+      timezoneId: "UTC",
       viewport: { width: 1920, height: 1080 },
       reducedMotion: "reduce",
     });

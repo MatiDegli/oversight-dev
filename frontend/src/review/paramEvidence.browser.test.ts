@@ -42,6 +42,7 @@ async function mounted(
   test: (page: Page, errors: string[]) => Promise<void>,
 ) {
   const page = await browser.newPage({
+    timezoneId: "America/Argentina/Buenos_Aires",
     viewport: { width, height: width === 1920 ? 1080 : width === 390 ? 844 : 800 },
     reducedMotion: "reduce",
   });

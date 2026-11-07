@@ -6,7 +6,19 @@ from collections.abc import Generator
 from contextvars import ContextVar
 
 CATEGORIES = frozenset(
-    {"not-standalone-repo", "unsupported-location", "path-too-long", "previous-session-changed"}
+    {
+        "not-standalone-repo",
+        "unsupported-location",
+        "path-too-long",
+        "previous-session-changed",
+        "missing-git",
+        "source-permissions",
+        "unsafe-git-config",
+        "source-changed",
+        "source-budget-exceeded",
+        "runtime-unavailable",
+        "running-oversight-source",
+    }
 )
 
 

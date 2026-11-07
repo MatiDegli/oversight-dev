@@ -1,7 +1,7 @@
 import type { ServerEvent } from "@contracts";
 import type { GraphProbeHost } from "../../graph";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
-import { expect as check } from "@playwright/test";
+import { expect as check, type Page } from "@playwright/test";
 import { expect, it, vi } from "vitest";
 import { applyEvent, createInitialState } from "../../state";
 import {
@@ -15,6 +15,20 @@ import {
 } from "./previewChat.browser.support";
 import { captureCheckpoint } from "./previewPanel.browser.support";
 const support = previewChatSupport();
+async function waitForReplayUi(page: Page) {
+  const duration = await page.evaluate(() => window.coldStartPlayer?.getSnapshot().duration);
+  // Store publication precedes React's lazy ReplayBar mount and seek reconciliation.
+  // Pump the virtual clock while waiting for the public controls, then measure quietness.
+  await check
+    .poll(async () => {
+      await page.clock.runFor(50);
+      return page
+        .getByRole("slider", { name: "Position in the recording" })
+        .evaluateAll((nodes) => nodes[0]?.getAttribute("aria-valuenow") ?? null);
+    })
+    .toBe(String(duration));
+  await check(page.getByText("End of recording", { exact: true })).toBeVisible();
+}
 const matrix = chatSizes.flatMap((viewport) =>
   ["dark", "day"].map((theme) => ({ viewport, theme })),
 );
@@ -385,6 +399,53 @@ it.each(measuredSources)(
   30_000,
 );
 
+it("waits for delayed replay controls before measuring render quietness", async () => {
+  if (!support.browser) throw new Error("Missing Chat browser");
+  const source = measuredSources.find((source) => source.path.includes("slots-extended"));
+  if (!source) throw new Error("Missing short replay fixture");
+  const createContext = support.browser.newContext.bind(support.browser);
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const context = vi
+    .spyOn(support.browser, "newContext")
+    .mockImplementationOnce(async (options) => {
+      const context = await createContext(options);
+      await context.route("**/src/app/replay/ReplayBar.tsx*", async (route) => {
+        await held;
+        await route.continue();
+      });
+      return context;
+    });
+  const session = await support
+    .session(chatSizes[0], "dark", "replay=true", source.events)
+    .finally(() => {
+      context.mockRestore();
+    });
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await session.page.waitForFunction(() => Boolean(window.coldStartPlayer));
+    await session.page.evaluate(() => {
+      const player = window.coldStartPlayer;
+      player?.seek(player.getSnapshot().duration);
+    });
+    expect(await session.page.locator(".replay-bar").count()).toBe(0);
+    timer = setTimeout(release, 200);
+    await waitForReplayUi(session.page);
+    expect(await session.page.locator(".replay-bar").count()).toBe(1);
+    await session.page.clock.runFor(50);
+    const settled = await session.page.evaluate(() => ({ ...window.previewChatRenders }));
+    await session.page.clock.runFor(500);
+    expect(await session.page.evaluate(() => window.previewChatRenders)).toEqual(settled);
+    expect(session.pageErrors).toEqual([]);
+  } finally {
+    clearTimeout(timer);
+    release();
+    await session.close();
+  }
+});
+
 it.each(measuredSources)(
   "plays $path through App's public player at recorded 1× timing and seek boundaries",
   async (source) => {
@@ -419,6 +480,7 @@ it.each(measuredSources)(
         const player = window.coldStartPlayer;
         player?.seek(player.getSnapshot().duration);
       });
+      await waitForReplayUi(page);
       await page.clock.runFor(50);
       expect(await page.evaluate(() => window.coldStartTrace.state)).toEqual(
         source.events.reduce(applyEvent, createInitialState()),

@@ -1,3 +1,11 @@
+import { applyTimeZone, AUTOMATIC } from "../timeZone";
+import { beforeEach as beforeZone, afterEach as afterZone } from "vitest";
+beforeZone(() => {
+  applyTimeZone("America/Argentina/Buenos_Aires");
+});
+afterZone(() => {
+  applyTimeZone(AUTOMATIC);
+});
 import { createHash } from "node:crypto";
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, it } from "vitest";

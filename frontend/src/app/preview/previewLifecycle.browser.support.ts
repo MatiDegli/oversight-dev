@@ -9,6 +9,8 @@ import { captureCheckpoint } from "./previewPanel.browser.support";
 export const lifecycleDirectory = fileURLToPath(
   new URL("../../../../.shots/preview-lifecycle/", import.meta.url),
 );
+export const refusedStartReason =
+  "Shop preview is unavailable at this address. Open Oversight at localhost on the same port, then try again.";
 type Kind = "start" | "details" | "renew" | "stop";
 interface Call {
   kind: Kind;
@@ -50,6 +52,7 @@ class FixtureAuthority {
   #send: ((status: PreviewStatus) => void) | undefined;
   #started = latch();
   loseNextStop = false;
+  startRefused = false;
   calls: Call[] = [];
   invalid: string[] = [];
   reset() {
@@ -58,6 +61,7 @@ class FixtureAuthority {
     this.#serial = 0;
     this.#started = latch();
     this.loseNextStop = false;
+    this.startRefused = false;
     this.calls = [];
     this.invalid = [];
   }
@@ -195,6 +199,15 @@ class FixtureAuthority {
     }
     if (this.#status && !["stopped", "failed"].includes(this.#status.state)) {
       this.#refuse(response, "owner-conflicting start", 409);
+      return;
+    }
+    if (this.startRefused) {
+      this.calls.push({ kind: "start", previewId: null, authenticated: false, delivered: true });
+      this.#reply(
+        response,
+        { error: { code: "not_configured", message: refusedStartReason, missing: [] } },
+        503,
+      );
       return;
     }
     this.#status = {
@@ -368,6 +381,9 @@ export function previewLifecycleSupport() {
       authority.arrive();
     },
     ready: () => authority.ready(),
+    refuseStart: () => {
+      authority.startRefused = true;
+    },
     previewId: () => authority.status()?.preview_id,
     state: () => authority.status()?.state,
     count: (kind: Kind) => authority.calls.filter((call) => call.kind === kind).length,

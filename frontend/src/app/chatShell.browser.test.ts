@@ -53,6 +53,7 @@ async function open(
   theme = "dark",
 ) {
   const page = await browser.newPage({
+    timezoneId: "UTC",
     viewport: { width, height: width === 1920 ? 1080 : 800 },
     reducedMotion: "reduce",
   });
@@ -141,7 +142,7 @@ it("keeps the fixture-selected view, selected tab, draft, commands, graph identi
   }
 });
 it("Chat-first requests no graph or field implementation until explicit entry", async () => {
-  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  const page = await browser.newPage({ timezoneId: "UTC", viewport: { width: 1280, height: 800 } });
   const requested: string[] = [];
   page.on("request", (req) => requested.push(new URL(req.url()).pathname));
   await page.route("**/", (route) => route.fulfill({ contentType: "text/html", body: html }));
@@ -273,7 +274,7 @@ it("retains actual replay capabilities and source wording", async () => {
 });
 
 it("conversation completion never focuses the Composer", async () => {
-  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  const page = await browser.newPage({ timezoneId: "UTC", viewport: { width: 1280, height: 800 } });
   let release = () => {};
   const gate = new Promise<void>((resolve) => {
     release = resolve;

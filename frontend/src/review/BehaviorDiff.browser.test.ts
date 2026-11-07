@@ -58,6 +58,7 @@ it.each(cases)(
   "keeps bounded $kind evidence usable: $theme $width summary=$summary",
   async ({ width, height, theme, summary, kind, index }) => {
     const page = await browser.newPage({
+      timezoneId: "America/Argentina/Buenos_Aires",
       viewport: { width, height },
       deviceScaleFactor: 1,
       reducedMotion: "reduce",

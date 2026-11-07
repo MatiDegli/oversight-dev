@@ -123,7 +123,7 @@ it("Chrome reserves native Ctrl+W; Alt+W reaches the page", async () => {
       args: ["--ozone-platform=x11"],
       env: { ...process.env, DISPLAY: display },
     });
-    const context = await browser.newContext();
+    const context = await browser.newContext({ timezoneId: "UTC" });
     const survivor = await context.newPage(); // Closing the probe must leave this page alive.
     const page = await context.newPage();
     const keys: Key[] = [];

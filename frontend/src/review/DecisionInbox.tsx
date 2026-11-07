@@ -1,3 +1,4 @@
+import { useClock } from "../timeZone";
 import { AgentBadge } from "../teams/badge";
 import { presentationFor } from "../teams/presentation";
 import { lazy, Suspense, useState } from "react";
@@ -6,7 +7,7 @@ import { slotUsage } from "../agents";
 import type { Plan } from "@contracts";
 import type { DecisionInboxEntry, State } from "../state";
 import { selectDecisionInbox, selectActiveGrants } from "../state";
-import { ChangeCard, eventTime } from "./ChangeCard";
+import { ChangeCard } from "./ChangeCard";
 import { InboxViews, InboxHeading } from "./InboxHeader";
 import { StandingGrants } from "./StandingGrants";
 import { Example } from "./AnswerChoices";
@@ -55,6 +56,7 @@ function InboxRow({
   onReview?: (id: string) => void;
   onOpenWorkflow?: OpenWorkflow;
 }) {
+  const clock = useClock();
   const change = entry.changeId ? state.changes[entry.changeId] : undefined;
   const wait = entry.changeId ? selectPossibleCallersWait(state, entry.changeId) : null;
   const facts = change?.proposal ? factsForRevision(state, change.proposal) : undefined;
@@ -92,7 +94,7 @@ function InboxRow({
       <div className="decision-heading">
         <span className="decision-muted">
           {identity ? <AgentBadge identity={identity} /> : "Decision"} ·{" "}
-          <time>{eventTime(entry.ts)}</time>
+          <time>{clock(entry.ts, { label: true })}</time>
         </span>
         <span className="decision-muted">{entry.age}</span>
       </div>
@@ -187,6 +189,7 @@ export function DecisionInbox({
   onReview?: (id: string) => void;
   onOpenWorkflow?: OpenWorkflow;
 }) {
+  const clock = useClock();
   const [view, setView] = useState<"decisions" | "grants">("decisions");
   const entries = selectDecisionInbox(state);
   const grants = selectActiveGrants(state);
@@ -253,7 +256,7 @@ export function DecisionInbox({
                       <article className="inbox-row" key={plan.plan_id}>
                         <div className="decision-heading">
                           <span className="decision-muted">
-                            Plan · <time>{eventTime(firstTs)}</time>
+                            Plan · <time>{clock(firstTs, { label: true })}</time>
                           </span>
                         </div>
                         <h3>{plan.task}</h3>

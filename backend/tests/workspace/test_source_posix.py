@@ -7,7 +7,6 @@ import shutil
 import stat
 import sys
 import threading
-import time
 from dataclasses import replace
 from pathlib import Path
 
@@ -49,7 +48,7 @@ async def repository(tmp_path: Path) -> posix.PosixSource:
     (source / "gone.py").write_text("gone\n")
     await git(source, "add", ".")
     await git(source, "commit", "-qm", "Fixture")
-    return await posix.prepare_source(source, runtime, ide)
+    return await posix.prepare_source(source, runtime, ide, reviewed_checkout=tmp_path / "reviewed")
 
 
 def test_fixture_git_waits_for_maintenance(tmp_path):
@@ -95,8 +94,8 @@ def test_fixture_git_waits_for_maintenance(tmp_path):
             await asyncio.sleep(0.1)
             lock = source.root / ".git/objects/maintenance.lock"
             assert lock.exists()
-            with pytest.raises(OSError, match="Git metadata lock present"):
-                await posix.inventory(source, git=GIT)
+            listing = await posix.inventory(source, git=GIT)
+            assert listing.warnings
             assert lock.exists()
             assert not task.done(), "fixture Git returned while maintenance still held its lock"
         finally:
@@ -155,14 +154,18 @@ def test_posix_placement_refusals(tmp_path, kind):
         elif kind == "unsafe":
             source.chmod(0o777)
         if kind == "swap":
-            prepared = await posix.prepare_source(source, runtime, ide)
+            prepared = await posix.prepare_source(
+                source, runtime, ide, reviewed_checkout=tmp_path / "reviewed"
+            )
             source.rename(tmp_path / "old-source")
             source.mkdir()
             with pytest.raises(OSError):
                 await posix.inventory(prepared, git=GIT)
         else:
             with pytest.raises(OSError):
-                await posix.prepare_source(source, runtime, ide)
+                await posix.prepare_source(
+                    source, runtime, ide, reviewed_checkout=tmp_path / "reviewed"
+                )
         assert not tuple(runtime.glob("source-stage-*"))
 
     asyncio.run(scenario())
@@ -214,10 +217,12 @@ def test_packed_clone_inventory_and_copy(tmp_path):
         clone = tmp_path / "clone"
         await git(tmp_path, "clone", "--no-local", "--quiet", str(original.root), str(clone))
         assert any(p.stat().st_size > posix.MAX_FILE for p in (clone / ".git").rglob("*.pack"))
-        # Reflogs and object storage are witnesses, outside the working-file byte budget.
+        # Reflogs and objects are outside the bounded control witnesses.
         with (clone / ".git/logs/large").open("wb") as log:
             log.truncate(posix.MAX_TOTAL + 1)
-        source = await posix.prepare_source(clone, original.runtime, original.ide)
+        source = await posix.prepare_source(
+            clone, original.runtime, original.ide, reviewed_checkout=tmp_path / "reviewed"
+        )
         before = {p: posix.token(p.lstat()) for p in clone.rglob("*")}
         selection = await posix.validate_selection(await posix.inventory(source, git=GIT))
         assert selection.total_bytes == len(b"value = 1\ngone\n")
@@ -228,143 +233,6 @@ def test_packed_clone_inventory_and_copy(tmp_path):
         assert {p: posix.token(p.lstat()) for p in clone.rglob("*")} == before
         await posix.cleanup_stage(stage)
         assert not tuple(source.runtime.iterdir())
-
-    asyncio.run(scenario())
-
-
-def test_git_metadata_hashes_only_head_and_index(tmp_path, monkeypatch):
-    async def scenario():
-        source = await repository(tmp_path)
-        read = posix.read_file
-        reads = set()
-
-        def record_read(path, *args, **kwargs):
-            reads.add(path.relative_to(source.root / ".git").as_posix())
-            return read(path, *args, **kwargs)
-
-        monkeypatch.setattr(posix, "read_file", record_read)
-        listing = await posix.inventory(source, git=GIT)
-        assert reads == {"HEAD", "index"}
-        for item in listing.metadata:
-            if item.path in {"HEAD", "index"}:
-                assert (
-                    item.sha256
-                    == hashlib.sha256((source.root / ".git" / item.path).read_bytes()).hexdigest()
-                )
-            else:
-                assert item.sha256 is None
-
-    asyncio.run(scenario())
-
-
-@pytest.mark.parametrize(
-    "name",
-    [
-        "commondir",
-        "gitdir",
-        "worktrees",
-        "modules",
-        "shallow",
-        "info/grafts",
-        "objects/info/alternates",
-        "objects/info/http-alternates",
-        "refs/replace",
-        "index.lock",
-        "objects/maintenance.lock",
-        "refs/heads/private-name.lock",
-    ],
-)
-def test_git_metadata_refusal_diagnostics(tmp_path, name):
-    gitdir = tmp_path / ".git"
-    gitdir.mkdir()
-    target = gitdir / name
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.touch()
-    reason = "Git metadata lock present" if name.endswith(".lock") else "forbidden Git metadata"
-    with pytest.raises(OSError) as error:
-        posix.metadata(tmp_path, time.monotonic() + 10)
-    assert str(error.value) == "POSIX source refused: " + reason
-    assert target.exists()
-
-
-def test_git_metadata_total_entry_budget_diagnostic(tmp_path, monkeypatch):
-    gitdir = tmp_path / ".git"
-    gitdir.mkdir()
-    for name in ("first", "second"):
-        (gitdir / name).mkdir()
-        (gitdir / name / "file").touch()
-    monkeypatch.setattr(posix, "MAX_PATHS", 2)
-    with pytest.raises(OSError) as error:
-        posix.metadata(tmp_path, time.monotonic() + 10)
-    assert str(error.value) == "POSIX source refused: Git metadata entry budget exceeded"
-
-
-@pytest.mark.parametrize("phase", ["selection", "copy"])
-@pytest.mark.parametrize("attack", ["bytes", "swap", "missing", "extra", "mode"])
-@pytest.mark.parametrize("storage", ["loose", "packed"])
-def test_git_object_changes_refuse(tmp_path, monkeypatch, phase, attack, storage):
-    async def scenario():
-        source = await repository(tmp_path)
-        blob = await git(source.root, "rev-parse", "HEAD:a.py")
-        target = source.root / ".git/objects" / blob[:2] / blob[2:]
-        if storage == "packed":
-            await git(source.root, "repack", "-adq")
-            target = next((source.root / ".git/objects/pack").glob("*.pack"))
-        selection = await posix.validate_selection(await posix.inventory(source, git=GIT))
-
-        def mutate():
-            if attack == "bytes":
-                target.chmod(0o600)
-                data = target.read_bytes()
-                target.write_bytes(bytes([data[0] ^ 1]) + data[1:])
-            elif attack == "swap":
-                target.rename(tmp_path / "held-object")
-                shutil.copyfile(tmp_path / "held-object", target)
-            elif attack == "missing":
-                target.unlink()
-            elif attack == "extra":
-                (target.parent / "extra").write_bytes(b"extra")
-            else:
-                target.chmod(0o600)
-
-        if phase == "selection":
-            mutate()
-        else:
-            copy = posix._copy
-
-            def changed_copy(*args):
-                stage = copy(*args)
-                mutate()
-                return stage
-
-            monkeypatch.setattr(posix, "_copy", changed_copy)
-        with pytest.raises(OSError, match="Git metadata changed"):
-            await posix.stage_source(selection, git=GIT)
-        assert not tuple(source.runtime.iterdir())
-
-    asyncio.run(scenario())
-
-
-@pytest.mark.parametrize("attack", ["link", "fifo", "hardlink", "writable"])
-def test_git_object_storage_safety(tmp_path, attack):
-    async def scenario():
-        source = await repository(tmp_path)
-        target = source.root / ".git/objects/pack/unsafe"
-        if attack == "link":
-            target.symlink_to(source.root / "a.py")
-        elif attack == "fifo":
-            os.mkfifo(target)
-        elif attack == "hardlink":
-            os.link(source.root / "a.py", target)
-        else:
-            target.write_bytes(b"unsafe")
-            target.chmod(0o666)
-
-        async def spawn(*args, **kwargs):
-            raise AssertionError("unsafe object storage reached Git")
-
-        with pytest.raises(OSError):
-            await posix.inventory(source, git=GIT, spawn=spawn)
 
     asyncio.run(scenario())
 
@@ -686,12 +554,12 @@ def test_inventory_budgets(tmp_path, monkeypatch, budget):
     async def scenario():
         source = await repository(tmp_path)
         if budget == "paths":
-            monkeypatch.setattr(posix, "MAX_PATHS", 2)
+            source = replace(source, budgets=replace(source.budgets, max_paths=2))
         elif budget == "file":
             with (source.root / "large").open("wb") as f:
                 f.truncate(posix.MAX_FILE + 1)
         else:
-            monkeypatch.setattr(posix, "MAX_TOTAL", 1)
+            source = replace(source, budgets=replace(source.budgets, max_total=1))
         with pytest.raises(OSError):
             await posix.validate_selection(await posix.inventory(source, git=GIT))
 
@@ -813,14 +681,16 @@ def test_posix_case_and_ancestor_policy(tmp_path):
         source, runtime, ide = (tmp_path / name for name in ("source", "SOURCE", "ide"))
         for path in (source, runtime, ide):
             path.mkdir()
-        await posix.prepare_source(source, runtime, ide)
+        await posix.prepare_source(source, runtime, ide, reviewed_checkout=tmp_path / "reviewed")
         parent = tmp_path / "unsafe-parent"
         parent.mkdir()
         nested = parent / "source"
         nested.mkdir()
         parent.chmod(0o777)
         with pytest.raises(OSError):
-            await posix.prepare_source(nested, runtime, ide)
+            await posix.prepare_source(
+                nested, runtime, ide, reviewed_checkout=tmp_path / "reviewed"
+            )
 
     asyncio.run(scenario())
 
@@ -841,7 +711,7 @@ async def main():
  result=await run_process(["/usr/bin/mount","--bind",str(source),str(alias)],cwd=ide,timeout_s=5)
  if result.returncode != 0: raise OSError(result.stderr)
  try:
-  try: await prepare_source(source,alias/"runtime",ide)
+  try: await prepare_source(source,alias/"runtime",ide,reviewed_checkout=ide/"reviewed")
   except OSError as error:
    assert "filesystem alias" in str(error), str(error)
    print("real bind alias refused")

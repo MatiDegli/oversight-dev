@@ -71,7 +71,9 @@ async def test_measured_callers_and_edited_nodes_replay_from_sqlite_without_work
         harness_pack=False,
         behavior_diff=True,
         measured_cone=True,
-        baseten_api_key="test",
+        # A four-character key "test" correctly hides every test identity. Use a
+        # synthetic key distinct from the evidence this integration test measures.
+        baseten_api_key="synthetic-classifier-credential",
         baseten_budget_usd=10,
         baseten_input_usd_per_m=1,
         baseten_output_usd_per_m=2,

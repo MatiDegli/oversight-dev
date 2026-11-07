@@ -41,7 +41,7 @@ afterAll(async () => {
 });
 async function visit(index: number, path: string, run: (page: Page) => Promise<void>) {
   if (!browser) throw new Error("Browser has not started");
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const page = await browser.newPage({ timezoneId: "UTC", viewport: { width: 390, height: 844 } });
   try {
     const origin = servers[index]?.resolvedUrls?.local[0];
     if (!origin) throw new Error("Missing Vite server");

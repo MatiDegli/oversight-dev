@@ -1,3 +1,4 @@
+import { useClock } from "../timeZone";
 import { selectBehaviorEvidence } from "./behaviorEvidence";
 import { GitMerge, LockKeyhole } from "lucide-react";
 import { ReviewHeader } from "./ReviewHeader";
@@ -17,14 +18,6 @@ import { selectChangeCard, selectPossibleCallersWait } from "./inboxSelectors";
 import type { ChangeCardState } from "./inboxSelectors";
 import { ComparisonMap } from "./ComparisonMap";
 import "./inbox.css";
-
-export const eventTime = (ts: string) =>
-  new Intl.DateTimeFormat("en-GB", {
-    timeZone: "America/Argentina/Buenos_Aires",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(new Date(ts)) + " ART";
 
 export function ChangeCard({
   state,
@@ -142,6 +135,7 @@ function CardDiffs({ state, changeId }: { state: State; changeId: string }) {
 }
 
 export function CardEvidence({ state, changeId, card, panel }: CardContentProps) {
+  const clock = useClock();
   const candidate = candidateKey(state, changeId);
   const answers = useAnswers((s) => s.drafts[candidate]) ?? {};
   const { change, facts, kind } = card;
@@ -159,7 +153,7 @@ export function CardEvidence({ state, changeId, card, panel }: CardContentProps)
             <p className="grant-receipt" key={use.grant_id}>
               Under grant <code>{use.grant_id}</code> · {grantReasons[use.authorization.reason]} ·{" "}
               {grantScopeWords(use.authorization.scope)} · given{" "}
-              {eventTime(use.authorization.creation_ts)}.
+              {clock(use.authorization.creation_ts, { label: true })}.
             </p>
           ))}
         </>

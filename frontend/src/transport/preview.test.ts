@@ -1,6 +1,7 @@
 import { expect, it, vi } from "vitest";
 import type { PreviewDetails, PreviewStatus, StartPreview } from "@contracts";
 import { createLivePreviewPort } from "./preview";
+import { CommandError } from "./commands";
 
 const id = `preview-${"a".repeat(32)}`;
 const lease = "A".repeat(43);
@@ -152,6 +153,72 @@ it.each([403, 409, 422, 500, 501, 503, 302])(
     expect(request).toHaveBeenCalledTimes(1);
   },
 );
+it.each([400, 403, 409, 422, 500, 501, 503])(
+  "keeps a validated refusal envelope for %s without retry or a cache header",
+  async (status) => {
+    const message = "Open Oversight at localhost on the same port, then try again.";
+    const { port, request } = setup(
+      { error: { code: "not_configured", message: `  ${message} \n`, missing: [] } },
+      status,
+      { "Cache-Control": "public" },
+    );
+    const refusal = await port.start(candidate, signal).catch((error: unknown) => error);
+    expect(refusal).toBeInstanceOf(CommandError);
+    expect(refusal).toMatchObject({ status, code: "not_configured", message });
+    expect(request).toHaveBeenCalledTimes(1);
+  },
+);
+it("bounds a trimmed refusal to 500 characters", async () => {
+  const message = `  ${"word ".repeat(120)}  `;
+  const { port } = setup({ error: { code: "wrong_state", message } }, 409);
+  await expect(port.start(candidate, signal)).rejects.toMatchObject({
+    code: "wrong_state",
+    message: message.trim().slice(0, 500).trimEnd(),
+  });
+});
+it.each([
+  null,
+  [],
+  { error: null },
+  { error: [] },
+  { error: { code: "unknown", message: "Private reason" } },
+  { error: { code: "toString", message: "Private reason" } },
+  { error: { message: "Private reason" } },
+  { error: { code: "wrong_state" } },
+  { error: { code: "wrong_state", message: 42 } },
+  { error: { code: "wrong_state", message: " \n " } },
+])("hides invalid error envelopes %j", async (body) => {
+  const { port } = setup(body, 409);
+  await expect(port.start(candidate, signal)).rejects.toThrow(
+    "Preview request could not be verified",
+  );
+});
+it.each(["renew", "stop"] as const)(
+  "hides a %s refusal containing its lease before bounding",
+  async (kind) => {
+    for (const message of [`Private ${lease}`, `${"safe ".repeat(120)}${lease}`]) {
+      const { port } = setup({ error: { code: "wrong_state", message } }, 409);
+      await expect(port[kind](id, { lease_token: lease }, signal)).rejects.toThrow(
+        "Preview request could not be verified",
+      );
+    }
+  },
+);
+it.each([200, 201, 202, 302])("hides error envelopes at non-error status %s", async (status) => {
+  const { port } = setup({ error: { code: "wrong_state", message: "Private reason" } }, status);
+  await expect(port.stop(id, { lease_token: lease }, signal)).rejects.toThrow();
+});
+it.each(["network", "timeout", "malformed"])("keeps %s failures generic", async (kind) => {
+  const request = vi.fn<typeof fetch>();
+  if (kind === "malformed")
+    request.mockResolvedValue(new Response("<html>Private</html>", { status: 500 }));
+  else request.mockRejectedValue(new Error(`Private ${kind}`));
+  const port = createLivePreviewPort("http://127.0.0.1:8710", validators, request);
+  await expect(port.start(candidate, signal)).rejects.toThrow(
+    "Preview request could not be verified",
+  );
+  expect(request).toHaveBeenCalledTimes(1);
+});
 it("refuses missing no-store, extra receipt keys and validator failures", async () => {
   await expect(
     setup({ preview_id: id, lease_token: lease, url: "secret" }, 202).port.start(candidate, signal),

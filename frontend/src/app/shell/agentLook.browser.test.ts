@@ -42,6 +42,7 @@ it.each(["dark", "day"] as const)(
   "shares team paint across unrelated seats in %s",
   async (theme) => {
     const page = await browser.newPage({
+      timezoneId: "UTC",
       viewport: { width: 1920, height: 1080 },
       reducedMotion: "reduce",
     });
@@ -164,6 +165,7 @@ it.each(["dark", "day"] as const)(
   "paints every team family across surfaces in %s",
   async (theme) => {
     const page = await browser.newPage({
+      timezoneId: "UTC",
       viewport: { width: 1920, height: 1080 },
       reducedMotion: "reduce",
     });

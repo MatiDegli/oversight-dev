@@ -219,7 +219,12 @@ function PanelMessage({ view, label }: { view: PreviewView; label: string }) {
           <p>Waiting for the app to become ready. You can close this preview at any time.</p>
         )
       )}
-      {view.notice === "start_failed" && <p>{startFailedCopy}</p>}
+      {view.notice === "start_failed" && (
+        <p>
+          {startFailedCopy}
+          {view.refusalReason ? ` ${view.refusalReason}` : ""}
+        </p>
+      )}
       {view.notice === "renewal_failed" && (
         <p>
           Ownership could not be renewed. Close to request verified closure; replacement is
@@ -229,6 +234,7 @@ function PanelMessage({ view, label }: { view: PreviewView; label: string }) {
       {view.notice === "closure_unconfirmed" && !view.pending && (
         <p>
           Close to request verified closure. Another preview cannot start until closure is verified.
+          {view.refusalReason ? ` ${view.refusalReason}` : ""}
         </p>
       )}
     </div>

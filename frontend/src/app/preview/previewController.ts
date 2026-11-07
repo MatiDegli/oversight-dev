@@ -8,6 +8,7 @@ import type {
 } from "./previewPort";
 import { parsePreviewDetails, parsePreviewStatus, previewId } from "./previewTypes";
 import type { PreviewStatus } from "./previewTypes";
+import { CommandError } from "../../transport";
 import {
   sameOwnershipCandidate,
   type PreviewOwnership,
@@ -26,6 +27,8 @@ const sameCandidate = (status: PreviewStatus, candidate: PreviewCandidate) =>
   status.revision === candidate.revision &&
   status.head_commit === candidate.head_commit;
 const rank = { starting: 0, ready: 1, stopping: 2, stopped: 3, failed: 3 };
+const refusalReason = (error: unknown) =>
+  error instanceof CommandError && error.code !== undefined ? error.message : null;
 
 /** Injected controller. Browser storage is optional and stays behind a private port. */
 export function createPreviewController(
@@ -72,6 +75,7 @@ class Controller implements PreviewController {
     uncertain: false,
     frameUrl: null,
     notice: null,
+    refusalReason: null,
   });
   constructor(
     port: PreviewPort,
@@ -277,6 +281,7 @@ class Controller implements PreviewController {
       uncertain: false,
       pending: false,
       notice: null,
+      refusalReason: null,
     });
   }
   observe = (input: PreviewStatus) => {
@@ -413,7 +418,7 @@ class Controller implements PreviewController {
     return this.#flight;
   };
   async #open(getCandidate: () => PreviewCandidate | null) {
-    this.#publish({ pending: true });
+    this.#publish({ pending: true, refusalReason: null });
     if (this.#token && !(await this.#stop())) return;
     if (this.#cancelled()) return;
     // Read only AFTER authenticated drainage; the candidate may have changed while stopping.
@@ -480,10 +485,15 @@ class Controller implements PreviewController {
       this.#publish({ pending: false });
       if (this.#cancelled()) await this.#stop();
       else this.#scheduleRenewal();
-    } catch {
+    } catch (error) {
       if (!this.#current(epoch)) return;
       this.#quarantined = true;
-      this.#publish({ pending: false, uncertain: true, notice: "start_failed" });
+      this.#publish({
+        pending: false,
+        uncertain: true,
+        notice: "start_failed",
+        refusalReason: refusalReason(error),
+      });
     }
   }
   #sendStop(id: string, token: string, signal: AbortSignal) {
@@ -536,6 +546,7 @@ class Controller implements PreviewController {
     this.#publish({
       pending: true,
       notice: "closure_unconfirmed",
+      refusalReason: null,
       frameUrl: null,
       uncertain: true,
     });
@@ -554,7 +565,7 @@ class Controller implements PreviewController {
       if (!this.#matches(status) || !confirmed(status)) throw new Error("Unverified drainage");
       this.#release(status);
       return true;
-    } catch {
+    } catch (error) {
       if (!this.#current(epoch)) return !this.#token && !this.#quarantined;
       if (this.#recovered) this.#discardRecovery();
       this.#quarantined = true;
@@ -562,6 +573,7 @@ class Controller implements PreviewController {
         pending: false,
         uncertain: true,
         notice: "closure_unconfirmed",
+        refusalReason: refusalReason(error),
       });
       return false;
     }
@@ -604,11 +616,12 @@ class Controller implements PreviewController {
       this.#id = null;
     }
     if (!this.#token && !this.#quarantined)
-      this.#publish({ status: null, uncertain: false, notice: null });
+      this.#publish({ status: null, uncertain: false, notice: null, refusalReason: null });
   };
   dispose = () => {
     if (this.#disposed) return;
     this.#disposed = true;
+    this.#view = Object.freeze({ ...this.#view, refusalReason: null });
     this.#cancelStart = true;
     ++this.#epoch;
     this.#cancelRenewal();
