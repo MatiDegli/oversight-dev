@@ -56,7 +56,7 @@ export function WorkflowPanel({
   const rows = useMemo(() => (plan ? projectPlanFlow(state, plan) : []), [state, plan]);
   const host = useRef<HTMLElement>(null);
   const scope = JSON.stringify([state.run?.run_id, planId, plan?.revision]);
-  const { selection, selected, setSelection, close } = useStepSelection(rows, host, scope);
+  const { selection, selected, setSelection, close } = useStepSelection(rows, scope);
   const [queue, setQueue] = useState(false);
   const phone = useSyncExternalStore(subscribePhone, phoneSnapshot, () => false) && chat;
   const detailId = useId();
@@ -166,7 +166,7 @@ function WorkflowBody({
   );
 }
 
-function useStepSelection(rows: PlanFlowRow[], host: RefObject<HTMLElement | null>, scope: string) {
+function useStepSelection(rows: PlanFlowRow[], scope: string) {
   const [selection, setSelection] = useState<string | null>(null);
   const [previousScope, setPreviousScope] = useState(scope);
   if (previousScope !== scope) {
@@ -176,23 +176,11 @@ function useStepSelection(rows: PlanFlowRow[], host: RefObject<HTMLElement | nul
   const selected =
     previousScope === scope ? rows.find((row) => stepKey(row) === selection) : undefined;
   const close = useRef<HTMLButtonElement>(null);
-  const previousSelection = useRef<string | null>(null);
-  // Clear removed local indices before committing the new evidence. The layout effect
-  // still observes the removal and returns keyboard focus after that commit.
+  // Clear removed local indices before committing the new evidence.
   if (selection !== null && !selected) setSelection(null);
   useLayoutEffect(() => {
     close.current?.focus({ preventScroll: true });
   }, []);
-  useLayoutEffect(() => {
-    if (
-      previousSelection.current !== null &&
-      !rows.some((row) => stepKey(row) === previousSelection.current) &&
-      host.current?.contains(document.activeElement)
-    ) {
-      close.current?.focus({ preventScroll: true });
-    }
-    previousSelection.current = selection;
-  }, [selection, rows, host]);
   return { selection, selected, setSelection, close };
 }
 

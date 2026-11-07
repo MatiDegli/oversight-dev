@@ -228,6 +228,48 @@ test("built arrival paths retain selection, scroll and focus and clear a removed
   ]);
 });
 
+for (const target of ["surviving step", "workflow view", "removed control"] as const)
+  test(`synthetic built replay preserves focus for ${target} when selection disappears`, async ({
+    page,
+  }) => {
+    await open(page, { scene: "large", mode: "replay" });
+    // Prepare the removal event, then explicitly replay each prefix: append uses live ingestion.
+    const removedPrefix = await page.evaluate(async () => {
+      const fixture = (window as WorkflowWindow).workflowTest;
+      const initialPrefix = fixture.currentSeq();
+      fixture.removeSelected();
+      const removedPrefix = fixture.prefixLength();
+      await fixture.replayThrough(initialPrefix);
+      return removedPrefix;
+    });
+    await page.getByRole("button", { name: "Open workflow", exact: true }).click();
+    await expect(steps(page)).toHaveCount(8);
+    await steps(page).nth(3).click();
+    await expect(steps(page).nth(3)).toHaveAttribute("aria-pressed", "true");
+    const control =
+      target === "workflow view"
+        ? panel(page).getByRole("button", { name: "Merge queue", exact: true })
+        : steps(page).nth(target === "removed control" ? 3 : 0);
+    await control.focus();
+    const focused = await control.elementHandle();
+    expect(await focused.evaluate((node) => document.activeElement === node)).toBe(true);
+    await page.evaluate(async (prefix) => {
+      await (window as WorkflowWindow).workflowTest.replayThrough(prefix);
+    }, removedPrefix);
+    await expect
+      .poll(() => page.evaluate(() => (window as WorkflowWindow).workflowTest.currentSeq()))
+      .toBe(removedPrefix);
+    await expect(steps(page)).toHaveCount(2);
+    await expect(panel(page).getByText("Select a step to see its evidence.")).toBeVisible();
+    await expect(panel(page).getByRole("button", { pressed: true })).toHaveText([
+      "Dependency canvas",
+    ]);
+    expect(await focused.evaluate((node) => node.isConnected)).toBe(target !== "removed control");
+    if (target === "removed control")
+      await expect(panel(page).getByRole("button", { name: "Close", exact: true })).toBeFocused();
+    else expect(await focused.evaluate((node) => document.activeElement === node)).toBe(true);
+  });
+
 test("built inbox launcher retains the inbox and the repository graph", async ({ page }) => {
   await open(page, { layout: "Oversight", inbox: true, mode: "replay" });
   const launcher = page.getByRole("button", { name: "Open workflow", exact: true }).first();
