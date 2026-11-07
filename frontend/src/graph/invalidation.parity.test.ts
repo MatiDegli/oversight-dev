@@ -16,7 +16,7 @@ import { replacePaintPublication } from "./paintPublication";
 import { graphSync } from "./graphSync";
 import { graphStyles } from "./styles";
 import { updateGraph } from "./updateGraph";
-import { a, b, event, initial, node, theme, updated } from "./graph.support";
+import { a, b, event, initial, node, theme, updated, updateEvent } from "./graph.support";
 
 /** Includes router-owned data/classes and compound frame minima, not just projection output. */
 export function graphReading(cy: Core) {
@@ -73,8 +73,7 @@ function nextEvent(state: State, draw: (limit: number) => number): ServerEvent {
         state: draw(2) ? "working" : "ready_for_review",
       });
     case 4: {
-      const template = updated(state).stageEvents.at(-1);
-      if (!template || template.type !== "change.updated") throw new Error("Missing update");
+      const template = updateEvent(state);
       return {
         ...template,
         payload: {

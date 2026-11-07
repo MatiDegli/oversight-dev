@@ -62,8 +62,11 @@ function event<K extends ServerEvent["type"]>(
   seq: number,
   type: K,
   payload: Extract<ServerEvent, { type: K }>["payload"],
-): ServerEvent {
-  return { seq, ts: "2026-10-26T15:00:00.000Z", type, payload } as ServerEvent;
+): Extract<ServerEvent, { type: K }> {
+  return { seq, ts: "2026-10-26T15:00:00.000Z", type, payload } as Extract<
+    ServerEvent,
+    { type: K }
+  >;
 }
 const log: ServerEvent[] = [
   event(1, "run.started", {
@@ -105,43 +108,43 @@ const log: ServerEvent[] = [
   event(4, "agent.status", b),
 ];
 const initial = () => log.reduce(applyEvent, createInitialState());
-function updated(state = initial()): State {
-  return applyEvent(
-    state,
-    event(state.lastSeq + 1, "change.updated", {
-      change_id: a.change_id,
-      agent_id: a.agent_id,
-      author: "agent",
-      file: {
-        path: "billing.py",
-        status: "modified",
-        original: "before",
-        modified: "after",
-        lines_added: 1,
-        lines_removed: 1,
-      },
-      node_ids: ["billing:fee"],
-      files_changed: 1,
+function updateEvent(state = initial()) {
+  return event(state.lastSeq + 1, "change.updated", {
+    change_id: a.change_id,
+    agent_id: a.agent_id,
+    author: "agent",
+    file: {
+      path: "billing.py",
+      status: "modified",
+      original: "before",
+      modified: "after",
       lines_added: 1,
       lines_removed: 1,
-      graph: {
-        nodes_added: [node("billing:discount", "function", "billing")],
-        nodes_modified: ["billing:fee"],
-        nodes_removed: ["billing:Bill.total"],
-        edges_added: [
-          {
-            id: "added-call",
-            kind: "calls",
-            src: "billing:discount",
-            dst: "billing:fee",
-            confidence: "exact",
-            reason: null,
-          },
-        ],
-        edges_removed: ["edge-imports"],
-      },
-    }),
-  );
+    },
+    node_ids: ["billing:fee"],
+    files_changed: 1,
+    lines_added: 1,
+    lines_removed: 1,
+    graph: {
+      nodes_added: [node("billing:discount", "function", "billing")],
+      nodes_modified: ["billing:fee"],
+      nodes_removed: ["billing:Bill.total"],
+      edges_added: [
+        {
+          id: "added-call",
+          kind: "calls",
+          src: "billing:discount",
+          dst: "billing:fee",
+          confidence: "exact",
+          reason: null,
+        },
+      ],
+      edges_removed: ["edge-imports"],
+    },
+  });
+}
+function updated(state = initial()): State {
+  return applyEvent(state, updateEvent(state));
 }
 let cy: Core | undefined;
 function render(state: State) {
@@ -155,4 +158,4 @@ afterEach(() => {
   stateStore.setState({ state: createInitialState() });
 });
 
-export { a, agents, b, event, initial, log, node, nodes, render, rgb, theme, updated };
+export { a, agents, b, event, initial, log, node, nodes, render, rgb, theme, updated, updateEvent };
