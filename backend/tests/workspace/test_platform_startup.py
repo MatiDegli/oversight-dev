@@ -230,7 +230,8 @@ def test_nt_deletion_handles_pytest_current_link_and_preserves_outside(tmp_path,
 
 
 @pytest.mark.anyio
-async def test_capture_forwards_nt_flags_and_absolute_git(tmp_path, template, monkeypatch):
+@pytest.mark.parametrize("dirty", [False, True], ids=["clean", "dirty"])
+async def test_capture_forwards_nt_flags_and_absolute_git(tmp_path, template, monkeypatch, dirty):
     from oversight.workspace import test_tree
     from oversight.workspace.runner import ProcessResult
 
@@ -238,17 +239,31 @@ async def test_capture_forwards_nt_flags_and_absolute_git(tmp_path, template, mo
     (root / ".git").mkdir(parents=True)
     monkeypatch.setattr(sys, "platform", "win32")
     workspace = Workspace(tmp_path / ".runtime", template, pytest_pin="9.1.1")
-    spawn = AsyncMock(return_value=ProcessResult(0, "", "", False, False, 1))
+    head, committed = "c" * 40, "a" * 40
+    captured = "b" * 40 if dirty else committed
+    spawn = AsyncMock(
+        side_effect=[
+            ProcessResult(0, stdout, "", False, False, 1)
+            for stdout in ("", "", "", f"{captured}\n", f"{head}\n{committed}\n")
+        ]
+    )
     monkeypatch.setattr(test_tree, "executable", lambda name: "C:/tools/git.exe")
     monkeypatch.setattr(test_tree, "run_process", spawn)
-    await test_tree.capture_test_tree(
+    result = await test_tree.capture_test_tree(
         root,
         tmp_path,
         env={"GIT_DIR": str(root / ".git"), "GIT_COMMON_DIR": str(root / ".git")},
         flags=workspace.git_flags,
         timeout_s=3,
     )
-    assert len(spawn.call_args_list) == 6
+    assert result == (captured, None if dirty else head)
+    assert [call.args[0][1 + len(workspace.git_flags) :] for call in spawn.call_args_list] == [
+        ["read-tree", "HEAD"],
+        ["ls-files", "-s", "-z"],
+        ["add", "-A"],
+        ["write-tree"],
+        ["rev-parse", "HEAD", "HEAD^{tree}"],
+    ]
     for call in spawn.call_args_list:
         assert call.args[0][: 1 + len(workspace.git_flags)] == [
             "C:/tools/git.exe",

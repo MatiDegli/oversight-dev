@@ -42,6 +42,7 @@ afterAll(async () => {
 });
 async function open(scene: RailScene = "chat-busy", width = 1920, theme = "dark") {
   const page = await browser.newPage({
+    timezoneId: "UTC",
     viewport: { width, height: width === 1920 ? 1080 : width === 390 ? 844 : 800 },
     reducedMotion: "reduce",
   });

@@ -67,6 +67,18 @@ const panel = (page: Page) => page.getByLabel("Workflow", { exact: true });
 const steps = (page: Page) =>
   panel(page).getByRole("list", { name: "Workflow steps" }).getByRole("button");
 
+async function tabThroughViews(page: Page) {
+  for (const [name, pressed] of [
+    ["Dependency canvas", "true"],
+    ["Merge queue", "false"],
+  ] as const) {
+    await page.keyboard.press("Tab");
+    const view = panel(page).getByRole("button", { name, exact: true });
+    await expect(view).toBeFocused();
+    await expect(view).toHaveAttribute("aria-pressed", pressed);
+  }
+}
+
 async function contrast(page: Page) {
   return panel(page).evaluate((root) => {
     const rgb = (color: string) => (color.match(/[\d.]+/g) ?? []).map(Number);
@@ -160,6 +172,7 @@ test("built replay retains native keyboard order and restores the launcher on Es
   await launcher.press("Enter");
   const close = panel(page).getByRole("button", { name: "Close", exact: true });
   await expect(close).toBeFocused();
+  await tabThroughViews(page);
   await page.keyboard.press("Tab");
   await expect(steps(page).nth(0)).toBeFocused();
   await page.keyboard.press("Enter");
@@ -210,7 +223,9 @@ test("built arrival paths retain selection, scroll and focus and clear a removed
   });
   await expect(steps(page)).toHaveCount(2);
   await expect(panel(page).getByRole("button", { name: "Close", exact: true })).toBeFocused();
-  await expect(panel(page).getByRole("button", { pressed: true })).toHaveCount(0);
+  await expect(panel(page).getByRole("button", { pressed: true })).toHaveText([
+    "Dependency canvas",
+  ]);
 });
 
 test("built inbox launcher retains the inbox and the repository graph", async ({ page }) => {
@@ -300,82 +315,85 @@ for (const layout of ["Chat", "Oversight"] as const)
       });
     }
 
+async function maximizePhone(page: Page, theme: string) {
+  await open(page, { mode: "replay" }, theme);
+  const launcher = page.getByRole("button", { name: "Open workflow", exact: true });
+  await launcher.scrollIntoViewIfNeeded();
+  const chat = page.locator(".chat-shell");
+  const position = await chat.evaluate((node) => node.scrollTop);
+  await launcher.tap();
+  await expect(page.getByRole("dialog", { name: "Workflow", exact: true })).toBeVisible();
+  const back = panel(page).getByRole("button", { name: "Back", exact: true });
+  await expect(back).toBeFocused();
+  expect(await panel(page).boundingBox()).toEqual({ x: 0, y: 0, width: 390, height: 844 });
+  await tabThroughViews(page);
+  await page.keyboard.press("Tab");
+  await expect(steps(page).nth(0)).toBeFocused();
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Space");
+  await expect(steps(page).nth(1)).toHaveAttribute("aria-pressed", "true");
+  await back.focus();
+  await back.press("Shift+Tab");
+  await expect(panel(page).getByRole("button", { name: "Review change" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(back).toBeFocused();
+  const ratios = await contrast(page);
+  expect(ratios.text).toBeGreaterThanOrEqual(4.5);
+  expect(ratios.graphics).toBeGreaterThanOrEqual(3);
+  for (const button of await panel(page).getByRole("button").all()) {
+    const bounds = await button.boundingBox();
+    expect(bounds?.height).toBeGreaterThanOrEqual(44);
+    expect(bounds?.width).toBeGreaterThanOrEqual(44);
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  if (process.env.WORKFLOW_SHOTS === "1") {
+    await mkdir(captures, { recursive: true });
+    await writeFile(
+      resolve(captures, `Chat-390-${theme}.json`),
+      JSON.stringify(
+        {
+          provenance: "Synthetic scripted events; production build; emulated Chromium touch",
+          width: 390,
+          height: 844,
+          theme,
+          contrast: ratios,
+        },
+        null,
+        2,
+      ),
+    );
+    await back.scrollIntoViewIfNeeded();
+    await panel(page)
+      .locator(".workflow-body")
+      .evaluate((node) => {
+        node.scrollTop = 0;
+      });
+    await page.screenshot({
+      path: resolve(captures, `Chat-390-${theme}.png`),
+      animations: "disabled",
+    });
+    await panel(page).getByRole("button", { name: "Review change" }).scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: resolve(captures, `Chat-390-${theme}-detail.png`),
+      animations: "disabled",
+    });
+  }
+  await back.tap();
+  await expect(panel(page)).toHaveCount(0);
+  await expect(launcher).toBeFocused();
+  expect(await chat.evaluate((node) => node.scrollTop)).toBe(position);
+  await expect(page.getByLabel("Repository graph", { exact: true })).toHaveCount(0);
+  expect(await page.locator(".chat-agents").evaluate((node: HTMLElement) => node.inert)).toBe(
+    false,
+  );
+}
+
 test.describe("phone workflow", () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
   for (const theme of ["dark", "day"]) {
     test(`built Chat maximizes and Back restores the exact view in ${theme}`, async ({ page }) => {
-      await open(page, { mode: "replay" }, theme);
-      const launcher = page.getByRole("button", { name: "Open workflow", exact: true });
-      await launcher.scrollIntoViewIfNeeded();
-      const chat = page.locator(".chat-shell");
-      const position = await chat.evaluate((node) => node.scrollTop);
-      await launcher.tap();
-      await expect(page.getByRole("dialog", { name: "Workflow", exact: true })).toBeVisible();
-      const back = panel(page).getByRole("button", { name: "Back", exact: true });
-      await expect(back).toBeFocused();
-      expect(await panel(page).boundingBox()).toEqual({ x: 0, y: 0, width: 390, height: 844 });
-      await back.press("Tab");
-      await expect(steps(page).nth(0)).toBeFocused();
-      await page.keyboard.press("Enter");
-      await page.keyboard.press("Tab");
-      await page.keyboard.press("Space");
-      await expect(steps(page).nth(1)).toHaveAttribute("aria-pressed", "true");
-      await back.focus();
-      await back.press("Shift+Tab");
-      await expect(panel(page).getByRole("button", { name: "Review change" })).toBeFocused();
-      await page.keyboard.press("Tab");
-      await expect(back).toBeFocused();
-      const ratios = await contrast(page);
-      expect(ratios.text).toBeGreaterThanOrEqual(4.5);
-      expect(ratios.graphics).toBeGreaterThanOrEqual(3);
-      for (const button of await panel(page).getByRole("button").all()) {
-        const bounds = await button.boundingBox();
-        expect(bounds?.height).toBeGreaterThanOrEqual(44);
-        expect(bounds?.width).toBeGreaterThanOrEqual(44);
-      }
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
-        true,
-      );
-      if (process.env.WORKFLOW_SHOTS === "1") {
-        await mkdir(captures, { recursive: true });
-        await writeFile(
-          resolve(captures, `Chat-390-${theme}.json`),
-          JSON.stringify(
-            {
-              provenance: "Synthetic scripted events; production build; emulated Chromium touch",
-              width: 390,
-              height: 844,
-              theme,
-              contrast: ratios,
-            },
-            null,
-            2,
-          ),
-        );
-        await back.scrollIntoViewIfNeeded();
-        await panel(page)
-          .locator(".workflow-body")
-          .evaluate((node) => {
-            node.scrollTop = 0;
-          });
-        await page.screenshot({
-          path: resolve(captures, `Chat-390-${theme}.png`),
-          animations: "disabled",
-        });
-        await panel(page).getByRole("button", { name: "Review change" }).scrollIntoViewIfNeeded();
-        await page.screenshot({
-          path: resolve(captures, `Chat-390-${theme}-detail.png`),
-          animations: "disabled",
-        });
-      }
-      await back.tap();
-      await expect(panel(page)).toHaveCount(0);
-      await expect(launcher).toBeFocused();
-      expect(await chat.evaluate((node) => node.scrollTop)).toBe(position);
-      await expect(page.getByLabel("Repository graph", { exact: true })).toHaveCount(0);
-      expect(await page.locator(".chat-agents").evaluate((node: HTMLElement) => node.inert)).toBe(
-        false,
-      );
+      await maximizePhone(page, theme);
     });
   }
 
@@ -416,7 +434,9 @@ test.describe("phone workflow", () => {
       (window as WorkflowWindow).workflowTest.removeSelected();
     });
     await expect(panel(page).getByRole("button", { name: "Back", exact: true })).toBeFocused();
-    await expect(panel(page).getByRole("button", { pressed: true })).toHaveCount(0);
+    await expect(panel(page).getByRole("button", { pressed: true })).toHaveText([
+      "Dependency canvas",
+    ]);
     await page.keyboard.press("Escape");
     await expect(panel(page)).toHaveCount(0);
     await expect(launcher).toBeFocused();

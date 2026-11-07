@@ -18,7 +18,10 @@ it.each(["A", "B"] as const)(
     agent.slot = slot;
     const browser = await launchBrowser({ headless: true });
     try {
-      const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+      const page = await browser.newPage({
+        timezoneId: "UTC",
+        viewport: { width: 390, height: 844 },
+      });
       await page.setContent(
         renderToStaticMarkup(
           <div className="phone-practice">

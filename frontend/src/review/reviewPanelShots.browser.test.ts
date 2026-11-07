@@ -41,7 +41,10 @@ async function compare(
   const exact = exactSketches.has(candidate);
   const file = exact ? candidate : `${state}-dark.png`;
   const sketch = await readFile(new URL(`../../../docs/sketches/review/${file}`, import.meta.url));
-  const report = await browser.newPage({ viewport: { width: 3000, height: 1140 } });
+  const report = await browser.newPage({
+    timezoneId: "America/Argentina/Buenos_Aires",
+    viewport: { width: 3000, height: 1140 },
+  });
   try {
     await report.setContent(
       `<style>body{margin:0;font:16px sans-serif}.pair{display:flex;align-items:flex-start;gap:24px}img{max-width:none}</style><p>Product: hand-written fixture · ${state}, ${String(width)}, ${theme} / ${exact ? "approved sketch" : "nearest sketch"}: docs/sketches/review/${file}</p><div class="pair"><img alt="Product panel" src="data:image/png;base64,${product.toString("base64")}"><img alt="Approved sketch" src="data:image/png;base64,${sketch.toString("base64")}"></div>`,
@@ -111,6 +114,7 @@ describe.skipIf(process.env.REVIEW_PANEL_SHOTS !== "1")("whole review panel capt
     "captures $state at $width in $theme",
     async ({ state, width, theme }) => {
       const page = await browser.newPage({
+        timezoneId: "America/Argentina/Buenos_Aires",
         viewport: { width, height: 1080 },
         reducedMotion: "reduce",
       });

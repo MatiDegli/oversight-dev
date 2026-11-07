@@ -5469,35 +5469,39 @@ still a later front. The Windows window is forced dark, so System there may alwa
 
 ## 2026-11-05 — The post-hackathon roadmap
 
-The maintainer approved docs/roadmap.md and all twelve choices on 2026-11-05, based on main 498639ff.
-It plans an IDE for any repository, language, model and harness, with visible person-owned policy,
-fixed authority invariants, configurable defaults, qualified execution or explicit trust, a bounded
-event log, native hosted harnesses and measured Rust adoption. Milestones start on conditions, not dates.
-This replaces docs/additions.md:83's queue order, which leaves recovery and execution dependencies implicit; today's rules stand until the named fronts land.
+The maintainer approved docs/roadmap.md and all twelve choices on 2026-11-05, based on main
+498639ff. It plans an IDE for any repository, language, model and harness, with visible
+person-owned policy, fixed authority invariants, configurable defaults, qualified execution or
+explicit trust, a bounded event log, native hosted harnesses and measured Rust adoption.
+Milestones start on conditions, not dates. This replaces docs/additions.md:85-90's queue order;
+today's rules stand until the named fronts land.
 
 ## 2026-11-05 — Rust where it pays, not a rewrite
 
-The maintainer chose Rust for OS boundaries (sandbox, PTY, watcher, search and desktop) and measured
-hot paths; Python keeps orchestration and providers. M7 measures before moving more work.
-A full backend rewrite was rejected: months of migration would put roughly 13,000 pytest checks at
-risk without proving a gain. This extends the Python backend baseline in ARCHITECTURE.md:145;
-it replaces no runtime today and defers broader migration until profiles justify it.
+The maintainer chose Rust for OS boundaries (sandbox, PTY, watcher, search and desktop) and
+measured hot paths; Python keeps orchestration and providers. M7 measures before moving more
+work. A full backend rewrite was rejected: months of migration would put roughly 13,000 pytest
+checks at risk without proving a gain. This extends the Python backend baseline in
+ARCHITECTURE.md:145; it replaces no runtime today and defers broader migration until profiles
+justify it.
 
 ## 2026-11-05 — Native agents get a sandboxed shell after M3 qualifies
 
-The maintainer chose a native-agent shell inside the sandbox, policy-gated and defaulting to ask.
-It reaches native agents only once M3's sandbox qualifies on their platform; AGENTS.md:48 and the
-no-shell rationale in ARCHITECTURE.md:256 stand until then. M4 changes that tool list when it lands.
-Keeping no shell was rejected because general toolchains need commands beyond fixed tools;
-the sandbox and the person's policy must bound execution before that capability is available.
+The maintainer chose a native-agent shell inside the sandbox, policy-gated and defaulting to
+ask. It reaches native agents only once M3's sandbox qualifies on their platform; AGENTS.md:48
+and the no-shell rationale in ARCHITECTURE.md:256 stand until then. M4 changes that tool list
+when it lands. Keeping no shell was rejected because general toolchains need commands beyond
+fixed tools; the sandbox and the person's policy must bound execution before that capability is
+available.
 
 ## 2026-11-05 — The person's terminal is unsandboxed under shared authority
 
-The maintainer chose an unsandboxed terminal, as in an IDE, after M4's security plan is reviewed.
-It requires the shared authority checks, a per-session token, 127.0.0.1 and server-owned cleanup;
-capture also waits for the bounded log and Secrets gate. Sandboxing it by default was rejected
-because the person needs direct control. M4 replaces the "built last" order in DECISIONS.md:318,
-retaining its security boundary and the HTTP/WebSocket authority policy in DECISIONS.md:591.
+The maintainer chose an unsandboxed terminal, as in an IDE, after M4's security plan is
+reviewed. It requires the shared authority checks, a per-session token, 127.0.0.1 and
+server-owned cleanup; capture also waits for the bounded log and Secrets gate. Sandboxing it by
+default was rejected because the person needs direct control. M4 replaces the "built last" order
+in DECISIONS.md:318, retaining its security boundary and the HTTP/WebSocket authority policy in
+DECISIONS.md:591.
 
 ## 2026-11-05 — Store keys in the OS keychain
 
@@ -5510,60 +5514,69 @@ in AGENTS.md:24 when M2 lands; M0's rules front records that transition without 
 ## 2026-11-05 — Use native provider SDKs behind one contract
 
 The maintainer chose the OpenAI SDK for compatible endpoints and the official Anthropic and
-Google SDKs for native caching and thinking, behind an extensible provider contract for every role.
-OpenAI-compatible only was rejected because it would hide native features and restrict providers;
-LiteLLM remains excluded. M2 replaces the OpenAI-only call rule in AGENTS.md:34 and the Meta-only
-provider scope in AGENTS.md:18 after M0 records the transition; contract changes remain his decisions.
+Google SDKs for native caching and thinking, behind an extensible provider contract for every
+role. OpenAI-compatible only was rejected because it would hide native features and restrict
+providers; LiteLLM remains excluded. M2 replaces the OpenAI-only call rule in AGENTS.md:34 and
+the Meta-only provider scope in AGENTS.md:18 after M0 records the transition; contract changes
+remain his decisions.
 
 ## 2026-11-05 — MCP first, plugins after workflow contracts stabilize
 
 The maintainer chose an MCP client in M6 and a general plugin API in M9 once workflow contracts
-are stable. Servers execute under the same trust or sandbox policy as other commands.
-VS Code extension compatibility through Open VSX was rejected because hosting its extension host
-is too large. This supersedes the unqueued outside-agent hooks/MCP candidate in docs/additions.md:265
-as a plan; the present native tool list in AGENTS.md:48 stands until the corresponding fronts land.
+are stable. Servers execute under the same trust or sandbox policy as other commands. VS Code
+extension compatibility through Open VSX was rejected because hosting its extension host is too
+large. This is distinct from outside agents reporting through hooks or MCP in
+docs/additions.md:265; the present native tool list in AGENTS.md:48 stands until the
+corresponding fronts land.
 
 ## 2026-11-05 — Choose the sandbox implementation in M3's security plan
 
 The maintainer deferred the choice to an independently reviewed M3 plan comparing a Rust helper
 using Landlock/seccomp with a narrow bubblewrap license exception (LGPL, separate binary), by
 coverage and maintenance. Rejecting bubblewrap now on license grounds would remove an option
-before that comparison. AGENTS.md:26 still applies until any exact exception lands; this advances
-the candidate in docs/additions.md:189, closing current containment gaps first with the existing launcher.
+before that comparison. AGENTS.md:26 still applies until any exact exception lands; this
+advances the candidate in docs/additions.md:189, closing current containment gaps first with the
+existing launcher.
 
 ## 2026-11-05 — Linux and Windows first, macOS after its sandbox
 
 The maintainer chose Linux and Windows first, Windows native acceptance in M1, and macOS after
 its M3 sandbox qualifies. Each platform must satisfy the execution policy before features ship.
-Earlier macOS for reach was rejected because qualification and a usable repository flow come first.
-This advances the deferred native qualification in desktop/README.md:5 and the later platform
-scope in ARCHITECTURE.md:60; it does not certify Windows or macOS acceptance today.
+Earlier macOS for reach was rejected because qualification and a usable repository flow come
+first. This advances the deferred native qualification in desktop/README.md:5 and the later
+platform scope in ARCHITECTURE.md:60; it does not certify Windows or macOS acceptance today.
 
 ## 2026-11-05 — Run independent milestones in parallel after M0
 
-The maintainer chose M1, M2 and M3 in parallel from the start, each under its own gate.
-The person's terminal follows its security plan, M5 editing runs alongside, actions wait for M1 recovery and approved
-contracts, hosted nodes wait for M2, the agent shell waits for M3, M6 grows progressively and M10
-waits for evidence acceptance. Serial delivery was rejected because independent work can proceed.
-This replaces docs/additions.md:83's queue order and DECISIONS.md:318's terminal-last order when fronts land.
+The maintainer chose M1, M2 and M3 in parallel from the start, each under its own gate. The
+person's terminal follows its security plan, M5 editing runs alongside, actions wait for M1
+recovery and approved contracts, hosted nodes wait for M2, the agent shell waits for M3, M6
+grows progressively and M10 waits for evidence acceptance. Serial delivery was not chosen
+because independent work can proceed. This replaces docs/additions.md:85-90's queue order and
+DECISIONS.md:318's terminal-last order when fronts land.
 
 ## 2026-11-05 — End hackathon-only restrictions through M0's rules front
 
-The maintainer chose to end the new-since-kickoff requirement (AGENTS.md:16), with third-party code only as licensed dependencies.
-M0's own front rewrites AGENTS.md and PRODUCT.md for broader language/model scope (PRODUCT.md:24, AGENTS.md:18) and phased tool/key/SDK changes (AGENTS.md:48, AGENTS.md:24, AGENTS.md:34); those changes take effect with their named fronts.
-Cross-provider merge review (AGENTS.md:4), the submission freeze until he lifts it, security and authority invariants, maintainer-owned contracts, license controls, hooks and fake-only checks stay.
-README.md's historical "Built during the hackathon" section and the daily DEVLOG also stay (AGENTS.md:17).
-The ban on code from, and on mentioning or linking, the maintainer's other projects (AGENTS.md:16-17)
-stays until he changes it.
-Retaining all hackathon restrictions was rejected because they block the approved broader product; this entry changes neither AGENTS.md nor PRODUCT.md today.
+The maintainer chose to end the new-since-kickoff requirement (AGENTS.md:16), with third-party
+code only as licensed dependencies. M0's own front rewrites AGENTS.md and PRODUCT.md for broader
+language/model scope (PRODUCT.md:24, AGENTS.md:18) and phased tool/key/SDK changes
+(AGENTS.md:48, AGENTS.md:24, AGENTS.md:34); those changes take effect with their named fronts.
+Cross-provider merge review (AGENTS.md:4), the submission freeze until he lifts it, security and
+authority invariants, maintainer-owned contracts, license controls, hooks and fake-only checks
+stay. README.md's historical "Built during the hackathon" section and the daily DEVLOG also stay
+(AGENTS.md:17). The ban on code from, and on mentioning or linking, the maintainer's other
+projects (AGENTS.md:16-17) stays until he changes it. Retaining all hackathon restrictions was
+not chosen because they block the approved broader product; this entry changes neither AGENTS.md
+nor PRODUCT.md today.
 
 ## 2026-11-05 — Build the usage ledger after judging and the freeze
 
-The maintainer chose to build M2's usage and cost ledger as a backend module with tests and fixtures
-after judging ends and the GitHub freeze lifts: log parsers, dated price books, agent-hours and
-unknown never zero. Until then only its specification and hosted-agent capture are built, with
-capture still gated by M2's bounded log and Secrets requirements. Starting the ledger now was rejected
-to preserve the freeze; this defers expansion of docs/additions.md:673, retaining its accounting semantics.
+The maintainer chose to build M2's usage and cost ledger as a backend module with tests and
+fixtures after judging ends and the GitHub freeze lifts: log parsers, dated price books,
+agent-hours and unknown never zero. Until then only its specification and hosted-agent capture
+are built, with capture still gated by M2's bounded log and Secrets requirements. Starting the
+ledger now was rejected to preserve the freeze; this defers expansion of docs/additions.md:673,
+retaining its accounting semantics.
 
 ## 2026-11-05 — Allow explicit repository trust before sandbox qualification
 
@@ -5572,3 +5585,406 @@ disclosed and verified cleanup of processes, ports and temporary state. Shell, n
 reach agents only through the sandbox and policy. Blocking all execution until M3 qualifies was
 rejected so M1/M2 can serve trusted repositories earlier, as native Windows does (docs/isolation.md:221).
 M1 replaces the informational, nonblocking trust prompt in docs/own-repository.md:32 with explicit trust.
+
+## 2026-11-06 — Mask tested-tree secrets at model and test-event boundaries
+
+One in-memory redactor belongs to the workspace for the server run, independently of the
+server's lead/message/probe redactor. Both start with the configured provider keys. Only the
+workspace collects values from the tested tree's secret-named files,
+using the existing name policy (including its .example exemption). Before each suite, and after
+child cleanup but before reading diagnostics, it collects literal KEY=VALUE lines in every
+secret-named text file (single-line quotes, export and trailing comments supported), and
+PEM/key/SSH body lines plus their joined body. Comments and assignment names are not collected,
+including in files below .env* directories. Repository values shorter than eight characters
+are ignored. Whole assignment values become [redacted] only for names containing PASS
+(including PASSWORD, PASSWD and PASSPHRASE), PWD, DSN, SECRET, TOKEN, KEY, AUTH, CREDENTIAL or
+PRIVATE (case-insensitive), credential-shaped values,
+or URLs containing a password. URL passwords are also remembered separately. Only
+credential-shaped values/passwords, key bodies and provider keys contribute eight-character
+windows; URLs with passwords contribute whole-value matches, not windows of their public
+host/path. Ordinary settings such as POSTGRES_USER=postgres, DB_HOST=localhost and
+ENVIRONMENT=production are not collected. Whole-value matches are indexed by their first
+eight characters so each output position checks only its matching bucket.
+Discovered material is never logged or persisted by the collector/redactor.
+
+Collection uses guarded regular-file reads: at most 128 secret files, 256 KiB per file and
+1 MiB total per scan; traversal excludes Git metadata and stops after 50,000 entries. Secret
+links, unreadable/non-UTF-8 files or exceeded limits refuse execution. An incomplete inventory
+also withholds subsequent workspace boundary text for that run rather than allowing an
+unmasked diff or summary after a refused suite. It cannot disable lead replies, person
+messages or probes, or add repository settings to their mask. Restart with a valid inventory
+to restore workspace diagnostic text.
+Previously discovered values remain masked when a later test changes or removes their file.
+
+The mask precedes truncation of test stdout/stderr, failed-test lists and JUnit details, so
+run_tests history, agent-step test evidence and tests.executed events receive safe diagnostics.
+Secret-bearing parameter identifiers are withheld from per-case evidence and mark it incomplete;
+unmatched paths and test names retain their exact identity. Whole secret values can still
+collide with ordinary diagnostic text: PASSWORD=postgres masks postgres in test_postgres.py
+and withholds that case. Secret protection takes precedence in those collisions.
+The reviewer receives a masked diff
+from the captured worktree and masked proposal task/summary text. Both observations and the
+review protocol explain the marker. Runtime-path removal precedes masking. Hex-only Git
+object ids and content hashes are exempt from the generic heuristic only in Workspace.redact
+so debugging and identity checks remain usable; explicit known-secret matches still take
+precedence, even for hex values. Shared lead/message/probe masking still catches hex tokens.
+
+Measured invocations are filtered after the same inventory refresh, before change facts or
+review-card model requests. Private identities are dropped; private inputs, results or problems
+withhold both snapshots and make the report incomplete. Behavior workers also inventory before
+and after execution and withhold private observations. Withheld measurements cannot establish
+equality or a behavior difference from two masked values; unaffected rows remain available.
+
+This supersedes the run_tests/reviewer-diff residual in the 2026-10-31 secret-file decision.
+It is output filtering, not filesystem or exfiltration isolation. Secrets absent from a
+secret-named file and not recognized by the heuristic, unmarked non-credential assignments
+(including secrets under ordinary setting names), values shorter than eight characters,
+encodings/escapes/interpolation the matcher does not recognize, and secrets created and removed
+entirely during child execution are not defended. The person's own file contents can still
+persist locally in their event log through existing file/change evidence; that storage is not
+rewritten or certified secret-free by this front. Contracts and person-facing file access stay
+unchanged. Tests use synthetic canaries, real local pytest subprocesses and scripted fake models;
+no provider credits are spent.
+
+## 2026-11-05 — Three criteria for every product decision
+
+The maintainer set three criteria for every product decision, in this order:
+
+1. The most comfortable option for the person using Oversight.
+2. How the maintainer and his agents actually work, or better.
+3. Highly controllable and configurable, where that is appropriate and viable.
+
+Every proposal or brief recommending a product option states how it meets each criterion, in
+order. They make the recommendation accountable to the person's comfort, actual working practice
+and useful control, so a technically possible option is assessed against the product's purpose.
+They do not claim to replace an earlier rule.
+
+## 2026-11-05 — Only the person's authority is fixed; other limits are settings
+
+The maintainer fixed only two rules: authority comes only from the person, so no agent grants
+itself or another agent more authority than the person configured; every loosening is visible,
+recorded in the event log and reversible. Every other limit is a setting with a safe default, so
+someone accepting more risk can choose it. Provider terms, law, licenses and capabilities not yet
+landed still impose limits, with their reasons stated. This concerns product settings, not the
+rules for developing Oversight or permission to bypass hooks and verification.
+
+Two AGENTS.md invariants become defaults when M5 builds their settings: combined tests run by
+default, with a person setting to turn them off per repository, workflow or block and label the
+merge "untested"; Approve has no keyboard shortcut by default, not even Ctrl+Enter, with a person
+setting to bind one. Both behave exactly as today until M5 lands. Keeping combined tests,
+click-only approval and agent-authority limits fixed for everyone was rejected because the choice
+of risk belongs to each person; agents still cannot widen their own configured authority.
+
+## 2026-11-05 — Roadmap limits become person settings with safe defaults
+
+The maintainer approved editing docs/roadmap.md's limits in place, with each new setting available
+from its named milestone, never claimed today. Every loosening is the person's act, visibly
+indicated, logged and revocable. Personal approval and person-only locks, modes, rules and grants
+are defaults; rules may approve everything, and lead delegation per workflow or plan is revocable
+(M5). Tests, independent review and evidence gates are on by default, configurable per repository,
+workflow or block, with "untested", "review off" and "evidence incomplete" labels. Unknown results
+never show as passing.
+
+Execution defaults to sandbox and ask. The person may grant trusted execution, network, installs
+and protected paths per repository, workflow, block or run, labeled "unsandboxed" outside the
+sandbox. Cleanup failure blocks by default; a person-authorized run exception says "cleanup
+unverified". Hosted CLIs are unmodified by default; the person may add instructions or tools per
+workflow and select a policy labeled "partial enforcement" where coverage is partial. Their
+credentials stay with each unmodified CLI. OS keychains are the default, but .env or another
+supported store is a per-repository choice (M2); secret-file access needs an explicit labeled
+grant. Test/build commands are person-owned by default, with "command editing delegated" by grant
+(M1). Parallelism is conservative; manual zones or overlap say "independence unverified" (M5).
+
+Session export, following and retry, checkpoint cadence and retention are configurable in their
+M1/M5 fronts. Capture is bounded and redacted by default; capture, retention, step and output
+limits become settings with their fronts. Agent self-reports are separate and labeled; status
+still comes from tool calls. Price books, budgets and pace are configurable beside the existing
+brake; "Build the usage ledger after judging and the freeze" keeps its timing unchanged.
+
+Implemented limits also become settings only when their milestone builds them, with default =
+today's behavior and an indicator for the selected policy. M2 covers role/model/reasoning choices
+per app, workflow or run, granted patch/create/rename/delete operations, and provisional reserves
+with reconciliation labeled "cost uncertain". M5 covers grant scopes/expiry; review rearming after
+personal intervention ("review resumed"); revision comments, replacement agents and conflict
+choices; queue capacity, priority and waves; plan composition, amendment, hold and replan; queued
+or interrupting lead steering and wake policy; Stop confirmation and retention (confirm and retain
+by default); and independently exposed nested capacity/wakes. Its checklist/todo settings cover
+goal count, required OK and block-or-label, with verifiable goals as recorded below.
+
+M6 covers reverting personal/historical merges; merge target, strategy and message template;
+coordinated multi-file edits and grouped commits; layout/startup/tabs/navigation profiles; graph
+visibility, filters, selection, arrangement and scale; attention (unfolding and notices, no focus
+theft by default); presentation/motion following the OS motion setting by default; time zone and
+format (OS time zone by default) and original replay gaps. M1/M3 cover preview concurrency, drafts,
+retention and capability profiles, admission budgets and safely resolved source locations. M7
+covers runtime locations, identifiers and Git identity policies. M8 covers background desktop
+sessions, readiness/shutdown budgets, native windows and installer consent. M9 permits explicitly
+configured HTTPS authorities only after authentication exists; loopback remains the default.
+
+Every settings save gets a receipt, history, diff and Restore, with file/environment/default
+provenance and next-run application, before agent settings proposals. M5 adds "Approve by
+keyboard" for keyboard and screen-reader users, off by default with an indicator while on;
+pointer-only remains the default from the 2026-10-26 "Approve answers only a pointer click"
+decision. Every setting may be suggested, prepared or applied by an agent under the safeguards
+below; that front follows M5's contracts and settings-history fronts.
+
+This amends "Native agents get a sandboxed shell after M3 qualifies" and roadmap decision 2:
+M4 may deliver the native shell in an explicitly M1-trusted repository before M3 qualifies. It
+amends "Store keys in the OS keychain" to allow other supported stores, "The person's terminal is
+unsandboxed under shared authority" to add a sandboxed option after M3 and labeled remote access
+only later, and "Allow explicit repository trust before sandbox qualification" to cover shell,
+network, installs and protected paths under policy. RAG, the training room and fine-tuning are
+"not planned now", opt-in if ever scheduled, rather than permanently excluded. Authority from the
+person, visible/logged/reversible loosening, provider terms, law, licenses, development rules,
+current refusals and the freeze remain; no capability is implemented by these decisions.
+
+## 2026-11-05 — Agents can suggest, prepare and apply settings
+
+The maintainer approved agents suggesting, preparing and applying settings, reinforcing the
+comfort criterion: the person should not have to perform every configuration edit manually.
+Four safeguards govern the later M5 settings-proposal front, after its contracts and settings
+receipt/history/diff/Restore front, with the maintainer's contract review:
+
+- Oversight renders the proposal card: exact typed change, scope, what loosens and indicator,
+  without stealing focus. File content, tool output and another agent never count as acceptance.
+- The person accepts by a click or their own chat message bound to that visible proposal, with a
+  receipt and Undo. Words suffice by default; safety loosening (grants, tests off, unsandboxed
+  execution, secret access) asks for one click unless the person enables words for it.
+- Direct application is only within the person's grants, naming which settings and which scope,
+  and never widens the agent's own authority; otherwise the agent proposes the typed change.
+- Each proposal is bound to the setting's current revision; a stale proposal cannot apply over a
+  changed setting.
+
+This records the principle and its future mechanism, not an existing settings tool or grant.
+
+## 2026-11-05 — The native agent's todo list is verifiable goals
+
+The maintainer chose a native-agent todo list of 2–6 verifiable goals derived from the instruction,
+each with a checkable done-condition: a test that must pass, or a file or symbol that must or must
+not change. The person sees and edits the goals. The harness marks them met from tool calls,
+never text. Finishing with open goals gets one reminder, then the result is labeled "goals unmet";
+progress for the no-progress stop counts goals met. Goal count, required OK and block-or-label
+are settings. This arrives in M5, on by default in the harness pack only once measured with the
+eval. Hosted CLIs keep their own todo lists, shown, not wrapped. A free-text list the model ticks
+itself was rejected because status must come from tool calls.
+
+## 2026-11-05 — Release changelogs replace daily devlog updates
+
+The maintainer chose CHANGELOG.md per release, with Unreleased recording landed work before the
+next release. DEVLOG.md is frozen history; README.md's "Built during the hackathon" section stays
+as history. This supersedes only the daily DEVLOG part of "End hackathon-only restrictions
+through M0's rules front" and AGENTS.md's former daily duty; that entry's other retained rules
+stay intact. Daily updates were replaced because release notes give the person a useful record
+of delivered changes without imposing a diary entry every working day. No version, release date
+or release automation is introduced by this front.
+The maintainer chose per-repository trust for unsandboxed execution, off by default, with exposure
+disclosed and verified cleanup of processes, ports and temporary state. Shell, network and installs
+reach agents only through the sandbox and policy. Blocking all execution until M3 qualifies was
+rejected so M1/M2 can serve trusted repositories earlier, as native Windows does (docs/isolation.md:221).
+M1 replaces the informational, nonblocking trust prompt in docs/own-repository.md:32 with explicit trust.
+
+## 2026-11-06 — Filter credential-shaped names from every child environment (F1-A)
+
+After merging caller extras, `child_env` removes names case-insensitively when they end in
+`_API_KEY`, `_TOKEN`, `_SECRET`, `_PASSWORD` or `_CREDENTIALS` (including `META_API_KEY` and
+`BASETEN_API_KEY`), or start with `OVERSIGHT_SESSION` or `OVERSIGHT_AUTH`, on every platform.
+This closes the extras bypass and keeps a future per-launch backend credential out of test,
+preview and shop environments; existing callers need no matching names. It does not defend
+against code reading files or process memory as the same user; isolation is a later front.
+
+## 2026-11-06 — Canvas direction: the graph is one removable object
+
+The maintainer approved a persistent creative workspace: the code graph is one removable and restorable object among workflows, notes, code, previews and agent objects.
+Comfort comes from the familiar graph-plus-agents default board; practice from live references to the maintainer's code and agents; control from person-owned boards, cameras and grants, in that order.
+This replaces the always-visible graph requirement in AGENTS.md:67 only when canvas front 1 lands and edits that rule; until then it remains in force.
+The three layout presets and startup behavior belong to “Code joins Chat and Oversight; reopen the last workspace view”; this entry records only the canvas direction.
+The approved fronts and gates are in docs/roadmap.md's Canvas milestone; this documentation implements no canvas capability.
+
+## 2026-11-06 — Canvas engine A: an owned DOM core
+
+The maintainer separately chose engine A after identical 500-object prototypes with a live 1,000-node graph and three preview fixtures: drag 30 vs 47 ms, marquee 42 vs 72 ms, heap after pan 36 vs 58 MiB and about 2.5 vs 63 KB gzip added, against React Flow.
+Smoothness tied: 4.69% vs 4.49% frames over 20 ms on a loaded host, not quiet-host acceptance. Front 1 must remove the observed 100–194 ms zoom long tasks.
+This supersedes the provisional React Flow starting choice; the measurement-only spike never lands. Object model, references, agent layer, history and virtualization are owned; camera/selection/connectors stay behind a replaceable interface, with no fork.
+Keep Cytoscape/fcose graph-local with separate cameras and nested gesture arbitration; native DOM hosts Monaco and isolated frames. Drawing uses perfect-freehand and roughjs (MIT).
+This extends the current frontend composition (AGENTS.md:54); tldraw remains excluded under the approved plan because production licensing/key enforcement and possible telemetry do not fit the choice.
+
+## 2026-11-06 — Canvas 1: deliver independently usable increments
+
+The maintainer approved fronts 0–5: engine measurement (S, complete: A), core/history/store/access (L), library/drag-in (M), live work objects/presence/assignment (L), granted agents/generated UI/types (L), then drawing/templates (M).
+Comfort comes from usable increments; practice from a cohesive front at a time; control from settings delivered with each front, in that order.
+This replaces the roadmap's generic M5 canvas placeholder with the separate Canvas milestone immediately after M5's core; core follows M0, workflow control M5 and IDE integration M6.
+Implementation retains the design pass under DESIGN.md/Impeccable and implementation-approval gate. Fronts 1/3/4 require full verification and two cross-provider reviewers, one Opus; 2/5 do too for sensitive changes (AGENTS.md:45).
+Fake-only replay, Undo/restart, isolation, keyboard/phone access and load evidence accompany delivery; drawing volume waits for bounded ingestion.
+
+## 2026-11-06 — Canvas 2: the person directs graph visibility and navigation
+
+The maintainer approved replacing AGENTS.md:67 in canvas front 1: Oversight opens with the repository graph; Chat loads it on the first switch to Oversight; the person may remove and restore it.
+Panels and cameras change only through the person's navigation; never steal focus. Remember maximize, board and camera per repository; keep decisions chip, status and agents rail outside the canvas.
+Graph growth offers Go there instead of automatically reframing (frontend/src/graph/GraphView.tsx:388). This supersedes that automatic camera behavior when implemented.
+Keyboard move/resize/connect, visible focus, a screen-reader outline and a phone object list with equivalent actions replace the widen-window text at DESIGN.md:685, DESIGN.md:750 and DESIGN.md:992 in the implementing front.
+The approved AGENTS.md replacement is deferred until that front lands; no current UI invariant is changed here.
+
+## 2026-11-06 — Canvas 3: amend the tool list for canvas and page access
+
+The maintainer approved adding canvas_patch and browser_read to the fixed product-tool list, with explicit scoped authority and attributed, revision-checked, replayable, undoable patches.
+This amends AGENTS.md:58 only when canvas front 4 implements the tools and edits the rule; neither tool exists by virtue of this decision.
+Grants are enforced by board, region, object kind and operation; agent patches never move focus or camera automatically. browser_read requires a visible revocable grant for the particular object.
+Browser sign-in remains in its view; no agent receives cookies or page content without that object-reading grant, and Oversight never reads another browser's cookie store.
+The final tool-contract diff still returns to the maintainer under AGENTS.md:38; authority comes only from the person (AGENTS.md:19).
+
+## 2026-11-06 — Canvas 4: review the final board, tool and type contracts
+
+The maintainer approved board-event, canvas_patch/browser_read and custom-type manifest contracts in principle; the final contract diff returns to him before implementation changes contracts/ (AGENTS.md:38).
+This extends the closed catalog in “Lead views stay a closed catalog of typed kinds” (DECISIONS.md:4476) when front 4 lands, reusing reference-resolving LeadViewCard and read-only WorkflowCanvas patterns.
+A type is a manifest (name/icon/inputs/live references/schema/requested capabilities/actions) plus declarative primitives or an isolated-code renderer; agents write ordinary reviewable files with edit_file, preview pending changes and add the type to the repository library on Approve.
+Save to my library enables reuse; export shares files under “License policy by terms”. Types see only placed data; path/event/test/network capabilities require visible logged revocable per-type grants.
+Host chrome identifies type/author/team and alone owns Approve; generated content cannot imitate Oversight controls. Isolated origins/frames require CSP, validated capability messages, no session credential or parent API access; today's preview iframe is not that qualification.
+Evidence/status resolve from events, while generated assertions stay labeled content. Current contracts and the closed catalog stand until their implementing fronts land.
+
+## 2026-11-06 — Canvas 5: a person-owned asset budget
+
+The maintainer chose a default 5 GB per repository for images and snapshots, a warning at 80%, and pruning only by the person's action or chosen policy.
+This adds a disk-retention policy to the Canvas milestone; event batching and ingestion bounds alone do not bound retained assets (backend/src/oversight/events/store.py:206, backend/src/oversight/events/store.py:218).
+Comfort comes from early warning; practice from retaining working materials; control from configurable budget and pruning policy, in that order.
+Repository-scoped snapshots/assets/revisions survive runs in a separate append-only board store/stream, with WAL, one writer, increasing seq, resumable SSE and periodic snapshot revisions, extending the per-run log in ARCHITECTURE.md:93.
+Gestures batch as transactions; Undo appends compensating events without rewinding running agents. The board-event contract awaits the final maintainer diff; no store changes here.
+
+## 2026-11-06 — Canvas 6: measure dropped frames on a quiet host
+
+The maintainer chose configurable targets: at most 1% of frames over 20 ms on a quiet host, interactions ≤100 ms and added canvas JavaScript ≤100 KB gzip, measured in production bundles on the same benchmark board.
+This replaces the proposed p95 16.7 ms frame target: a nominal 16.67 ms tick plus jitter makes it unsuitable. The engine comparison on a loaded host does not establish acceptance.
+Comfort comes from measurable fluidity; practice from checking every front; control from configurable targets, in that order.
+Virtualize objects, lazy-load editors and snapshot offscreen/zoomed-out browser/preview/custom-code objects without implicitly stopping processes; per-object keep alive and attention-based mirror rates remain settings.
+Suspend hidden desktop webviews; the person sets a live-object count with warning and no mandatory cap. Desktop shows per-object/total memory; browser shows live count because other sites' memory is not measurable.
+This extends the current performance baseline without qualifying preview concurrency or isolation; those remain front 3's lifecycle work.
+
+## 2026-11-06 — Canvas 7: grant editing within a chosen frame
+
+The maintainer chose create, edit, move and delete within a person-chosen frame as the recommended canvas delegation scope.
+Comfort comes from simple delegation; practice from a clear agent work area; control from the person's choice of frame, in that order.
+This specializes the broader future grant scopes in “Roadmap limits become person settings with safe defaults”; it gives no agent authority today.
+Front 4 enforces board/region/kind/operation grants, revision checks, attribution, replay and Undo; a connector binds object/port IDs and grants no execution.
+Presence derives from tool-call/event contact with referenced paths/entities/runs, assigned or not; team glow means activity and a dashed border means only a pending change (AGENTS.md:64, AGENTS.md:69).
+
+## 2026-11-06 — Canvas 8: advance composition after M6 review
+
+The maintainer approved advancing generic generative-view composition to canvas front 4 after M6's complete review-loop gate: anchored revision/file/line comments and the first compare-and-merge flow.
+This explicitly replaces M10's generic composition item and its planned-capability mapping in docs/roadmap.md; composition no longer waits for M10's evidence-quality gate.
+Comfort comes from earlier composition; practice from inspecting, annotating, revising and comparing real changes first; control from the approved transition and later scoped grants, in that order.
+M10 retains evidence intelligence, decision probabilities/learning after review, and reference-view release qualification. Front 4 also needs front 3, generated-content isolation and final contract review.
+No existing generated-view capability is enabled by this timing change.
+
+## 2026-11-06 — Canvas 9: repository-local persistence before export
+
+The maintainer chose repository-local server persistence first, followed by explicit credential-free export, rather than implicit sharing or cross-repository synchronization.
+Comfort comes from less setup; practice from persistent work; control from choosing what to export, in that order.
+This extends today's per-run history (ARCHITECTURE.md:93) with board snapshots/assets/revisions across runs; board storage remains separate from environment settings.
+Dragged messages/files/diffs/agents keep live repository/run/entity IDs, message seq and path/change revision; missing sources retain provenance. Freeze copy explicitly creates a labeled snapshot; a Monaco file object edits the live file.
+Stable UUIDs retain geometry, z-order, grouping and frames; board contract changes remain subject to the maintainer's final diff. No persistence or export is implemented here.
+
+## 2026-11-06 — Canvas 10: the optional browser extension needs its own plan
+
+The maintainer approved a separate plan and double review before an optional person-installed extension streams a real tab into a canvas object and forwards input with the browser's own control banner.
+This defers extension execution beyond the built-in browser-object front rather than treating page framing as permission to control a signed-in browser.
+Comfort comes from reusing sign-in; practice from keeping the page beside code; control from person installation, browser consent and visible revocable grants, in that order.
+The default is a linked signed-in tab mirrored only with screen-share consent; credential-free frameable pages use isolated frames. Desktop native webviews remember one sign-in, live focused at full zoom and snapshots otherwise.
+No cookie-store access is added, and the extension gets no implied agent page-reading authority (AGENTS.md:19).
+
+## 2026-11-06 — Canvas 11: command buttons need their own execution plan
+
+The maintainer approved planning a command-button object separately before adding its execution path: the person writes the command, sees it before execution, and its click/run is logged.
+Comfort comes from running on click; practice from explicit reusable commands; control from visible commands and agents pressing them only under a person-issued grant, in that order.
+This defers command-button execution from the canvas object library and drawing/templates fronts; neither a connector nor an object manifest alone authorizes execution.
+Its later plan must satisfy the roadmap's qualified-boundary or explicit-trust principle and the person's policy, with verified lifecycle/cleanup.
+Terminal objects also wait for M4; voice notes wait for dictation. No new shell or execution tool is enabled here.
+
+## 2026-11-06 — WSL repositories use a matching Linux backend
+
+The maintainer approved the Windows window connecting to a matching Linux backend inside the selected WSL2 distro, with a first-use downloaded hash-pinned payload, no extension and no independent backend upgrades.
+Comfort comes from automatic setup; practice from the maintainer's Linux repositories; control from automatic/on/off prefetch, distro selection, cache/retry and visible lifecycle budgets, in that order. Automatic prefetch selects WSL support when WSL plus a distro exists; unchecked keeps the feature available.
+This supersedes the no-WSL-bridge scope of “Bounded native desktop preparation; executable deferred” (DECISIONS.md:4417) and “Package a Windows installer with an embedded Python” (DECISIONS.md:4962), only as the WSL fronts land.
+Order: F1-B authenticated callers/handoff (M); 2a Linux admission (three L then M, independent of F1-B); 2b desktop selection (M selection scope, after both); payload (L, or M plus notices); transport/lifecycle (L); installer/acceptance (M). Detailed ownership, cleanup, accounting and fake-only/native acceptance gates are in docs/roadmap.md.
+Use owned framed stdio HTTP/SSE and a Windows 127.0.0.1:8710 proxy; preserve authenticated matching-commit health, Host/Origin checks and SSE resume. Linux supervision/fallback reaping verifies process identity; never terminate a whole distro. State stays on Linux; shared spending/settings stay Windows-owned, with labeled local accounting and exactly-once reconciliation on channel loss.
+Payload publication waits for “Follow the newest stable CPython when dependencies support it”, “CPython license scope for the desktop distribution” and “License policy by terms”; this entry grants no license exception or runtime upgrade. Maintainer-machine Windows+WSL acceptance remains required.
+
+## 2026-11-06 — Linux admission 1: approve the expanded backend scope
+
+The maintainer approved front 2a for native Linux/WSL source launches, independent of F1-B: admission/Git layouts (L) → environments/isolation (L) → shared recovery/audit (L) → CLI/runtime/factory integration and documentation (M).
+Comfort comes from direct repository opening; practice from small cohesive deliveries; control from public enablement last, in that order. Split each L slice into small changes.
+This replaces POSIX own-path refusal (backend/src/oversight/workspace/source.py:355) only when enabled, extending native Windows disposable COPY without automatic writeback (docs/own-repository.md:9).
+Qualify linked worktrees, shallow/hard-linked/large-object clones using bounded metadata witnesses; preserve private staging, raw-byte bootstrap and unchanged originals, including dirty/untracked inputs/deletions.
+Changed-main and ambiguous resets stay protected. Discarding unmerged/dirty agent work asks with No as default; noninteractive consent is process-only, bound to exact main and refs/dirty/untracked digest, rechecked before destruction, never from .env.
+Full merged-tree verification, two cross-provider reviewers (one Opus), fake-only mutation/recovery/spending/switching evidence and native Linux/WSL plus real DrvFs acceptance remain gates; Windows dispatch must not regress.
+
+## 2026-11-06 — Linux admission 2: explicit CLI selection and separate source state
+
+The maintainer approved serve --repository PATH: lexical absolute resolution against cwd, exact case, traversal validation before normalization; precedence is flag, environment, then .env, before Settings.load so factory/--reload inherits it.
+This supersedes only the “No source-selection CLI” restriction in “Open a repository from the Windows app” (DECISIONS.md:5039) when the integration slice lands; native Windows selection guards remain.
+Let B be the pre-selection runtime setting, default REPO_ROOT/.runtime (backend/src/oversight/settings.py:93): demo uses B, profiles B/profiles/name/.runtime, repositories B/sources/sha256(exact-case-absolute-path)/.runtime, verifying stored source identity.
+Every source shares OVERSIGHT_LEDGER_DIR (default B), including provider/decision ledgers, unknowns, recovery markers and ledger.lock, extending the shared-spending rule at DECISIONS.md:5048.
+Switching never discards another source's runtime or agent work; case-distinct repositories never share runtime/trust keys. Platform dispatch replaces Windows-only startup composition in the final slice.
+
+## 2026-11-06 — Linux admission 3: authorize the own-repository documentation edit
+
+The maintainer approved updating docs/own-repository.md for the Linux admission plan, satisfying that document's explicit approval requirement (docs/own-repository.md:3).
+This extends its native Windows-only current COPY description (docs/own-repository.md:9) when front 2a's final CLI/runtime/factory integration slice lands; this recording front does not edit it.
+The update must distinguish disposable COPY with unchanged originals/no automatic writeback from M1's later session branches and guarded integration.
+Comfort comes from accurate opening guidance; practice from consistent startup/recovery documentation; control from the maintainer's explicit approval and the person's exact discard authority, in that order.
+It grants no execution authority through the informational trust prompt (AGENTS.md:62).
+
+## 2026-11-06 — Linux admission 4: receipts and pre-store audit
+
+The maintainer approved source.admission in principle: receipts cover selection, policies/providers, warnings, environment/limits, discard authority and reversal; the final contract diff returns to him (AGENTS.md:38).
+This extends run.started.workspace and error provenance (contracts/src/oversight_contracts/events.py:98, contracts/src/oversight_contracts/events.py:487) without changing contracts here.
+Before the event store exists, redacted append/fsynced attempt IDs go to a private oversight/startup-audit directory under the person's Linux state directory (XDG state home); import after the next run.started, deduplicate and acknowledge only after commit.
+Failed persistence refuses loosening under AGENTS.md:19. Preserve closed refusal categories and add missing-git, source-permissions, unsafe-git-config, source-changed, source-budget-exceeded, runtime-unavailable, running-oversight-source and previous-session-pending.
+Environment/isolation failure leaves graph access and tests unavailable. Refuse running Oversight development worktrees, aliases/shared Git common-directory identities and reviewed-self admission/execution (AGENTS.md:55, AGENTS.md:63); disclose actual UID/root, providers and exposure.
+This specializes the later admission audit rather than changing today's informational trust rule or granting unsandboxed execution.
+
+## 2026-11-06 — Linux admission 5: reuse the person's selected environment
+
+The maintainer approved discovery in order: OVERSIGHT_REPOSITORY_VENV, .venv, then venv/, including external Poetry/pyenv environments.
+This replaces the fixed .venv/lib/python3.12/site-packages assumption (backend/src/oversight/workspace/source_posix_env.py:514) when the environment slice lands.
+Use bounded isolated executable/version/abiflags/purelib/platlib probes, supplying venv bases under -S and covering python3.13t; generalize async preparation, -I/-S launch, editable remapping and POSIX import guards.
+Comfort comes from reusing environments; practice from respecting Poetry/pyenv; control from an explicit path, in that order.
+Unsupported environments keep graph access without automatic installation or substitution. Whole-repository discovery and person-owned frozen test timeouts remain (AGENTS.md:60).
+
+## 2026-11-06 — Linux admission 6: CPython 3.8 floor with end-of-life warnings
+
+The maintainer confirmed CPython 3.8+ with no upper pin for the person's repository venv; end-of-life versions receive warnings, never refusal solely for age.
+This replaces the CPython 3.12-only admission check (backend/src/oversight/workspace/source_posix_env.py:230) and the suite's 3.10 minimum (backend/src/oversight/workspace/suite.py:47) in front 2a's environment slice; it does not change the backend runtime pin.
+Older minors require postponed annotations, evaluated-cast/observer compatibility and probe changes; qualify pytest>=8.2,<8.4 and pluggy>=1.5,<1.6 there, and probe modern compatible versions.
+Comfort comes from fewer migrations; practice from running the real suite in its environment; control from the person's version choice, in that order.
+Cached uv matrix cells cover 3.8/3.9/3.10/3.12/3.13t/3.14 venvs using focused tests under the 3.12 backend within 20 minutes; no environment is silently substituted.
+
+## 2026-11-06 — Linux admission 7: warned DrvFs sources with Linux state
+
+The maintainer approved DrvFs sources with name/permission checks, warnings and runtime/locks/SQLite on the Linux filesystem; mounted-state handling remains unqualified.
+This extends POSIX admission beyond the existing writable-input/config restrictions (backend/src/oversight/workspace/source_posix.py:134, backend/src/oversight/workspace/source_posix.py:500) in front 2a; it does not relax native Windows drive/case restrictions.
+DrvFs 0777 needs metadata,umask=022 or explicit writer-risk acceptance. Allow boolean core.symlinks; warn for case-insensitive directories, retain actual names and exact-case keys, and refuse unrepresentable snapshots.
+Comfort comes from existing folders; practice from supporting /mnt/c sources; control from explicit risk acceptance and configurable admission budgets, in that order.
+Links, special files and transforms remain unavailable until verified COPY handling exists; simulated DrvFs CI does not replace acceptance on real /mnt/c.
+
+## 2026-11-06 — Linux admission 8: private groups and explicit writer risk
+
+The maintainer approved verified user-private groups, including primary-GID membership, so umask 002 can work; other writers need a warning-backed person setting.
+This amends blanket group-writable refusal (backend/src/oversight/workspace/source_posix.py:134) only in front 2a's admission slice, preserving protection against outsider mutation.
+Comfort comes from existing permissions; practice from the maintainer's group/umask workflow; control from visible explicit exceptions, in that order.
+Keep no-follow/hash checks, private staging, source identity verification and retry on changed witnesses; stale Git locks are diagnosed, never deleted automatically.
+Every loosening remains visible, recorded and reversible (AGENTS.md:19); the agent never accepts writer risk for the person.
+
+## 2026-11-06 — Linux admission 9: defer system-site-packages
+
+The maintainer chose to defer system-site-packages until additional roots can be validated and remapped, retaining the current refusal (backend/src/oversight/workspace/source_posix_env.py:200).
+This explicitly limits front 2a's expanded venv support; a compatible Python version alone does not qualify unvalidated import roots.
+Comfort comes from an explained limitation; practice from leaving the graph usable; control from no automatic environment substitution, in that order.
+The environment slice diagnoses unavailable tests and preserves graph access, without installing dependencies or switching interpreters.
+The later additional-root implementation needs its own evidence; no new admission exception is granted here.
+
+## 2026-11-06 — Linux admission 10: require network and process isolation
+
+The maintainer approved mandatory IsolatedRunner readiness/probes/suites for Linux own repositories, overriding the best_effort own-suite fallback (backend/src/oversight/workspace/capability.py:126).
+This retains AGENTS.md:61's network/PID isolation and filesystem-isolation residual; it grants no unsandboxed test execution. Such a path needs a separate maintainer change to AGENTS.md.
+Blocked namespaces leave the graph open and tests unavailable, with a diagnosed remedy; AppArmor guidance includes sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 and restoration of the previous value (.github/workflows/ci.yml:225).
+Comfort comes from an actionable diagnosis; practice from whole-repository test discovery; control from person-owned timeout/policy, in that order (AGENTS.md:60).
+The approved own-repository documentation update lands with the integration slice; neither the trust prompt nor this plan changes execution authority today.

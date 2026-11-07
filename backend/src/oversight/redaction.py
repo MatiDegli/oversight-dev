@@ -1,22 +1,25 @@
-"""Credential masking shared by local event storage and development probes."""
+"""Run-scoped credential masking; discovered values stay only in memory."""
 
 import re
+from threading import RLock
+from urllib.parse import urlsplit
 
 FRAGMENT = 8  # a run of this many characters of the key is as good as the key
 REDACTED = "[redacted]"
 # What looks like a credential whoever it belongs to: a bearer token, an sk-style key, or a long
 # run of letters and digits mixed (hyphens and underscores split words, so slugs and field names
-# are left alone).
+# are left alone). Only repository diagnostics exempt hexadecimal object ids/content hashes.
 KEY_LIKE = re.compile(
     r"Bearer\s+[A-Za-z0-9._~+/=-]{6,}"
     r"|\b(?:sk|pk|rk)[-_][A-Za-z0-9_-]{8,}"
     r"|\b(?=[A-Za-z0-9]*\d)(?=[A-Za-z0-9]*[A-Za-z])[A-Za-z0-9]{24,}\b",
     re.IGNORECASE,
 )
+SECRET_NAME = re.compile(r"PASS|PWD|DSN|SECRET|TOKEN|KEY|AUTH|CREDENTIAL|PRIVATE", re.IGNORECASE)
 
 
 class Redactor:
-    """Mask credentials in text destined for local storage or probe reports.
+    """Mask credentials before model requests, event publication and probe reports.
 
     It removes the key, every run of FRAGMENT or more characters that appears in the key (so a
     reflected piece of it goes too, not only the whole), and anything shaped like a credential.
@@ -24,22 +27,95 @@ class Redactor:
     """
 
     def __init__(self, key: str | None, *other_keys: str | None) -> None:
+        self._lock = RLock()
+        self._withheld = False
         self._windows: dict[int, set[str]] = {}
+        self._values: dict[str, set[str]] = {}
         for text in (key, *other_keys):
             if text:
-                width = min(FRAGMENT, len(text))
-                self._windows.setdefault(width, set()).update(
-                    text[i : i + width] for i in range(len(text) - width + 1)
-                )
+                self.remember(text)
 
-    def __call__(self, text: str) -> str:
-        return REDACTED.join(self._mask(piece) for piece in text.split(REDACTED))
+    def withhold(self) -> None:
+        """An incomplete inventory must never let repository text through later in this run."""
+        with self._lock:
+            self._withheld = True
 
-    def _mask(self, text: str) -> str:
+    def remember(self, text: str, *, fragments: bool = True) -> None:
+        """Retain matching windows, never persist or report the discovered value."""
+        width = min(FRAGMENT, len(text))
+        if not width:
+            return
+        with self._lock:
+            if not fragments and width == FRAGMENT:
+                self._values.setdefault(text[:FRAGMENT], set()).add(text)
+                return
+            self._windows.setdefault(width, set()).update(
+                text[i : i + width] for i in range(len(text) - width + 1)
+            )
+
+    def remember_file(self, name: str, content: str) -> None:
+        """Literal dotenv assignments, or key/PEM body lines and their joined body.
+
+        Quoted single-line values and export assignments are supported. No interpolation,
+        escape decoding or encoded variants are inferred.
+        """
+        dotenv = any(part.casefold().startswith(".env") for part in name.split("/"))
+        pem = "-----BEGIN " in content
+        body: list[str] = []
+        for line in content.splitlines():
+            line = line.strip()
+            if not line or line.startswith(("#", "-----BEGIN ", "-----END ")):
+                continue
+            match = None if pem else re.fullmatch(r"(?:export\s+)?([\w]+)\s*=\s*(.*?)\s*", line)
+            if match is not None:
+                value = match[2]
+                if value.startswith(("'", '"')):
+                    value = value[1:].split(value[0], 1)[0]
+                else:
+                    value = re.split(r"\s+#", value, maxsplit=1)[0].rstrip()
+                self._remember_assignment(match[1], value)
+            elif pem or not dotenv:
+                body.append(line)
+        for value in [*body, "".join(body)]:
+            if len(value) >= FRAGMENT:
+                self.remember(value)
+
+    def _remember_assignment(self, name: str, value: str) -> None:
+        """Keep credentials, including URL passwords, without collecting ordinary settings."""
+        if len(value) < FRAGMENT:
+            return
+        try:
+            password = urlsplit(value).password
+        except ValueError:
+            password = None
+        shaped = KEY_LIKE.search(value) is not None
+        if SECRET_NAME.search(name) or shaped or password is not None:
+            self.remember(value, fragments=shaped and password is None)
+        if password is not None and len(password) >= FRAGMENT:
+            self.remember(password, fragments=KEY_LIKE.search(password) is not None)
+
+    def __call__(self, text: str, *, preserve_hex: bool = False) -> str:
+        with self._lock:
+            if self._withheld:
+                return REDACTED if text else text
+            return REDACTED.join(self._mask(piece, preserve_hex) for piece in text.split(REDACTED))
+
+    def _mask(self, text: str, preserve_hex: bool) -> str:
         spans: list[list[int]] = []
         for start in range(len(text)):
             width = max(
-                (w for w, windows in self._windows.items() if text[start : start + w] in windows),
+                (
+                    *(
+                        w
+                        for w, windows in self._windows.items()
+                        if text[start : start + w] in windows
+                    ),
+                    *(
+                        len(value)
+                        for value in self._values.get(text[start : start + FRAGMENT], ())
+                        if text.startswith(value, start)
+                    ),
+                ),
                 default=0,
             )
             if width:
@@ -53,4 +129,11 @@ class Redactor:
             pieces += [text[done:begin], REDACTED]
             done = end
         pieces.append(text[done:])
-        return KEY_LIKE.sub(REDACTED, "".join(pieces))
+        return KEY_LIKE.sub(
+            lambda match: (
+                match[0]
+                if preserve_hex and re.fullmatch(r"[a-f0-9]+", match[0], re.IGNORECASE)
+                else REDACTED
+            ),
+            "".join(pieces),
+        )

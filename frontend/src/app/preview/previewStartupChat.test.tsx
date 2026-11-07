@@ -1,3 +1,11 @@
+import { applyTimeZone, AUTOMATIC } from "../../timeZone";
+import { beforeEach as beforeZone, afterEach as afterZone } from "vitest";
+beforeZone(() => {
+  applyTimeZone("UTC");
+});
+afterZone(() => {
+  applyTimeZone(AUTOMATIC);
+});
 import { useContext } from "react";
 import { renderToReadableStream } from "react-dom/server";
 import { beforeEach, expect, it, vi } from "vitest";

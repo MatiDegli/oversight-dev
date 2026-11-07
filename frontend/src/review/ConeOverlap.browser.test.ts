@@ -10,7 +10,9 @@ let server: ViteDevServer, browser: Browser, html: string, url: string;
 beforeAll(async () => {
   server = await createServer({
     root: fileURLToPath(new URL("../../", import.meta.url)),
-    cacheDir: fileURLToPath(new URL("../../../.shots/cone-overlap/cache", import.meta.url)),
+    cacheDir: fileURLToPath(
+      new URL("../../node_modules/.vite-browser-tests/cone-overlap", import.meta.url),
+    ),
     optimizeDeps: { entries: ["src/review/ConeOverlap.fixture.tsx"] },
     server: { host: "127.0.0.1", port: 0, strictPort: false },
   });
@@ -28,6 +30,7 @@ afterAll(async () => {
 });
 async function mounted(width: number, test: (page: Page) => Promise<void>) {
   const page = await browser.newPage({
+    timezoneId: "America/Argentina/Buenos_Aires",
     viewport: { width, height: width === 390 ? 844 : 800 },
     reducedMotion: "reduce",
   });

@@ -64,6 +64,7 @@ interface Options {
 async function withPage(options: Options, test: (page: Page) => Promise<void>) {
   if (!browser) throw new Error("Browser was not started");
   const page = await browser.newPage({
+    timezoneId: "UTC",
     viewport: options.viewport ?? { width: 1600, height: 900 },
     reducedMotion: options.reducedMotion ?? "no-preference",
   });

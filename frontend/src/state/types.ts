@@ -22,6 +22,7 @@ import type {
 } from "@contracts";
 
 import type { DecisionEvent } from "./decisionProjection";
+import type { StageAcc, StagePoint } from "./stageFold";
 import type { NeedsYou } from "./needsYou";
 
 /** Retained envelope order; older in-memory fixtures can omit the timestamp. */
@@ -137,8 +138,11 @@ export interface State {
   changeFacts: Record<string, ChangeFacts[]>;
   /** Run-local inbox evidence; retained even when the current proposal is replaced. */
   decisionEvents: DecisionEvent[];
-  /** Complete accepted inventory: continuity and horizon include unrelated events. */
-  stageEvents: ServerEvent[];
+  /** Per-change consumed data; unrelated envelopes only advance the horizon. */
+  stageAcc: Record<string, StageAcc>;
+  /** contiguous preserves the old null reading after a same-run restart above seq 1. */
+  stageHorizon: (StagePoint & { contiguous: boolean }) | null;
+  lastEventType: ServerEvent["type"] | null;
   /** Stage horizons are independent of change and graph-evidence identities. */
   changeStages: Record<string, ChangeStages | null>;
 }
@@ -178,7 +182,9 @@ export function createInitialState(): State {
     testExecutions: {},
     changeFacts: {},
     decisionEvents: [],
-    stageEvents: [],
+    stageAcc: {},
+    stageHorizon: null,
+    lastEventType: null,
     changeStages: {},
   };
 }

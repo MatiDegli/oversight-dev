@@ -43,7 +43,7 @@ async function startCameraBrowser() {
   await server.listen();
   url = server.resolvedUrls?.local[0] ?? "";
   browser = await launchBrowser();
-  sharedPage = await browser.newPage({ viewport: { width: 1600, height: 900 } });
+  sharedPage = await browser.newPage({ timezoneId: "UTC", viewport: { width: 1600, height: 900 } });
   const page = sharedPage;
   page.setDefaultTimeout(5_000);
   page.on("request", (request) => {

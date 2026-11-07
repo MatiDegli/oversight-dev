@@ -16,6 +16,7 @@ from oversight.workspace.isolation import IsolatedRunner
 from oversight.workspace.locks import offload
 from oversight.workspace.runner import Spawn
 from oversight.workspace.snapshot import finish_snapshot, take_snapshot
+from oversight.workspace.suite_guard import remember_secrets
 
 if TYPE_CHECKING:
     from oversight.workspace.core import Tree, Workspace
@@ -89,6 +90,25 @@ def _read_report(path: Path, targets: Sequence[BehaviorTarget]) -> dict[str, Beh
     return found
 
 
+def _redact_observations(
+    workspace: "Workspace", observations: dict[str, BehaviorObservation]
+) -> dict[str, BehaviorObservation]:
+    """Keep typed comparisons honest by withholding entire private observations."""
+    return {
+        target_id: BehaviorObservation(problem="secret-bearing behavior withheld")
+        if any(
+            workspace.redact(text) != text
+            for text in (
+                target_id,
+                json.dumps(observation.results, ensure_ascii=False),
+                observation.problem or "",
+            )
+        )
+        else observation
+        for target_id, observation in observations.items()
+    }
+
+
 async def run_behavior_worker(
     workspace: "Workspace",
     tree: "Tree",
@@ -112,6 +132,7 @@ async def run_behavior_worker(
         partial(take_snapshot, tree.git_identity, workspace.integrity, timeout_s)
     )
     try:
+        await offload(partial(remember_secrets, workspace, tree))
         await offload(lambda: request.write_text(raw, encoding="utf-8"))
         process = await spawn(
             [
@@ -136,7 +157,9 @@ async def run_behavior_worker(
             raise TimeoutError("behavior budget exhausted")
         if process.returncode != 0:
             raise WorkspaceError("behavior worker failed")
-        return await offload(partial(_read_report, report, targets))
+        await offload(partial(remember_secrets, workspace, tree))
+        observations = await offload(partial(_read_report, report, targets))
+        return _redact_observations(workspace, observations)
     finally:
         await offload(lambda: (request.unlink(missing_ok=True), report.unlink(missing_ok=True)))
         if isinstance(spawn, IsolatedRunner) and not spawn.cleanup_complete:

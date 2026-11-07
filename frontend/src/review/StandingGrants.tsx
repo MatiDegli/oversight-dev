@@ -1,10 +1,10 @@
+import { useClock } from "../timeZone";
 import { useState } from "react";
 import { replayDecisionWords, useDecisions } from "./DecisionContext";
 import { commandFailure } from "../transport";
 import { ShieldCheck } from "lucide-react";
 import type { State } from "../state";
 import { grantReasons, grantScopeWords, selectActiveGrants } from "../state";
-import { eventTime } from "./ChangeCard";
 import "./inbox.css";
 
 function Revoke({ id }: { id: string }) {
@@ -35,6 +35,7 @@ function Revoke({ id }: { id: string }) {
   );
 }
 export function StandingGrants({ state }: { state: State }) {
+  const clock = useClock();
   const grants = selectActiveGrants(state);
   return (
     <section aria-label="Standing grants" className="grants-content">
@@ -49,7 +50,7 @@ export function StandingGrants({ state }: { state: State }) {
               <h3>{grantReasons[grant.reason]}</h3>
               <p>{grantScopeWords(grant.scope)}</p>
               <p className="decision-muted">
-                Given by you at {eventTime(grant.ts)} · {grant.uses}{" "}
+                Given by you at {clock(grant.ts, { label: true })} · {grant.uses}{" "}
                 {grant.uses === 1 ? "change" : "changes"} let through
               </p>
             </div>

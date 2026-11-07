@@ -160,8 +160,8 @@ class PreviewManager:
             and parent_authority.split(":")[0] != "localhost"
         ):
             raise PreviewError(
-                "Shop preview requires a localhost parent "
-                "until its authority adapter is available.",
+                "Shop preview is unavailable at this address. "
+                "Open Oversight at localhost on the same port, then try again.",
                 code="not_configured",
             )
         # Synchronous reservation BEFORE waiting for locks/preflight Git: never evict an owner.

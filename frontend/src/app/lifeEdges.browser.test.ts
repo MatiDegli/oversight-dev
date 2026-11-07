@@ -37,6 +37,7 @@ afterAll(async () => {
 
 async function withPage(width: number, theme: string, test: (page: Page) => Promise<void>) {
   const page = await browser.newPage({
+    timezoneId: "UTC",
     viewport: { width, height: width === 1920 ? 1080 : 800 },
     reducedMotion: "reduce",
   });
@@ -388,6 +389,8 @@ it("keeps a chip popover still while its button presses, excluding editor and gr
     });
     await chip.click();
     const popover = page.locator("[data-chip-popover]");
+    // Placement reveals the initially hidden popover after writing its transform.
+    await check(popover).toBeVisible();
     const before = await popover.boundingBox();
     const box = await chip.boundingBox();
     if (!box || !before) throw new Error("Missing chip or popover");

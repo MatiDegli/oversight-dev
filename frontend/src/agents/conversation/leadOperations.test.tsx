@@ -1,3 +1,11 @@
+import { applyTimeZone, AUTOMATIC } from "../../timeZone";
+import { beforeEach as beforeZone, afterEach as afterZone } from "vitest";
+beforeZone(() => {
+  applyTimeZone("UTC");
+});
+afterZone(() => {
+  applyTimeZone(AUTOMATIC);
+});
 import type { LeadStatus, ServerEvent, UsageTick } from "@contracts";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";

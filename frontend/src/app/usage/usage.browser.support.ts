@@ -54,6 +54,7 @@ export function usageBrowserSupport(cachePrefix = "") {
     const entry = entries[options.replay ? 1 : 0];
     if (!entry) throw new Error("Missing server");
     const page = await browser.newPage({
+      timezoneId: "UTC",
       viewport: { width: options.width ?? 1920, height: options.width === 1280 ? 800 : 1080 },
       reducedMotion: "reduce",
     });
@@ -77,7 +78,10 @@ export function usageBrowserSupport(cachePrefix = "") {
 
 async function warmReplay(browser: Browser, entry: { url: string; html: string }) {
   // Replay mounts App rather than Harness: warm its own Vite graph/dependency pass once.
-  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+  const page = await browser.newPage({
+    timezoneId: "UTC",
+    viewport: { width: 1920, height: 1080 },
+  });
   try {
     await page.route("**/usage", (route) => route.fulfill({ json: recorded }));
     await page.route("**/", (route) =>

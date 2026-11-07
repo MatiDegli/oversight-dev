@@ -72,7 +72,7 @@ function suite(
   });
 }
 
-it("keeps stable subtask IDs, computes waves and parallel starts from dependencies", () => {
+it("keeps revision-scoped subtask indices, waves and parallel starts from dependencies", () => {
   const state = base();
   const rows = projectPlanFlow(state, plan);
   expect(rows.map((item) => [item.index, item.wave])).toEqual([
@@ -82,6 +82,8 @@ it("keeps stable subtask IDs, computes waves and parallel starts from dependenci
     [3, 1],
   ]);
   expect(rows[0]).toMatchObject({
+    planId: plan.plan_id,
+    planRevision: plan.revision,
     agentId: agent.agent_id,
     word: "Working",
     progress: "Step 3 of 10",
@@ -281,4 +283,16 @@ it("folds each live/replay prefix identically without mutating evidence", () => 
     expect(JSON.stringify(replay)).toBe(before);
   }
   expect(projectPlanFlow(streamed, plan)).toEqual(projectPlanFlow(live, plan));
+});
+
+it("passes exact winning plan context without inferring identity across revisions", () => {
+  const state = base();
+  const replacement = { ...plan, revision: 2 };
+  expect(
+    projectPlanFlow(state, replacement).map(({ planId, planRevision, index }) => [
+      planId,
+      planRevision,
+      index,
+    ]),
+  ).toEqual([0, 1, 2, 3].map((index) => [plan.plan_id, 2, index]));
 });

@@ -13,7 +13,8 @@ it.each([
 ])("matches the server team identity and first-start order for $name", ({ name, text }) => {
   const state = text.trim().split("\n").map(parseEvent).reduce(applyEvent, createInitialState());
   expect(state.gap).toBe(false);
-  expect(selectTeams(state)).toEqual(golden[name]);
+  const { byAgent, teamOrder } = selectTeams(state);
+  expect({ byAgent, teamOrder }).toEqual(golden[name]);
   if (name === "handwritten-lead-plans.jsonl") {
     expect(state.agents).toEqual({});
     expect(selectTeams(state).byAgent["agent-1"]).toEqual({ team: "agent-1", kind: "lead" });

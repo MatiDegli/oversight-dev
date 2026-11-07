@@ -1,5 +1,5 @@
 import type { ServerEvent } from "@contracts";
-import { applyEvent } from "../state";
+import { applyEvent, createInitialState } from "../state";
 import { parseEvent } from "./events";
 import type { ReplayOptions } from "./replay";
 import { replayOffsets, replayPrefix } from "./replayTimeline";
@@ -51,6 +51,9 @@ export function createReplayPlayer({
   let timer: ReturnType<typeof setTimeout>;
   let generation = 0;
   let anchor = performance.now();
+  let folded = createInitialState();
+  let cursor = 0; // First event not included in folded, independent of the incoming store.
+  let recordingPrefix = true;
   const publish = (next: Partial<ReplaySnapshot>) => {
     snapshot = { ...snapshot, ...next };
     listeners.forEach((listener) => {
@@ -67,15 +70,52 @@ export function createReplayPlayer({
       snapshot.position +
         (snapshot.status === "playing" ? (performance.now() - anchor) * snapshot.speed : 0),
     );
-  const advance = (position: number) => {
-    let state = store.getState().state;
-    for (const [index, event] of snapshot.events.entries()) {
-      if (event.seq > state.lastSeq && (snapshot.offsets[index] ?? Infinity) <= position) {
-        state = applyEvent(state, event);
-        if (state.gap)
-          throw new Error(`Replay sequence or graph version mismatch at ${String(event.seq)}`);
+  const fold = (position: number, throughSeq = Infinity, advancing = false) => {
+    let state = advancing ? store.getState().state : folded;
+    let next = cursor;
+    let prefix = recordingPrefix;
+    if (advancing && state !== folded) {
+      // Another writer replaced the store. Resume its sequence, but never cache it as a refold.
+      prefix = false;
+      next = 0;
+      let end = snapshot.events.length;
+      while (next < end) {
+        const middle = Math.floor((next + end) / 2);
+        if ((snapshot.events[middle]?.seq ?? Infinity) <= state.lastSeq) next = middle + 1;
+        else end = middle;
       }
     }
+    const previous = snapshot.events[next - 1];
+    // Nondecreasing offsets and strictly increasing sequences make this equivalent to replayPrefix.
+    // Backward seeks refold from zero: one current fold needs no checkpoint ownership or cache.
+    // Timed advancement retains applied events even when its clock moves backward.
+    if (
+      !advancing &&
+      (!prefix ||
+        (previous &&
+          (previous.seq > throughSeq || (snapshot.offsets[next - 1] ?? Infinity) > position)))
+    ) {
+      state = createInitialState();
+      next = 0;
+      prefix = true;
+    }
+    while (next < snapshot.events.length) {
+      const event = snapshot.events[next];
+      if (!event || event.seq > throughSeq || (snapshot.offsets[next] ?? Infinity) > position)
+        break;
+      state = applyEvent(state, event);
+      if (state.gap)
+        throw new Error(`Replay sequence or graph version mismatch at ${String(event.seq)}`);
+      next++;
+    }
+    // Commit the cursor only after the entire requested prefix folds successfully.
+    folded = state;
+    cursor = next;
+    recordingPrefix = prefix;
+    return state;
+  };
+  const advance = (position: number) => {
+    const state = fold(position, Infinity, true);
     if (state !== store.getState().state) store.setState({ state });
     anchor = performance.now();
     publish({ position, status: position >= snapshot.duration ? "ended" : snapshot.status });
@@ -96,7 +136,7 @@ export function createReplayPlayer({
     if (abort.signal.aborted || !snapshot.events.length) return;
     cancel();
     const clamped = Math.max(0, Math.min(snapshot.duration, Number.isNaN(position) ? 0 : position));
-    const state = replayPrefix(snapshot.events, snapshot.offsets, clamped, throughSeq);
+    const state = fold(clamped, throughSeq);
     store.setState({ state });
     anchor = performance.now();
     publish({

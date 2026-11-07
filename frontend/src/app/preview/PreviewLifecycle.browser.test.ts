@@ -4,6 +4,7 @@ import { chatSizes } from "./previewChat.browser.support";
 import {
   previewLifecycleSupport,
   ownershipPresent,
+  refusedStartReason,
   type LifecyclePage,
 } from "./previewLifecycle.browser.support";
 
@@ -41,6 +42,31 @@ async function arrivalGuard(session: LifecyclePage) {
   expect(await support.geometry(page)).toEqual(before);
   await check(page.locator(".chat-preview-slot, iframe")).toHaveCount(0);
 }
+
+it.each(matrix)(
+  "shows the refused-start reason at $viewport.width × $viewport.height in $theme",
+  async ({ viewport, theme }) => {
+    support.reset();
+    support.refuseStart();
+    const session = await support.open(viewport, theme);
+    try {
+      await support.lead(session.page);
+      await option(session).click();
+      await check(
+        session.page.getByRole("heading", { name: "Closure is unconfirmed" }),
+      ).toBeVisible();
+      await check(session.page.getByText(refusedStartReason, { exact: false })).toBeVisible();
+      await check(session.page.locator("iframe")).toHaveCount(0);
+      expect(await ownershipPresent(session.page)).toBe(false);
+      expect(support.count("start")).toBe(1);
+      expect(support.count("stop")).toBe(0);
+      expect(support.invalidRequests()).toEqual([]);
+      await evidence(session, "refused-start");
+    } finally {
+      await session.context.close();
+    }
+  },
+);
 
 it.each(matrix)(
   "proves shared-authority lifecycle at $viewport.width × $viewport.height in $theme",
@@ -227,6 +253,8 @@ it("a duplicate copying an unmarked owner record stays an observer and sends not
       await duplicate.page.close();
     }
     await session.page.locator(".preview-panel button").click();
+    // The owner dismisses its panel only after the Stop receipt confirms closure.
+    await check(session.page.locator(".preview-panel")).toHaveCount(0);
     expect(support.state()).toBe("stopped");
   } finally {
     await session.context.close();

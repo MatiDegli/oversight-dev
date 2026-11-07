@@ -28,7 +28,11 @@ afterAll(async () => {
 });
 
 async function openSettings(colorScheme: "light" | "dark") {
-  const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, colorScheme });
+  const page = await browser.newPage({
+    timezoneId: "UTC",
+    viewport: { width: 1280, height: 800 },
+    colorScheme,
+  });
   await page.route("**/settings", (route) =>
     route.fulfill({ json: { settings: [], restart_required: false, apply: "server_restart" } }),
   );

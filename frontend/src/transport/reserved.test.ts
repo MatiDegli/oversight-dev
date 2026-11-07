@@ -16,7 +16,8 @@ describe("reserved level 3 events", () => {
     const next = applyEvent(state, event);
     expect(next).toEqual({
       ...state,
-      stageEvents: [...state.stageEvents, event],
+      stageHorizon: { seq: event.seq, ms: Date.parse(event.ts), contiguous: true },
+      lastEventType: event.type,
       eventFacts: {
         ...state.eventFacts,
         [event.seq]: {
@@ -53,7 +54,12 @@ describe("reserved level 3 events", () => {
     await replay.ready;
     expect(store.getState().state).toEqual({
       ...state,
-      stageEvents: [...state.stageEvents, ...additions],
+      stageHorizon: {
+        seq: additions.at(-1)?.seq,
+        ms: Date.parse(additions.at(-1)?.ts ?? ""),
+        contiguous: true,
+      },
+      lastEventType: additions.at(-1)?.type,
       eventFacts: {
         ...state.eventFacts,
         ...Object.fromEntries(

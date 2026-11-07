@@ -307,6 +307,7 @@ class LiveRun:
             if tree is not None
             else TEMPLATE,
             pytest_pin=pytest_pin(),
+            redactor=Redactor(settings.meta_api_key, settings.baseten_api_key),
             demo_python=settings.demo_python,
             pytest_targets=self._source.pytest_targets if self._source else (),
             pytest_options=self._source.pytest_options if self._source else (),

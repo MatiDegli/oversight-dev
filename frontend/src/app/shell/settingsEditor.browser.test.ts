@@ -60,6 +60,7 @@ it.each([1280, 390])(
   "edits, preserves refused drafts and scrolls without overflow at %ipx",
   async (width) => {
     const page = await browser.newPage({
+      timezoneId: "UTC",
       viewport: { width, height: 800 },
       reducedMotion: "reduce",
     });
@@ -143,7 +144,7 @@ it.each([1280, 390])(
   },
 );
 it("keeps replay settings read-only at 390px and never requests the settings file", async () => {
-  const page = await browser.newPage({ viewport: { width: 390, height: 800 } });
+  const page = await browser.newPage({ timezoneId: "UTC", viewport: { width: 390, height: 800 } });
   const requests: string[] = [];
   await page.route("**/settings", (route) => {
     requests.push(route.request().url());

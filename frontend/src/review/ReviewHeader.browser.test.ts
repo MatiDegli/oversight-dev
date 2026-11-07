@@ -103,7 +103,10 @@ async function comparison(
 ) {
   if (!sketchDir)
     throw new Error("Set REVIEW_HEADER_SKETCH_DIR to the read-only review sketch directory");
-  const sketch = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+  const sketch = await browser.newPage({
+    timezoneId: "America/Argentina/Buenos_Aires",
+    viewport: { width: 1920, height: 1080 },
+  });
   try {
     await sketch.route("http://sketch.test/**", async (route) => {
       const path = new URL(route.request().url()).pathname;
@@ -147,7 +150,10 @@ it.each(["dark", "day"])(
   "uses one measured header for A, B and merged in %s at 1920",
   async (theme) => {
     for (const name of ["a", "b", "merged", "approvedCone"] as const) {
-      const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+      const page = await browser.newPage({
+        timezoneId: "America/Argentina/Buenos_Aires",
+        viewport: { width: 1920, height: 1080 },
+      });
       const errors: string[] = [];
       page.on("pageerror", (error) => errors.push(error.message));
       try {
@@ -196,7 +202,10 @@ it.each(["dark", "day"])(
 
 // 960 CSS px exercises the space available at 200% zoom on the 1920px demo screen.
 it.each([1920, 1280, 960])("wraps long task and provenance at %i CSS px", async (width) => {
-  const page = await browser.newPage({ viewport: { width, height: 1080 } });
+  const page = await browser.newPage({
+    timezoneId: "America/Argentina/Buenos_Aires",
+    viewport: { width, height: 1080 },
+  });
   try {
     await page.route("**/", (route) => route.fulfill({ contentType: "text/html", body: html }));
     await page.goto(url);
@@ -284,7 +293,10 @@ async function mountTask(page: Page, task: string, width?: number) {
 it.each([390, 1920])(
   "clamps a long task to two lines with a toggle at %i CSS px",
   async (width) => {
-    const page = await browser.newPage({ viewport: { width, height: 844 } });
+    const page = await browser.newPage({
+      timezoneId: "America/Argentina/Buenos_Aires",
+      viewport: { width, height: 844 },
+    });
     try {
       await page.route("**/", (route) => route.fulfill({ contentType: "text/html", body: html }));
       await page.goto(url);
@@ -329,7 +341,10 @@ it.each([390, 1920])(
 );
 
 it("measures instead of counting: a task under 140 characters that overflows at 390 has a toggle", async () => {
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const page = await browser.newPage({
+    timezoneId: "America/Argentina/Buenos_Aires",
+    viewport: { width: 390, height: 844 },
+  });
   try {
     await page.route("**/", (route) => route.fulfill({ contentType: "text/html", body: html }));
     await page.goto(url);

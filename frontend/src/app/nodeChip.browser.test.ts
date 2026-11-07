@@ -72,6 +72,7 @@ async function withPage(
   test: (page: Page) => Promise<void>,
 ) {
   const page = await browser.newPage({
+    timezoneId: "UTC",
     viewport: { width, height: width === 1920 ? 1080 : 800 },
     reducedMotion: "reduce",
   });
@@ -251,7 +252,7 @@ it.each([
 );
 
 it("excludes drawn labels, overlays, underlays and edges from body boxes", async () => {
-  const page = await browser.newPage();
+  const page = await browser.newPage({ timezoneId: "UTC" });
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   try {
@@ -371,7 +372,10 @@ it("keeps placement and dismissal subscriptions stable across usage ticks", asyn
 });
 
 it("places the captured graph evidence beside its approved sketches", async () => {
-  const page = await browser.newPage({ viewport: { width: 3840, height: 1080 } });
+  const page = await browser.newPage({
+    timezoneId: "UTC",
+    viewport: { width: 3840, height: 1080 },
+  });
   try {
     for (const [live, sketch] of [
       ["review", "behavior-dark"],
