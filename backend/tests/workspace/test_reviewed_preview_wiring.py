@@ -1006,8 +1006,8 @@ def real_prepared_inputs(directory, tracked):
     )
 
 
-# Inventories, four boundary commands and deployed ownership all share this outer guard.
-@pytest.mark.timeout(6 * CONTROLLED_READINESS_S)
+# Inventories, four command hang guards and deployed ownership share this outer guard.
+@pytest.mark.timeout(30 * CONTROLLED_READINESS_S)
 async def test_reviewed_offline_build_and_imports(tmp_path):
     import json
     from dataclasses import asdict
@@ -1041,13 +1041,19 @@ else: raise AssertionError('dependency write')
 print(json.dumps(dict(backend=oversight.__file__, contracts=oversight_contracts.__file__)))
 """
     node = "/opt/node/node"
+    # 600 s is a hang guard for builds sharing two CPUs under load, not a performance check.
     commands: list[dict[str, Any]] = [
         dict(argv=["/opt/pnpm/pnpm", "--version"], cwd="/T"),
         dict(argv=["/opt/deps/backend/bin/python", "-c", code], cwd="/T"),
-        dict(argv=[node, "/opt/deps/frontend/typescript/bin/tsc", "--noEmit"], cwd="/T/frontend"),
+        dict(
+            argv=[node, "/opt/deps/frontend/typescript/bin/tsc", "--noEmit"],
+            cwd="/T/frontend",
+            lifetime_s=600,
+        ),
         dict(
             argv=[node, "/opt/deps/frontend/vite/bin/vite.js", "build", "--outDir", "/state/dist"],
             cwd="/T/frontend",
+            lifetime_s=600,
         ),
     ]
     for command in commands:
@@ -1061,25 +1067,19 @@ print(json.dumps(dict(backend=oversight.__file__, contracts=oversight_contracts.
             file_bytes=16 * 1024**2,
         )
         print("translated command", command)
+        serialized = json.dumps(payload)
         handle = await launch_boundary(
             BoundaryConfig(
-                argv=(
-                    "/opt/python/bin/python",
-                    "-I",
-                    "-S",
-                    "-c",
-                    wiring._EXEC,
-                    json.dumps(payload),
-                ),
+                argv=("/opt/python/bin/python", "-I", "-S", "-c", wiring._EXEC, serialized),
                 cwd=command["cwd"],
-                lifetime_s=120,
+                lifetime_s=command.get("lifetime_s", 120),
                 launch_timeout_s=20,
                 output_cap=1024**2,
             ),
             roots,
         )
         try:
-            async with asyncio.timeout(120):
+            async with asyncio.timeout(command.get("lifetime_s", 120) + 30):
                 await handle.wait()
             assert handle.returncode == 0, handle.stdout + handle.stderr
             print("build/import provenance", handle.stdout)
