@@ -116,7 +116,8 @@ function Decision({ practice, attempt, onAnswer, onNext, onReveal }: PanelProps)
       <p>{impactText(proposal.impact.entries.length)}.</p>
       {omittedText(proposal.impact) && <p>{omittedText(proposal.impact)}</p>}
       <p id="practice-only">
-        These buttons save a practice answer only. Approve requires a pointer click.
+        These buttons save a practice answer only. The practice Approve button requires a pointer
+        click.
       </p>
       <div className="flex gap-3">
         <button

@@ -24,4 +24,9 @@ it.each([
     />,
   );
   expect(html).toContain('class="practice-panel h-full overflow-auto p-6 text-text"');
+  if (attempt.started && !attempt.revealed) {
+    expect(html).toContain(
+      "These buttons save a practice answer only. The practice Approve button requires a pointer click.",
+    );
+  }
 });

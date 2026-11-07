@@ -68,9 +68,11 @@ the agents' lights, the diff) is where this happens, not the pitch.
   retained. Live moments show event facts and explain that rewind is available in replay.
 - Watch mode: the graph and the agents panel, with live node highlighting and agent cards.
 - Review mode: an inline diff in Monaco beside the graph with the impact cone; decisions Approve,
-  Reject and, from level 2, Request changes. Approve has no keyboard shortcut by default; M5 adds
-  the person's "Approve by keyboard" setting, off by default with an indicator while on. Until
-  then approval behaves exactly as today.
+  Reject and, from level 2, Request changes. Approve accepts a pointer click or an unmodified Enter
+  held for one second on the focused, enabled Approve control. Releasing early cancels; taps, Space,
+  modified Enter and comment typing never approve. Focused held Enter ships enabled with a fixed
+  one-second duration. The approved disable switch and adjustable duration await recorded settings
+  contracts and history; neither preference is available today. No global approval shortcut exists.
 - Live diff (read-only) and file view share the review panel; there is no third screen.
 - Current models are Muse Spark through the Meta Model API and Muse Spark Open through Baseten.
   Calls use the official OpenAI SDK today; M2 adds native Anthropic/Google SDKs behind the same

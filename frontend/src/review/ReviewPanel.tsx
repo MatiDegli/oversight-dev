@@ -212,6 +212,7 @@ export function ReviewPanel({
             onDecide={onDecide}
             replayOf={replayOf}
             candidate={body.facts?.review_cards?.length ? candidate : changeId}
+            approvalCandidate={candidate}
             cards={body.facts?.review_cards ?? []}
             answers={answers}
             unavailable={body.kind === "unavailable"}

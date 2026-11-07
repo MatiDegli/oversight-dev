@@ -203,7 +203,9 @@ getActiveTheme())`, and `EditorDiff`'s font gate. Colors from theme tokens only.
   the path and "Unsaved edits" while dirty; Save is enabled only when dirty and not saving.
 - **Save**: the button and Ctrl+S/Cmd+S send `{path, content, base_hash}`. The shortcut is a Monaco
   command plus a `keydown` on the panel element, both removed on unmount. It cannot fire in review:
-  `FileView` is unmounted while `View.review` is set. Approve keeps its pointer-only rule.
+  `FileView` is unmounted while `View.review` is set. The pointer-only Approve premise is
+  superseded by the 2026-11-06 security packet point 12(c): pointer or focused held Enter, enabled
+  with a fixed one-second duration; disable/duration preferences await recorded settings contracts.
 - **Answers**: `FileSaved` adopts the returned hash and the sent text as loaded (edits typed in
   flight stay dirty against it). The PUT itself is App's, not the component's (F2, 2.3): an
   unmount settles nothing and drops nothing. `stale_file` shows "This file changed on the server since you

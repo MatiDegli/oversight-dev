@@ -5,6 +5,7 @@ import type { ReviewCard } from "@contracts";
 import type { Answers } from "./AnswerChoices";
 import { cardAnswer, cardKey } from "./AnswerChoices";
 import type { DecisionAction, DecisionView } from "./decisions";
+import { ApproveButton } from "./ApproveButton";
 
 const pendingWords: Record<DecisionAction, string> = {
   approve: "Approving: waiting for the merge result.",
@@ -84,6 +85,7 @@ export function CardDecisions({
           </span>
         </p>
         <CardActions
+          candidate={candidate}
           no={!!no}
           open={open}
           allYes={allYes}
@@ -99,6 +101,7 @@ export function CardDecisions({
 }
 
 function CardActions({
+  candidate,
   no,
   open,
   allYes,
@@ -107,6 +110,7 @@ function CardActions({
   comment,
   onDecide,
 }: {
+  candidate: string;
   no: boolean;
   open: boolean;
   allYes: boolean;
@@ -118,16 +122,15 @@ function CardActions({
   return (
     <div className="decision-actions">
       {!no && (
-        <button
+        <ApproveButton
+          candidate={candidate}
           className="decision-primary"
           disabled={!open || !allYes || view.kind !== "open"}
           aria-describedby={approvalReason}
-          onClick={(event) => {
-            if (event.detail > 0) onDecide?.("approve", comment);
-          }}
+          onApprove={() => onDecide?.("approve", comment)}
         >
           {!allYes && <LockKeyhole size={14} aria-hidden="true" />} Approve and merge
-        </button>
+        </ApproveButton>
       )}
       <button
         className={no ? "decision-primary" : undefined}

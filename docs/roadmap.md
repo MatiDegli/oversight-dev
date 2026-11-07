@@ -172,7 +172,34 @@ Each milestone starts when its gate holds and a slot is free. Milestones run in 
 - Queued or interrupting lead steering and wake policy: configurable; default = today's behavior; indicator "custom steering/wakes" (available from M5).
 - Stop confirmation and retention: configurable; default = today's behavior (confirm and retain); indicator "custom Stop policy" (available from M5).
 - Nested capacity and wakes exposed independently: configurable; default = today's behavior; indicator "custom nested capacity/wakes" (available from M5).
-- Approve: pointer-only by default (DECISIONS.md, 2026-10-26); the person's "Approve by keyboard" setting for keyboard and screen-reader users is off by default, with an indicator while on (available from M5).
+- Approve: security packet point 12(c), approved 2026-11-06 at 09:54 ART, supersedes the
+  pointer-only and off-by-default keyboard guidance. The focused held-Enter front ships enabled
+  at a fixed one-second duration alongside pointer approval. The person can disable it and adjust
+  its duration once recorded settings contracts and history land; those controls remain pending.
+  No global approval shortcut, Ctrl+Enter or Ctrl K approval command is introduced.
+  - Maintainer proposal (not an implemented contract): application/person scope, shared by all
+    review surfaces, persisted in the selected environment file through GET/PUT `/settings`, never
+    browser storage. Proposed allowlisted fields `OVERSIGHT_APPROVE_HOLD_ENABLED` (boolean,
+    default true) and `OVERSIGHT_APPROVE_HOLD_MS` (positive integer milliseconds, default 1000).
+    Reject zero, negatives, fractions, non-finite numbers and invalid booleans; no arbitrary maximum.
+    Return stored and effective values plus file/environment/default provenance and an explicit
+    application boundary. Environment overrides must be visible and must never be reported as a
+    successful effective change when only the file changed. Maintainer review owns exact API
+    names, scope, schema, CAS revision and the event envelope; F1/F3 settings plans remain the boundary.
+  - Save shows an exact diff, consequence and scope before the person's confirmation. Proposed
+    application: the next fresh gesture after a durably recorded save; cancel any hold in progress,
+    never reinterpret elapsed time. Show a persistent "Keyboard approval off" or custom duration
+    indicator beside Approve and update the accessible instructions from the effective snapshot.
+    Retain pointer approval. A shorter duration explicitly discloses reduced accidental-merge protection.
+  - A dedicated settings receipt records revision, person/provenance, scope, before/after stored
+    and effective values, application boundary and any restored receipt. Commit it before UI
+    confirmation; define file/event failure recovery so no unrecorded change silently takes effect.
+    History and Restore use revision-bound comparisons, record a new receipt, preserve intervening
+    edits and allow removal of an override to restore the default. Restore cancels active holds too.
+    Do not reuse `merge_mode.changed`; a maintainer-owned settings contract is required.
+  - Criteria, in order: keyboard access works immediately; deliberate holding preserves accidental-
+    merge protection; disabling and duration control remain approved settings work, deferred because
+    persistence, receipts and Restore require contracts.
 - Settings themselves: every save gets a receipt, history, diff and Restore, with provenance (file, environment, default) and next-run application; this front precedes agent settings proposals (available from M5).
 - Every setting can be suggested, prepared or applied by an agent within the person's grants, never widening its own authority. Otherwise a typed, revision-bound proposal needs the person's click on an Oversight-rendered card (exact change, scope, what loosens, indicator; never stealing focus) or their own chat message bound to that visible proposal, never file content, tool output or another agent; receipt and Undo follow. Words suffice except safety loosening (grants, tests off, unsandboxed execution, secret access), which asks for one click unless the person enables words for it. The settings-proposal front follows M5's contracts and settings-history fronts and the maintainer's contract review (available from M5).
 - **Policy dry-run:** replay recorded decision inputs against a proposed rule or gate. It needs principle 4's captured inputs, not just the log.

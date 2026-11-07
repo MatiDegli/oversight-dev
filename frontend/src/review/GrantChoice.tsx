@@ -7,6 +7,7 @@ import { useDecisions } from "./DecisionContext";
 import { decisionView } from "./decisions";
 import { DecisionFeedback } from "./CardDecisions";
 import { selectPossibleCallersWait } from "./inboxSelectors";
+import { ApproveButton } from "./ApproveButton";
 
 export function GrantChoice({
   state,
@@ -20,6 +21,8 @@ export function GrantChoice({
   const scopeId = useId();
   const candidate = candidateKey(state, changeId);
   const grant = useAnswers((s) => s.grants[candidate]);
+  // Answer edits must invalidate a hold even when the event state has not changed.
+  useAnswers((s) => s.drafts[candidate]);
   const scope = grant?.scope.kind;
   const { attempts, onDecide } = useDecisions();
   const change = state.changes[changeId];
@@ -33,15 +36,14 @@ export function GrantChoice({
   return (
     <div className="grant-choice">
       {!scopeOnly && (
-        <button
+        <ApproveButton
+          candidate={candidate}
           className="decision-primary"
           disabled={!enabled || !allYes}
-          onClick={(event) => {
-            if (event.detail > 0) onDecide?.(changeId, "approve", "");
-          }}
+          onApprove={() => onDecide?.(changeId, "approve", "")}
         >
           Approve
-        </button>
+        </ApproveButton>
       )}
       <details
         onToggle={(event) => {

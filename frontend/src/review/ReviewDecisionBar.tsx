@@ -7,6 +7,7 @@ import type { DecisionView } from "./decisions";
 import type { ReviewPanelProps } from "./ReviewPanel";
 import "./inbox.css";
 import { approvalLocked, approvalLockedCaption } from "./answers";
+import { ApproveButton } from "./ApproveButton";
 
 const focusRing =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text";
@@ -66,6 +67,7 @@ export function ReviewDecisionBar({
   cards = [],
   answers = {},
   candidate = changeId,
+  approvalCandidate = candidate,
   unavailable = false,
 }: {
   changeId: string;
@@ -76,12 +78,12 @@ export function ReviewDecisionBar({
   cards?: ReviewCard[];
   answers?: Answers;
   candidate?: string;
+  approvalCandidate?: string;
   unavailable?: boolean;
 }) {
   const approvalReason = useId();
   const requestReason = useId();
   const editsReason = useId();
-  const [keyboardTried, setKeyboardTried] = useState(false);
   const values = cards.map((card) => cardAnswer(card, answers));
   const no = cards.find((_card, i) => values[i] === "no");
   const prefill = no?.example
@@ -112,10 +114,8 @@ export function ReviewDecisionBar({
   const pending = view.kind === "pending";
   const revising = view.kind === "revising";
   const approvable = view.kind === "open" && onDecide !== undefined && !blocked && !locked;
-  const pointerCaption = keyboardTried && approvable;
   const loading = blocked === "loading";
-  const hasCaption =
-    pointerCaption || locked || loading || unavailable || (!recorded && view.kind !== "conflict");
+  const hasCaption = locked || loading || unavailable || (!recorded && view.kind !== "conflict");
   const requestable =
     (view.kind === "open" || view.kind === "conflict") && onDecide !== undefined && !blocked;
   // A disabled control always says why: pending, revising, edits and conflicts have their own lines.
@@ -123,9 +123,7 @@ export function ReviewDecisionBar({
   const describedBy = (...ids: (string | false)[]) => ids.filter(Boolean).join(" ") || undefined;
   const rejectable = (view.kind === "open" || view.kind === "conflict") && onDecide !== undefined;
   const failure = view.kind === "open" || view.kind === "conflict" ? view.failure : null;
-  // No key in this section makes a decision. Approve answers only a pointer click: Enter and Space
-  // on the focused button arrive as a click with detail 0, which AGENTS.md forbids it to act on.
-  // Reject stays keyboard-operable, and Escape in the comment box only leaves the box.
+  // Only Approve owns its held-Enter gesture; comment typing never starts a decision.
   return (
     <section aria-label="Decision" className={bar}>
       {view.kind === "conflict" && <Resolution resolution={view.resolution} />}
@@ -155,20 +153,14 @@ export function ReviewDecisionBar({
         />
       )}
       <div className="review-decision-actions mt-2.5 flex flex-wrap items-center gap-2.5">
-        <button
-          type="button"
+        <ApproveButton
+          candidate={approvalCandidate}
           disabled={!approvable}
           aria-describedby={describedBy(
             hasCaption && approvalReason,
             blocked === "edits" && editsReason,
           )}
-          onClick={(event) => {
-            // Keyboard and scripted clicks have detail 0; only a pointer can merge.
-            if (event.detail === 0) {
-              setKeyboardTried(true);
-              return;
-            }
-            setKeyboardTried(false);
+          onApprove={() => {
             onDecide?.(changeId, "approve", comment);
           }}
           className={primary}
@@ -179,7 +171,7 @@ export function ReviewDecisionBar({
             <GitMerge aria-hidden="true" className="size-4" />
           )}{" "}
           Approve and merge
-        </button>
+        </ApproveButton>
         <button
           type="button"
           disabled={!requestable || comment.trim() === ""}
@@ -212,15 +204,13 @@ export function ReviewDecisionBar({
           id={approvalReason}
           className="review-decision-caption mt-2 text-[13px] leading-[18px] text-muted"
         >
-          {pointerCaption
-            ? "Approve with a click: it merges into main"
-            : locked
-              ? approvalLockedCaption
-              : loading
-                ? "Approve and Request changes open when the file finishes loading."
-                : unavailable
-                  ? "The check is still unavailable. You decide whether to continue without it."
-                  : "If main moved since the agent started, the tests run again on the combined result before the merge."}
+          {locked
+            ? approvalLockedCaption
+            : loading
+              ? "Approve and Request changes open when the file finishes loading."
+              : unavailable
+                ? "The check is still unavailable. You decide whether to continue without it."
+                : "If main moved since the agent started, the tests run again on the combined result before the merge."}
         </p>
       )}
       {needsComment && (
