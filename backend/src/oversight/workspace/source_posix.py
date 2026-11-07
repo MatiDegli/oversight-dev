@@ -629,6 +629,10 @@ def _validate(listing: Inventory) -> Selection:
         current = source.root
         for part in ("", *relative(name)[:-1]):
             current = current / part if part else current
+            # Keep the first witness for the final check. Per-file reads still pin
+            # and check all ancestors; shared witnesses need only be recorded once.
+            if current in directories:
+                continue
             try:
                 with directory(current):
                     directories[current] = token(current.lstat())
