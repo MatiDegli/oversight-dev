@@ -1,8 +1,13 @@
 # Graph invalidation evidence
 
 Base checked at dispatch: `c55fac027dd9394c02703bb2642d7e61ae65e68d`, on
-`frontend/graph-invalidation`, with a clean worktree. Contracts, events, reducer, layout solver,
-styles and tokens are unchanged. Frame passes one retained-stage flag through its existing container.
+`frontend/graph-invalidation`, with a clean worktree. This front changes no contracts, events,
+layout solver, styles or tokens. Frame passes one retained-stage flag through its existing container.
+
+This measurement was rerun after merging main `ba05377e`. Both paths now use its real reducer,
+including the incremental stage projection that replaced `State.stageEvents`; the frozen full
+graph updater remains the `c55fac02` baseline. The unrelated, hidden-event and pan/zoom cases
+call that reducer inside the measured interval, so the earlier evidence was refreshed.
 
 Run separately from `make check`:
 
@@ -34,32 +39,32 @@ the seven samples, excluding initialization by entry start time. Separate marks 
 `applyFrames` and `applyRoutes` phases after each case. Raw values, browser version and UTC recording
 time are in the JSON artifact. Measurements are synthetic observations, not Windows acceptance.
 
-Recorded 2026-11-06T02:15:40.544Z; Chromium 156.0.8078.4. This run includes the hidden-layout
-retry fix (`e56d1044`) and queued agent-presentation collapse (`0aa5a151`).
+Recorded 2026-11-07T00:10:11.240Z; Chromium 156.0.8078.4. This run includes the hidden-layout
+retry fix (`e56d1044`), queued agent-presentation collapse (`0aa5a151`) and merged main reducer.
 
 |  Nodes | Scenario      | Pixel/tick ms before → after | Work ms before → after | Long tasks before → after |
 | -----: | ------------- | ---------------------------: | ---------------------: | ------------------------: |
-|    100 | class         |                  33.2 → 33.4 |              4.8 → 0.9 |                     0 → 0 |
-|    100 | unrelated     |                  50.3 → 32.5 |             44.8 → 0.0 |                     0 → 0 |
-|    100 | hidden        |                  33.3 → 33.3 |              4.2 → 0.0 |                     0 → 0 |
-|    100 | hidden-events |                  61.0 → 33.1 |             46.5 → 0.0 |                     2 → 0 |
-|    100 | pan/zoom      |                  69.7 → 33.4 |             46.6 → 0.0 |                     3 → 0 |
-|  1,000 | class         |                  47.7 → 42.6 |             19.8 → 3.8 |                     1 → 1 |
-|  1,000 | unrelated     |                 451.2 → 31.3 |            446.0 → 0.0 |                     6 → 1 |
-|  1,000 | hidden        |                  32.3 → 33.3 |             18.7 → 0.0 |                     1 → 0 |
-|  1,000 | hidden-events |                 449.8 → 33.1 |            441.2 → 0.0 |                     6 → 0 |
-|  1,000 | pan/zoom      |                 487.2 → 33.1 |            464.2 → 0.0 |                     6 → 0 |
-| 10,000 | class         |                346.5 → 210.6 |           183.7 → 44.0 |                    13 → 9 |
-| 10,000 | unrelated     |                6329.5 → 33.4 |           6339.3 → 0.0 |                     7 → 1 |
-| 10,000 | hidden        |                 331.2 → 33.2 |            183.4 → 0.0 |                    13 → 1 |
-| 10,000 | hidden-events |                5826.0 → 33.2 |           5869.4 → 0.0 |                     7 → 1 |
-| 10,000 | pan/zoom      |                5248.5 → 38.0 |           5188.3 → 0.0 |                     7 → 1 |
+|    100 | class         |                  32.7 → 33.7 |              7.3 → 0.9 |                     0 → 0 |
+|    100 | unrelated     |                  66.4 → 29.5 |             51.3 → 0.0 |                     4 → 0 |
+|    100 | hidden        |                  33.0 → 33.4 |              4.2 → 0.0 |                     0 → 0 |
+|    100 | hidden-events |                  66.3 → 33.0 |             51.9 → 0.0 |                     4 → 0 |
+|    100 | pan/zoom      |                  60.9 → 33.5 |             43.6 → 0.0 |                     2 → 0 |
+|  1,000 | class         |                  65.1 → 40.5 |             26.8 → 3.8 |                     2 → 1 |
+|  1,000 | unrelated     |                 575.9 → 30.9 |            552.1 → 0.0 |                     6 → 1 |
+|  1,000 | hidden        |                  48.9 → 33.2 |             24.3 → 0.0 |                     1 → 0 |
+|  1,000 | hidden-events |                 528.1 → 33.4 |            514.3 → 0.0 |                     6 → 0 |
+|  1,000 | pan/zoom      |                 582.6 → 32.9 |            550.5 → 0.0 |                     6 → 1 |
+| 10,000 | class         |                409.1 → 211.9 |           221.4 → 34.9 |                    13 → 8 |
+| 10,000 | unrelated     |                7362.2 → 33.4 |           7294.4 → 0.0 |                     7 → 1 |
+| 10,000 | hidden        |                 428.3 → 33.3 |            247.1 → 0.0 |                    13 → 1 |
+| 10,000 | hidden-events |                5353.1 → 33.3 |           5358.1 → 0.0 |                     7 → 1 |
+| 10,000 | pan/zoom      |                6054.3 → 36.3 |           5964.0 → 0.0 |                     9 → 1 |
 
-Hidden class graph applications during measurement were 7 → 0 at each size. Showing the new path applied exactly one final paint projection; show-to-two-frame times were 100: 33.8 ms, 1,000: 61.3 ms, 10,000: 184.8 ms. Hidden-events applications were 210 → 0 at each size, with exactly one application on show; show-to-two-frame times were 100: 37.0 ms, 1,000: 34.7 ms, 10,000: 65.9 ms. Unrelated and pan/zoom graph applications were 210 → 0; visible class applications were 7 → 7.
+Hidden class graph applications during measurement were 7 → 0 at each size. Showing the new path applied exactly one final paint projection; show-to-two-frame times were 100: 37.3 ms, 1,000: 57.4 ms, 10,000: 229.7 ms. Hidden-events applications were 210 → 0 at each size, with exactly one application on show; show-to-two-frame times were 100: 34.5 ms, 1,000: 42.5 ms, 10,000: 119.2 ms. Unrelated and pan/zoom graph applications were 210 → 0; visible class applications were 7 → 7.
 
-At 10,000 nodes, the separate settle phase measurements after the class case were 80.3 ms for frames and 44.3 ms for routes (124.6 ms total). Those passes remain global and unchanged. Class-only application avoids them; projection/application still took 44.0 ms on average, while event-to-two-frame latency was 210.6 ms. The remaining end-to-end cost includes scheduling and rendering. Incremental settle and WebGL rendering remain outside this front.
+At 10,000 nodes, the separate settle phase measurements after the class case were 83.7 ms for frames and 43.8 ms for routes (127.5 ms total). Those passes remain global and unchanged. Class-only application avoids them; projection/application still took 34.9 ms on average, while event-to-two-frame latency was 211.9 ms. The remaining end-to-end cost includes scheduling and rendering. Incremental settle and WebGL rendering remain outside this front.
 
-Frame scheduling can dominate small updates: at 100 nodes the class median was 33.2 → 33.4 ms despite lower projection/application work (4.8 → 0.9 ms). This seven-sample run is not a statistical latency guarantee. Some optimized 10,000-node cases still recorded one browser long task with zero graph applications.
+Frame scheduling can dominate small updates: at 100 nodes the class median was 32.7 → 33.7 ms despite lower projection/application work (7.3 → 0.9 ms). This seven-sample run is not a statistical latency guarantee. Some optimized 10,000-node cases still recorded browser long tasks with zero graph applications.
 
 The parity suite keeps the old full updater and fold controller as independent test oracles.
 It compares exact data (including routing fields and frame minima), class sets, positions and
@@ -93,11 +98,10 @@ extracts invalidation. The frozen fold oracle exceeds 80 lines to preserve the o
 flow. The benchmark's run function exceeds 80 lines to keep setup, performance observation, marks
 and cleanup within one auditable experiment. The reviewer decides these size exceptions.
 
-Validation for this evidence refresh (all commands unpiped, each exited 0):
+Validation for this evidence refresh:
 
-- `pnpm -C frontend exec tsc --noEmit`: 0 errors.
-- `pnpm -C frontend exec vitest related --run --maxWorkers 2 src/graph/invalidation.bench.test.ts`: 1 file passed, 2 tests passed. Both tests failed against the stale evidence before this refresh. They check the complete case matrix, hidden-event application counts, table values, recording metadata and documented case counts.
-- `pnpm -C frontend exec eslint --max-warnings 0 src/graph/invalidation.bench.test.ts`: 0 errors/warnings.
-- `pnpm -C frontend exec node src/graph/invalidation.bench.ts`: 30 browser measurement cases passed their count/finite-value assertions.
+- `pnpm -C frontend exec node src/graph/invalidation.bench.ts`: exit 0; 30 browser measurement cases passed their count/finite-value assertions.
+- `pnpm -C frontend exec vitest run --project unit src/graph/invalidation.parity.test.ts`: exit 0; 1 file and 31 tests passed, including all 1,152 randomized sequence steps against the real merged reducer.
+- `invalidation.bench.test.ts` checks the complete case matrix, hidden-event application counts, every table value, recording metadata and documented case counts against the JSON artifact.
 
-No Python files changed. Full gates, application browser acceptance and screenshot comparison remain with the coordinating loop as requested; this evidence refresh does not claim new screenshot evidence.
+No Python files changed. Full backend gates, Windows application acceptance and screenshot comparison remain with the coordinating loop; this measurement does not claim new screenshot evidence.
