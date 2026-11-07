@@ -35,3 +35,10 @@ class StartupRefusal(OSError):
     def __init__(self, message: str, category: str = "other") -> None:
         super().__init__(message)
         self.refusal_category = category
+
+
+class SourceChanged(StartupRefusal):
+    """A bounded source witness changed; inventory may retry before any handoff."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message, "source-changed")
