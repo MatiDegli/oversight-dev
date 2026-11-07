@@ -1,3 +1,11 @@
+import { applyTimeZone, AUTOMATIC } from "../../timeZone";
+import { beforeEach as beforeZone, afterEach as afterZone } from "vitest";
+beforeZone(() => {
+  applyTimeZone("UTC");
+});
+afterZone(() => {
+  applyTimeZone(AUTOMATIC);
+});
 // eslint-disable-next-line no-restricted-imports -- Explicit renderer header fixture with independent paint and identity.
 import { mark } from "../../graph/marks.testSupport"; // Explicit renderer header input.
 import { renderToReadableStream, renderToStaticMarkup } from "react-dom/server";

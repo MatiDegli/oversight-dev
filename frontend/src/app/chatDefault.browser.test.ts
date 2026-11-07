@@ -38,6 +38,7 @@ it.each([1280, 390].flatMap((width) => ["dark", "day"].map((theme) => ({ width, 
   "production opens in Chat at $width px in $theme, then loads Oversight once",
   async ({ width, theme }) => {
     const page = await browser.newPage({
+      timezoneId: "UTC",
       viewport: { width, height: width === 390 ? 844 : 800 },
       reducedMotion: "reduce",
     });

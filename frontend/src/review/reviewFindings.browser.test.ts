@@ -29,7 +29,7 @@ afterAll(async () => {
   await server.close();
 });
 async function mounted(width: number, test: (page: Page) => Promise<void>) {
-  const page = await browser.newPage();
+  const page = await browser.newPage({ timezoneId: "America/Argentina/Buenos_Aires" });
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   try {

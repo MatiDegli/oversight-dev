@@ -35,6 +35,7 @@ afterAll(async () => {
 
 async function open(options: WorkflowOptions = {}, width = 1280, theme = "dark") {
   const page = await browser.newPage({
+    timezoneId: "UTC",
     viewport: { width, height: width === 390 ? 844 : 900 },
     reducedMotion: "reduce",
   });

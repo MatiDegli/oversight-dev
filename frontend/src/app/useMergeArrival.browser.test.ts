@@ -64,7 +64,7 @@ afterAll(async () => {
   await rm(cacheDir, { recursive: true, force: true });
 });
 it("returns Merging and holds the pending mark in the first render receiving a merge", async () => {
-  const page = await browser.newPage({ reducedMotion: "no-preference" });
+  const page = await browser.newPage({ timezoneId: "UTC", reducedMotion: "no-preference" });
   try {
     const html = await server.transformIndexHtml(
       "/",

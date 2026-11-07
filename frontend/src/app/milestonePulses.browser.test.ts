@@ -97,6 +97,7 @@ async function scene(
   held = true,
 ) {
   const page = await browser.newPage({
+    timezoneId: "UTC",
     viewport: { width, height },
     reducedMotion: reduced ? "reduce" : "no-preference",
   });

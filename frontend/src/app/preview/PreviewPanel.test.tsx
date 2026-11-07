@@ -169,6 +169,40 @@ it("explains the next action when closure is uncertain without an existing frame
   expect(html).toContain("Another preview cannot start until closure is verified.");
   expect(html).not.toContain("iframe");
 });
+it.each(["start_failed", "closure_unconfirmed"] as const)(
+  "appends the %s reason as escaped text after existing copy",
+  (notice) => {
+    const html = render({
+      uncertain: true,
+      notice,
+      refusalReason: "Open <localhost> & try again.",
+    });
+    const copy =
+      notice === "start_failed"
+        ? "The preview could not be confirmed. Replacement is unavailable until closure is verified."
+        : "Close to request verified closure. Another preview cannot start until closure is verified.";
+    expect(html).toContain(`${copy} Open &lt;localhost&gt; &amp; try again.</p>`);
+    expect(html).not.toContain("<localhost>");
+  },
+);
+it.each(["start_failed", "closure_unconfirmed"] as const)(
+  "leaves %s copy unchanged without a refusal reason",
+  (notice) => {
+    expect(render({ uncertain: true, notice, refusalReason: null })).toBe(
+      render({ uncertain: true, notice }),
+    );
+  },
+);
+it("does not show a retained HTTP reason for another notice or a pending stop", () => {
+  for (const patch of [
+    { notice: "renewal_failed" as const },
+    { notice: null },
+    { notice: "closure_unconfirmed" as const, pending: true },
+  ])
+    expect(render({ ...patch, refusalReason: "Unrelated refusal." })).not.toContain(
+      "Unrelated refusal.",
+    );
+});
 it("keeps pending closure polite and announces failed commands assertively", () => {
   expect(render({ pending: true, uncertain: true, notice: "closure_unconfirmed" })).toContain(
     'role="status"',

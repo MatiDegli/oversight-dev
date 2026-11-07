@@ -86,7 +86,10 @@ const check = (actual: Awaited<ReturnType<typeof measure>>) => {
 };
 
 it.each(["dark", "day"])("keeps No disabled in %s replay", async (theme) => {
-  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+  const page = await browser.newPage({
+    timezoneId: "America/Argentina/Buenos_Aires",
+    viewport: { width: 1920, height: 1080 },
+  });
   const commands: string[] = [];
   page.on("request", (request) => {
     if (request.method() !== "GET") commands.push(request.url());
@@ -126,7 +129,10 @@ it.each(["dark", "day"])("keeps No disabled in %s replay", async (theme) => {
 it.each(["dark", "day"])(
   "contains long failures and preserves multilingual comments and focus in %s",
   async (theme) => {
-    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    const page = await browser.newPage({
+      timezoneId: "America/Argentina/Buenos_Aires",
+      viewport: { width: 1280, height: 800 },
+    });
     try {
       await page.route("**/", (route) => route.fulfill({ contentType: "text/html", body: html }));
       await page.goto(url);
@@ -194,7 +200,10 @@ async function comparison(
   const header = await page
     .locator(".review-header")
     .screenshot({ path: `${shots}${name}-${theme}-header.png` });
-  const sketch = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+  const sketch = await browser.newPage({
+    timezoneId: "America/Argentina/Buenos_Aires",
+    viewport: { width: 1920, height: 1080 },
+  });
   try {
     await sketch.route("http://sketch.test/**", async (route) => {
       const path = new URL(route.request().url()).pathname;
@@ -216,7 +225,10 @@ async function comparison(
         return `<tr><td>${k}</td><td>${String(actual[k])}</td><td>${String(reference[k])}</td><td>${String(expected[k])}</td></tr>`;
       })
       .join("");
-    const report = await browser.newPage({ viewport: { width: 3840, height: 1300 } });
+    const report = await browser.newPage({
+      timezoneId: "America/Argentina/Buenos_Aires",
+      viewport: { width: 3840, height: 1300 },
+    });
     try {
       await report.setContent(
         `<style>body{margin:0;font:16px sans-serif;background:#eee;color:#111}.pair{display:flex}td,th{padding:2px 20px;text-align:left}</style><div class="pair"><img width="1920" src="data:image/png;base64,${product.toString("base64")}"><img width="1920" src="data:image/png;base64,${original.toString("base64")}"></div><p>Product (hand-written fixture) / approved docs/sketches/review/${name}-${theme}.png · 1920 × 1080 · DESIGN.md item 6</p><table><tr><th>Measurement (px except weight)</th><th>Product</th><th>Sketch DOM</th><th>DESIGN.md</th></tr>${rows}</table>`,
@@ -243,7 +255,10 @@ it.each(["dark", "day"])(
   "measures one pinned decision bar for a and b at 1920 in %s",
   async (theme) => {
     for (const name of ["a", "b"]) {
-      const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+      const page = await browser.newPage({
+        timezoneId: "America/Argentina/Buenos_Aires",
+        viewport: { width: 1920, height: 1080 },
+      });
       const errors: string[] = [];
       page.on("pageerror", (error) => errors.push(error.message));
       try {

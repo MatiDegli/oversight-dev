@@ -34,7 +34,10 @@ beforeAll(async () => {
   url = server.resolvedUrls?.local[0] ?? "";
   browser = await launchBrowser();
   // Pay the cold module transform and dependency pass before the per-test navigation budget.
-  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+  const page = await browser.newPage({
+    timezoneId: "UTC",
+    viewport: { width: 1920, height: 1080 },
+  });
   try {
     await page.route("**/", (route) => route.fulfill({ contentType: "text/html", body: html }));
     await page.goto(url, { timeout: 60_000 });
@@ -55,7 +58,10 @@ export async function withPage(
   expectedErrors: string[] = [],
 ) {
   if (!browser) throw new Error("Browser was not started");
-  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+  const page = await browser.newPage({
+    timezoneId: "UTC",
+    viewport: { width: 1920, height: 1080 },
+  });
   page.setDefaultTimeout(15_000);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));

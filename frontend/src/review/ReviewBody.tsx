@@ -1,3 +1,4 @@
+import { useClock } from "../timeZone";
 import { presentationFor } from "../teams/presentation";
 import { ChevronDown, CircleAlert } from "lucide-react";
 import { Fragment } from "react";
@@ -6,7 +7,7 @@ import type { State } from "../state";
 import { grantReasons, grantScopeWords } from "../state";
 import { cardAnswer, Example } from "./AnswerChoices";
 import { candidateKey, useAnswers } from "./answers";
-import { CardEvidence, eventTime } from "./ChangeCard";
+import { CardEvidence } from "./ChangeCard";
 import { CrossReviewNote } from "./CrossReviewNote";
 import { mergedRuleWords } from "./evidenceWords";
 import { hasReviewFindings } from "./reviewFindings";
@@ -38,6 +39,7 @@ export function ReviewBody({
   showCrossReview: boolean;
   phone?: boolean;
 }) {
+  const clock = useClock();
   const { kind, card, facts, callers, summary } = selectReviewBody(state, changeId);
   const change = state.changes[changeId];
   const extensions = parameterExtensions(state, changeId);
@@ -137,7 +139,7 @@ export function ReviewBody({
               <p className="grant-receipt" key={use.grant_id}>
                 Under grant <code>{use.grant_id}</code> · {grantReasons[use.authorization.reason]} ·{" "}
                 {grantScopeWords(use.authorization.scope)} · given{" "}
-                {eventTime(use.authorization.creation_ts)}.
+                {clock(use.authorization.creation_ts, { label: true })}.
               </p>
             ))}
           {card && (kind === "a" || kind === "unavailable") && (

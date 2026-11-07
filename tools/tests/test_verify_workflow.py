@@ -293,7 +293,8 @@ def assert_verify_policy(verify: str, ci: str) -> None:
     assert workflow["permissions"] == "{}"
     assert_ci_triggers(ci)
     jobs = mapping(workflow["jobs"])
-    assert set(jobs) == {"check", "secrets"}
+    assert set(jobs) == {"check", "python-tests", "secrets"}
+    assert steps(mapping(jobs["python-tests"])["steps"])[-1] == TRACKED
     ci_jobs = mapping(mapping(ci)["jobs"])
     parsed_steps: dict[str, list[dict[str, str]]] = {}
     for job_id, timeout in (("check", "20"), ("secrets", "10")):
@@ -341,7 +342,7 @@ def assert_verify_policy(verify: str, ci: str) -> None:
         "name": "Allow unprivileged user namespaces",
         "run": "sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0",
     }
-    assert check[7:9] == [{"run": "make check-ci"}, {"run": "make smoke"}]
+    assert check[7:9] == [{"run": "make check-ci-no-python"}, {"run": "make smoke"}]
     assert check[9]["name"] == "Report network isolation probe"
 
     secrets = parsed_steps["secrets"]
@@ -708,7 +709,7 @@ exec({script!r})
         ),
         ("make install", "uv sync --frozen"),
         ("./.github/actions/setup-gitleaks", "some-owner/setup-gitleaks@main"),
-        ("make check-ci", "make check-ci || true"),
+        ("make check-ci-no-python", "make check-ci-no-python || true"),
         ("make smoke", "make smoke\n        continue-on-error: true"),
         ('{"confirmed", "unavailable"}', '{"confirmed", "unavailable", "failed"}'),
         (' --log-opts="HEAD"', ""),
@@ -737,13 +738,15 @@ def test_verify_rejects_unpinned_or_drifted_actions(action: str, ref: str) -> No
         assert_verify_policy(verify.replace(action, changed), (WORKFLOWS / "ci.yml").read_text())
 
 
-@pytest.mark.parametrize("job", ["check", "secrets"])
+@pytest.mark.parametrize("job", ["check", "python-tests", "secrets"])
 def test_tracked_files_is_required_in_each_job(job: str) -> None:
     verify = (WORKFLOWS / "verify.yml").read_text()
+    jobs = mapping(mapping(verify)["jobs"])
+    assert steps(mapping(jobs[job])["steps"])[-1] == TRACKED
     start = verify.index(f"  {job}:\n")
     tracked = verify.index("      - name: tracked files\n", start)
-    end = verify.find("\n  secrets:", tracked)
-    end = end if end != -1 else len(verify)
+    last_line = '          test -z "$status"\n'
+    end = verify.index(last_line, tracked) + len(last_line)
     with pytest.raises(AssertionError):
         assert_verify_policy(verify[:tracked] + verify[end:], (WORKFLOWS / "ci.yml").read_text())
 

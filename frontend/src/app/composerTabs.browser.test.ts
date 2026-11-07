@@ -28,6 +28,7 @@ afterAll(async () => {
 
 it("restores a draft after a tab unmount and confirms a successful pause", async () => {
   const page = await browser.newPage({
+    timezoneId: "UTC",
     viewport: { width: 1920, height: 1080 },
     reducedMotion: "reduce",
   });
@@ -157,7 +158,7 @@ async function lateRejection(page: Page, draft: string) {
 }
 
 async function failedSendBehavior() {
-  const page = await browser.newPage({ reducedMotion: "reduce" });
+  const page = await browser.newPage({ timezoneId: "UTC", reducedMotion: "reduce" });
   try {
     await mountDeferred(page);
     // Exercise the late-settlement race first so the regression fails at that boundary.
@@ -231,6 +232,7 @@ describe.skipIf(process.env.SEND_FAILURE_SHOTS !== "1")("failed send captures", 
     ] as const) {
       for (const theme of ["dark", "day"] as const) {
         const page = await browser.newPage({
+          timezoneId: "UTC",
           viewport: { width, height },
           reducedMotion: "reduce",
         });

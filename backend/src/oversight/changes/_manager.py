@@ -508,7 +508,7 @@ class ChangeManager:
                 capture.target.head_commit,
             )
             cross_review.current(self._ctx, capture)
-            return diff
+            return self._ctx.workspace.redact(diff)
 
     def request_cross_review(
         self, capture: ReviewCapture, outcome: ReviewOutcome, *, review_seq: int
