@@ -208,19 +208,28 @@ async def test_history_remains_responsive_while_insertion_waits(
 
     async with endpoint(tmp_path) as (store, client):
         await store.publish(resolution("committed"))
+        initial = success(await client.get("/history"))
+        assert initial.through_seq == 1
+        assert [event.seq for event in initial.events] == [1]
+        assert initial.next_seq is None
         entered, release = threading.Event(), threading.Event()
         insert = store._insert  # pyright: ignore[reportPrivateUsage]
 
         def held(rows):
             entered.set()
-            assert release.wait(10)
+            # Outlast the read's hang guard so the insertion stays held throughout it.
+            assert release.wait(60)
             insert(rows)
 
         monkeypatch.setattr(store, "_insert", held)
         pending = asyncio.create_task(store.publish(resolution("pending")))
         try:
             assert await asyncio.to_thread(entered.wait, 5)
-            result = success(await asyncio.wait_for(client.get("/history"), 2))
+            assert not release.is_set()
+            # Generous hang guard, not a response-time assertion.
+            result = success(await asyncio.wait_for(client.get("/history"), 30))
+            assert not release.is_set()
+            assert not pending.done()
             assert result.through_seq == 1
             assert [event.seq for event in result.events] == [1]
             assert result.next_seq is None
