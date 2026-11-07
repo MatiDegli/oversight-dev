@@ -102,3 +102,33 @@ def test_validation_retains_first_ancestor_stamp(tmp_path, monkeypatch):
         assert changed
 
     asyncio.run(scenario())
+
+
+def test_validation_refuses_ancestor_replaced_between_files(tmp_path, monkeypatch):
+    async def scenario():
+        source = await repository(tmp_path)
+        parent = source.root / "package"
+        parent.mkdir()
+        for name in ("a.py", "b.py"):
+            (parent / name).write_text("value = 1\n")
+        listing = await posix.inventory(source, git=GIT)
+        replaced = False
+
+        def mutate(root, name, deadline, **kwargs):
+            nonlocal replaced
+            item = entry(root, name, deadline, **kwargs)
+            if name == "package/a.py":
+                # The old last-seen stamp accepted entries from two different trees.
+                parent.rename(tmp_path / "old-package")
+                parent.mkdir()
+                for child in ("a.py", "b.py"):
+                    (parent / child).write_text("value = 1\n")
+                replaced = True
+            return item
+
+        monkeypatch.setattr(posix, "entry", mutate)
+        with pytest.raises(SourceChanged, match="source directory changed"):
+            await posix.validate_selection(listing)
+        assert replaced
+
+    asyncio.run(scenario())
