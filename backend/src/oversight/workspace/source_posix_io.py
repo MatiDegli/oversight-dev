@@ -150,6 +150,8 @@ class Witness:
 def directory(path: Path) -> Generator[int]:
     """Pin every ancestor with O_NOFOLLOW; compare names again before closing descriptors."""
     absolute(path)
+    # Classification depends on the target and inspection, not the ancestor being opened.
+    source = source_input(path)
     descriptors: list[int] = []
     witnesses: list[Witness] = []
     current = Path("/")
@@ -157,16 +159,14 @@ def directory(path: Path) -> Generator[int]:
         fd = os.open("/", os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC)
         descriptors.append(fd)
         for part in path.parts[1:]:
-            secure(
-                os.fstat(fd), path=current, source=source_input(path), sticky_ancestor=True, fd=fd
-            )
+            secure(os.fstat(fd), path=current, source=source, sticky_ancestor=True, fd=fd)
             current /= part
             fd = os.open(
                 part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC, dir_fd=fd
             )
             descriptors.append(fd)
             witnesses.append(Witness(current, identity(os.fstat(fd))))
-        secure(os.fstat(fd), path=current, source=source_input(path), sticky_ancestor=True, fd=fd)
+        secure(os.fstat(fd), path=current, source=source, sticky_ancestor=True, fd=fd)
         yield fd
         for witness in witnesses:
             if identity(witness.path.lstat()) != witness.identity:

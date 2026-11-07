@@ -3,10 +3,12 @@
 import asyncio
 import os
 from collections import Counter
+from types import SimpleNamespace
 
 import pytest
 
 from oversight.workspace import source_posix as posix
+from oversight.workspace import source_posix_io as posix_io
 from oversight.workspace import source_posix_policy as policy
 from oversight.workspace.errors import StartupRefusal
 
@@ -17,6 +19,12 @@ from .test_source_posix_policy import group, membership, user
 def test_large_umask_tree_enumerates_accounts_once_per_phase(tmp_path, monkeypatch):
     import grp
     import pwd
+
+    # This tests per-inspection caching and fresh writer checks, not wall-clock budgets.
+    # Replace only the admission clocks; asyncio and subprocess timeouts stay real.
+    clock = SimpleNamespace(monotonic=lambda: 0.0)
+    monkeypatch.setattr(posix, "time", clock)
+    monkeypatch.setattr(posix_io, "time", clock)
 
     async def scenario():
         source = await repository(tmp_path)
