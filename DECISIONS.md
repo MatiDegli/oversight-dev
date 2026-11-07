@@ -5988,3 +5988,10 @@ This retains AGENTS.md:61's network/PID isolation and filesystem-isolation resid
 Blocked namespaces leave the graph open and tests unavailable, with a diagnosed remedy; AppArmor guidance includes sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 and restoration of the previous value (.github/workflows/ci.yml:225).
 Comfort comes from an actionable diagnosis; practice from whole-repository test discovery; control from person-owned timeout/policy, in that order (AGENTS.md:60).
 The approved own-repository documentation update lands with the integration slice; neither the trust prompt nor this plan changes execution authority today.
+
+## 2026-11-06 — Union merges for the changelog
+
+Extend the decision-log union driver to `CHANGELOG.md` with `CHANGELOG.md merge=union`
+in `.gitattributes`, keeping parallel bullets under `## Unreleased` through both `git merge`
+and `git merge-tree --write-tree`. Union also keeps both sides of a same-line edit without
+reporting a conflict; reviewers must check release sections for duplicates or contradictions.

@@ -6,6 +6,7 @@ its "Built during the hackathon" section.
 
 ## Unreleased
 
+- Use Git's union merge driver for CHANGELOG.md so parallel Unreleased bullets merge without conflicts.
 - Recorded the approved canvas, WSL and Linux own-repository admission plans and decisions, including engine A, the M6 composition gate and the CPython 3.8 venv floor; implementation and acceptance remain pending.
 
 - Added the approved post-hackathon roadmap and its decisions, with milestone gates separating
