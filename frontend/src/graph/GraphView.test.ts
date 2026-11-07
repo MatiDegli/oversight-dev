@@ -1,12 +1,28 @@
 import type { Core, CytoscapeOptions } from "cytoscape";
 import { afterEach, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({
-  effects: [] as (() => undefined | (() => void))[],
-  instances: [] as Core[],
-  refs: [] as { current: unknown }[],
-  refIndex: 0,
-}));
+const mocks = vi.hoisted(() => {
+  let solverStarted = () => {};
+  const importingSolver = new Promise<void>((resolve) => {
+    solverStarted = resolve;
+  });
+  return {
+    effects: [] as (() => undefined | (() => void))[],
+    instances: [] as Core[],
+    refs: [] as { current: unknown }[],
+    refIndex: 0,
+    releaseSolver: () => {},
+    solverStarted,
+    importingSolver,
+  };
+});
+vi.mock("cytoscape-fcose", async (importOriginal) => {
+  await new Promise<void>((resolve) => {
+    mocks.releaseSolver = resolve;
+    mocks.solverStarted();
+  });
+  return importOriginal();
+});
 vi.mock("react", () => ({
   // The container ref (null) stands in as a host; other refs keep their initial value.
   useRef: (...initial: unknown[]) => {
@@ -17,6 +33,7 @@ vi.mock("react", () => ({
           ? initial[0]
           : Object.assign(new EventTarget(), {
               getBoundingClientRect: () => ({ left: 0, top: 0 }),
+              closest: () => null,
             }),
     });
   },
@@ -48,6 +65,7 @@ import { themes } from "../theme";
 const theme = themes.dark;
 
 import * as camera from "./camera";
+import * as layout from "./mapController";
 
 import { frames, paint, setLabel, setupGraphView } from "./GraphView.support";
 
@@ -70,19 +88,68 @@ const { mount, rerender } = setupGraphView(mocks, (value) => {
   cleanup = value;
 });
 
-it("synchronizes each store update immediately, including transport-only updates", async () => {
+it("retries the initial layout on show when fcose finishes importing in Chat", async () => {
+  const prepare = layout.prepareGraphLayout;
+  let retryFinished = () => {};
+  const retried = new Promise<void>((resolve) => {
+    retryFinished = resolve;
+  });
+  vi.spyOn(layout, "prepareGraphLayout").mockImplementation((cy, elements, retry) =>
+    prepare(cy, elements, (fallback) => {
+      retry(fallback);
+      retryFinished();
+    }),
+  );
+  setLabel("Unplaced");
+  stateStore.setState(({ state }) => ({
+    state: { ...state, graph: state.graph && { ...state.graph, positions: {} } },
+  }));
+  const { settle } = mount();
+  let hidden = false;
+  let visibilityChanged = () => {};
+  const stage = { getAttribute: () => String(hidden) };
+  Object.assign(mocks.refs[1]?.current ?? {}, { closest: () => stage });
+  vi.stubGlobal(
+    "MutationObserver",
+    class {
+      constructor(changed: () => void) {
+        visibilityChanged = changed;
+      }
+      observe() {}
+      disconnect() {}
+    },
+  );
+  await settle("resolved");
+  const cy = mocks.instances[0];
+  if (!cy) throw new Error("Missing graph");
+  expect(cy.nodes()).toHaveLength(0);
+  hidden = true;
+  visibilityChanged();
+  // Let the import factory start without waiting for the deferred chunk to resolve.
+  await mocks.importingSolver;
+  mocks.releaseSolver();
+  await retried;
+  expect(cy.nodes()).toHaveLength(0);
+  hidden = false;
+  visibilityChanged();
+  expect(cy.getElementById("billing:fee").data("label")).toBe("Unplaced");
+});
+
+it("synchronizes graph updates and ignores transport-only publications", async () => {
   setLabel("Initial");
   const { settle } = mount();
   await settle("resolved");
   const cy = mocks.instances[0];
   if (!cy) throw new Error("Graph was not created");
   setLabel("First");
+  paint();
   expect(cy.getElementById("billing:fee").data("label")).toBe("First");
   setLabel("Second");
+  paint();
   expect(cy.getElementById("billing:fee").data("label")).toBe("Second");
   const batch = vi.spyOn(cy, "batch");
   stateStore.setState(({ state }) => ({ state: { ...state, lastSeq: state.lastSeq + 1 } }));
-  expect(batch).toHaveBeenCalled();
+  expect(batch).not.toHaveBeenCalled();
 });
 
 it.each(["resolved", "rejected"] as const)(
@@ -331,3 +398,28 @@ it.each([false, true])(
     expect(cy.nodes().map((node) => ({ ...node.position() }))).toEqual(openingPositions);
   },
 );
+
+it("pauses document-hidden updates, catches up on show, and forces ref operations current", async () => {
+  setLabel("Initial");
+  const apiRef = { current: null as import("./GraphView").GraphApi | null };
+  const { settle } = mount({ apiRef });
+  await settle("resolved");
+  const cy = mocks.instances[0];
+  if (!cy) throw new Error("Missing graph");
+  paint();
+  const batch = vi.spyOn(cy, "batch");
+  Object.assign(document, { visibilityState: "hidden" });
+  document.dispatchEvent(new Event("visibilitychange"));
+  for (let i = 0; i < 100; i++) setLabel(`Hidden ${String(i)}`);
+  paint();
+  expect(batch).not.toHaveBeenCalled();
+  expect(cy.getElementById("billing:fee").data("label")).toBe("Initial");
+  apiRef.current?.zoomIn();
+  expect(cy.getElementById("billing:fee").data("label")).toBe("Hidden 99");
+  setLabel("Last");
+  const resize = vi.spyOn(cy, "resize");
+  Object.assign(document, { visibilityState: "visible" });
+  document.dispatchEvent(new Event("visibilitychange"));
+  expect(resize).toHaveBeenCalledOnce();
+  expect(cy.getElementById("billing:fee").data("label")).toBe("Last");
+});

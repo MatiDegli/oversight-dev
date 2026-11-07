@@ -10,6 +10,8 @@ import { applyFrames } from "./frames";
 import { growthPositions, placeAdditions } from "./place";
 import { applyRoutes } from "./routes";
 import type { RouteTheme } from "./routes";
+import { graphProjection } from "./graphProjection";
+import type { ElementSignature } from "./graphProjection";
 import { writeData } from "./writes";
 
 type GeometryTheme = Parameters<typeof nodeGeometry>[0] & RouteTheme;
@@ -34,14 +36,84 @@ const OPTIONAL_DATA = [
   "h",
 ] as const;
 
-/** Update by id, retaining dragged positions and the viewport after the first layout. */
+interface AppliedProjection {
+  elements: Map<string, ElementSignature>;
+  moved: boolean;
+  applying: boolean;
+  ids: Set<string>;
+}
+const applied = new WeakMap<Core, AppliedProjection>();
+
+function appliedProjection(cy: Core): AppliedProjection {
+  let previous = applied.get(cy);
+  if (previous) return previous;
+  previous = {
+    elements: new Map(),
+    moved: false,
+    applying: false,
+    ids: new Set(cy.elements().map((e) => e.id())),
+  };
+  const tracked = previous;
+  cy.on("position", "node", () => {
+    if (!tracked.applying) tracked.moved = true;
+  });
+  applied.set(cy, previous);
+  return previous;
+}
+
+/** Compare projection signatures; unchanged ids never enter the application loop. */
 export function updateGraph(
   cy: Core,
   elements: GraphElement[],
   theme: GeometryTheme = getActiveTheme(),
 ): void {
+  const previous = appliedProjection(cy);
+  const projected = graphProjection(elements);
+  const changed = [...projected.values()].filter(
+    (entry) => previous.elements.get(entry.definition.data.id)?.value !== entry.value,
+  );
+  const removed = [...previous.ids].filter((id) => !projected.has(id));
+  const geometry =
+    previous.moved ||
+    removed.length > 0 ||
+    changed.some(
+      (entry) => previous.elements.get(entry.definition.data.id)?.geometry !== entry.geometry,
+    );
+  if (!changed.length && !geometry) return;
+  previous.applying = true;
+  try {
+    if (geometry)
+      applyGeometry(
+        cy,
+        elements,
+        changed.map((entry) => entry.definition),
+        theme,
+      );
+    else
+      cy.batch(() => {
+        applyDefinitions(
+          cy,
+          changed.map((entry) => entry.definition),
+        );
+      });
+    previous.elements = projected;
+    previous.ids = new Set(projected.keys());
+    previous.moved = false;
+  } finally {
+    previous.applying = false;
+  }
+}
+
+/** The existing placement/history algorithm runs only when geometry can change. */
+function applyGeometry(
+  cy: Core,
+  elements: GraphElement[],
+  changed: GraphElement[],
+  theme: GeometryTheme,
+): void {
   const initial = cy.nodes().empty();
   const byId = new Map(elements.map((element) => [element.data.id, element]));
+  const removed = [...(applied.get(cy)?.ids ?? [])].filter((id) => !byId.has(id));
   const remembered = leafPositions.get(cy) ?? new Map<string, Position>();
   leafPositions.set(cy, remembered);
   for (const id of remembered.keys()) if (!byId.has(id)) remembered.delete(id);
@@ -53,15 +125,15 @@ export function updateGraph(
     .filter((node) => byId.has(node.id()) && !parents.has(node.id()) && remembered.has(node.id()));
   const removeObsolete = () => {
     // Detach survivors before removing a parent (which would remove its children too).
-    for (const node of cy.nodes()) {
-      const definition = byId.get(node.id());
-      if (definition && node.parent().first().id() !== definition.data.parent) {
+    for (const definition of changed.filter((e) => e.group === "nodes")) {
+      const node = cy.getElementById(definition.data.id);
+      if (node.nonempty() && node.parent().first().id() !== definition.data.parent) {
         node.move({ parent: null });
       }
     }
-    cy.elements()
-      .filter((element) => !byId.has(element.id()))
-      .remove();
+    const obsolete = cy.collection();
+    for (const id of removed) obsolete.merge(cy.getElementById(id));
+    obsolete.remove();
     for (const node of restore) {
       const position = remembered.get(node.id());
       if (position) node.position(position);
@@ -79,36 +151,46 @@ export function updateGraph(
   const restoringGrowth = [...(growthPositions.get(cy)?.values() ?? [])].some(
     (saved) => ![...saved.additions].some((id) => byId.has(id)),
   );
-  // A restored frame must be measured at its original position before placing new arrivals.
+  const needsAdditions = elements.some((e) => !applied.get(cy)?.ids.has(e.data.id));
+  // Restore before scanning live membership: removing nodes can also remove surviving edges.
   if (restoringGrowth) cy.batch(removeObsolete);
-  const { additions, relocated } = placeAdditions(cy, elements, theme);
+  const { additions, relocated } =
+    restoringGrowth || needsAdditions
+      ? placeAdditions(cy, elements, theme)
+      : { additions: [], relocated: new Map<string, Position>() };
   cy.batch(() => {
     if (!restoringGrowth) removeObsolete();
     for (const [id, point] of relocated) cy.getElementById(id).position(point);
-    cy.add(additions);
-    for (const definition of elements) {
-      const element = cy.getElementById(definition.data.id);
-      if (definition.group === "nodes") {
-        if (element.parent().first().id() !== definition.data.parent) {
-          element.move({ parent: definition.data.parent ?? null });
-        }
-      } else if (
-        element.source().id() !== definition.data.source ||
-        element.target().id() !== definition.data.target
-      ) {
-        element.removeClass("count-hover node-hover");
-        element.move({ source: definition.data.source, target: definition.data.target });
-      }
-      writeData(element, definition.data, OPTIONAL_DATA);
-      // Keep selection and routing state; hover survives while its geometry stays put.
-      const owned = ["touching", "node-hover", "count-hover", "edge-shield", "unroutable"].filter(
-        (name) => element.hasClass(name),
-      );
-      element.classes([...definition.classes.split(/\s+/).filter(Boolean), ...owned]);
-    }
+    if (additions.length)
+      cy.add(additions.map((definition) => ({ ...definition, data: { ...definition.data } })));
+    applyDefinitions(cy, changed);
   });
   if (initial) initialLayout(cy, elements, theme);
   else settle(cy, theme);
+}
+
+/** Preserve interaction-owned classes and the full path's optional-data clearing semantics. */
+function applyDefinitions(cy: Core, definitions: readonly GraphElement[]): void {
+  for (const definition of definitions) {
+    const element = cy.getElementById(definition.data.id);
+    if (definition.group === "nodes") {
+      if (element.parent().first().id() !== definition.data.parent) {
+        element.move({ parent: definition.data.parent ?? null });
+      }
+    } else if (
+      element.source().id() !== definition.data.source ||
+      element.target().id() !== definition.data.target
+    ) {
+      element.removeClass("count-hover node-hover");
+      element.move({ source: definition.data.source, target: definition.data.target });
+    }
+    writeData(element, definition.data, OPTIONAL_DATA);
+    // Keep selection and routing state; hover survives while its geometry stays put.
+    const owned = ["touching", "node-hover", "count-hover", "edge-shield", "unroutable"].filter(
+      (name) => element.hasClass(name),
+    );
+    element.classes([...definition.classes.split(/\s+/).filter(Boolean), ...owned]);
+  }
 }
 
 /** Choose the initial layout, then settle header bands and routes before choosing the camera. */

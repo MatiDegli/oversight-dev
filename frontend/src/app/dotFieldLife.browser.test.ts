@@ -272,6 +272,11 @@ it("sends a merge's pulse along the graph to its node, then lights it and fades 
       await page.evaluate(() => document.querySelectorAll("[data-field-travel] g").length),
     ).toBe(0);
     // Arrival removes the pending word; pin the resulting row geometry for the remaining fade.
+    // fastForward invokes the arrival timer once; React then queues the graph's next frame.
+    await page.clock.runFor(16);
+    expect(
+      (await nodeCenters())?.find((node) => node.id === "shop.pricing:compute_price")?.agents,
+    ).toEqual([]);
     still[1] = await nodeCenters();
     const lit = await lightMass(page);
     expect(lit).toBeGreaterThan(waiting * 0.9);

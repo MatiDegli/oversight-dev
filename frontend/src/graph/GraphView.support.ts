@@ -68,9 +68,13 @@ function mount(
   const load = vi.fn(() => pending);
   const observer = { observe: vi.fn(), disconnect: vi.fn() };
   let onResize: (() => void) | undefined;
-  vi.stubGlobal("document", {
-    fonts: { load, check: () => false, addEventListener: vi.fn(), removeEventListener: vi.fn() },
-  });
+  vi.stubGlobal(
+    "document",
+    Object.assign(new EventTarget(), {
+      fonts: { load, check: () => false, addEventListener: vi.fn(), removeEventListener: vi.fn() },
+      visibilityState: "visible",
+    }),
+  );
   vi.stubGlobal(
     "ResizeObserver",
     class {

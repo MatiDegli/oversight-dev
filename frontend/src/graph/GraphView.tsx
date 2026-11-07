@@ -12,6 +12,11 @@ import type { Camera, Framing } from "./camera";
 import { ControlledMapLayer, MapRoutingOmissions } from "./MapLayer";
 import { prepareGraphLayout, useMapController } from "./mapController";
 import type { MapOptions } from "./mapController";
+import { graphVisibility } from "./graphVisibility";
+import { projectionState, sameProjectionState } from "./projectionState";
+import { replacePaintPublication } from "./paintPublication";
+import { graphSync } from "./graphSync";
+import type { State } from "../state";
 import { elementSnapshot } from "./elementSnapshot";
 import type { GraphElement, MeasuredWord } from "./elements";
 import { foldController } from "./foldController";
@@ -108,6 +113,7 @@ export function GraphView({
   field = NO_LIGHTS,
   onZoom,
 }: GraphViewProps = {}) {
+  const current = useRef<(() => void) | undefined>(undefined);
   const container = useRef<HTMLDivElement>(null);
   // What the dot field reads of the graph: the rendered boxes of the nodes it lights.
   const graph = useRef<Core | undefined>(undefined);
@@ -123,6 +129,7 @@ export function GraphView({
   const reportViewport = useRef<(() => void) | undefined>(undefined);
   useEffect(() => {
     const relit =
+      latest.current.selectedId !== selectedId ||
       latest.current.litIds !== litIds ||
       latest.current.cone !== cone ||
       latest.current.map !== map ||
@@ -152,7 +159,6 @@ export function GraphView({
       onZoom,
     };
     if (relit) resync.current?.();
-    else if (graph.current) showSelection(graph.current, selectedId);
   }, [
     selectedId,
     onNodeTap,
@@ -180,6 +186,7 @@ export function GraphView({
     const wasOpen = framedFor.current;
     framedFor.current = panelOpen;
     framedKey.current = frameKey;
+    current.current?.();
     const cy = graph.current;
     if (cy) {
       if (!wasOpen && panelOpen) watchCamera.current = { zoom: cy.zoom(), pan: { ...cy.pan() } };
@@ -353,14 +360,38 @@ export function GraphView({
           : 0;
       };
       const snapshot = elementSnapshot();
-      const sync = (fallback?: GraphElement[]) => {
+      let lastFull: GraphElement[] | undefined;
+      let lastRun: string | undefined;
+      let lastMap: boolean | undefined;
+      let foldRevision = 0;
+      let renderedFold = -1;
+      let lastSelected: string | null | undefined;
+      const sync = (
+        fallback?: GraphElement[],
+        state: State = stateStore.getState().state,
+        props = latest.current,
+        revision = foldRevision,
+      ) => {
         // A second addition can arrive before the first ease ends. Include both targets when
         // replacing that animation, rather than leaving the first addition outside the view.
         if (!cy.animated() || latest.current.panelOpen) arriving.clear();
+        const full = fallback ?? snapshot(projectionState(state), props);
+        if (!fallback && !prepareGraphLayout(cy, full, retrySync)) return;
+        if (
+          full === lastFull &&
+          state.run?.run_id === lastRun &&
+          props.map === lastMap &&
+          revision === renderedFold
+        ) {
+          if (props.selectedId !== lastSelected) showSelection(cy, props.selectedId ?? null);
+          lastSelected = props.selectedId;
+          return;
+        }
         const existing = new Set(cy.nodes().map((node) => node.id()));
-        const state = stateStore.getState().state;
-        const full = fallback ?? snapshot(state, latest.current);
-        if (!fallback && !prepareGraphLayout(cy, full, sync)) return;
+        lastFull = full;
+        lastRun = state.run?.run_id;
+        lastMap = props.map;
+        renderedFold = revision;
         const foldsChanged = folding.render(state, full);
         mapControl.sync(full);
         if (
@@ -384,6 +415,7 @@ export function GraphView({
           });
         }
         showSelection(cy, latest.current.selectedId ?? null);
+        lastSelected = latest.current.selectedId;
         reportSoon();
         if (
           mapControl.level() !== "map" &&
@@ -404,7 +436,34 @@ export function GraphView({
           }
         }
       };
-      resync.current = sync;
+      const visibility = graphVisibility(host);
+      const updates = graphSync({
+        read: () => ({
+          state: stateStore.getState().state,
+          props: latest.current,
+          revision: foldRevision,
+        }),
+        equal: (a, b) =>
+          a.revision === b.revision &&
+          a.props === b.props &&
+          a.state.run?.run_id === b.state.run?.run_id &&
+          sameProjectionState(a.state, b.state),
+        replace: replacePaintPublication,
+        apply: ({ state, props, revision }) => {
+          sync(undefined, state, props, revision);
+        },
+        visible: visibility.visible,
+        resize: () => cy.resize(),
+      });
+      const retrySync = (fallback?: GraphElement[]) => {
+        if (!visibility.visible()) updates.publish(true);
+        else sync(fallback);
+      };
+      resync.current = () => {
+        updates.publish();
+      };
+      current.current = updates.force;
+      const stopVisibility = visibility.observe(updates.visibility);
       cy.on("tap", "node", (event) => {
         if (mapControl.level() === "map") return;
         const node = event.target as NodeSingular;
@@ -416,20 +475,43 @@ export function GraphView({
           );
           if (event.position.y > top + height) return;
         }
-        if (folding.toggle(id)) sync();
-        else latest.current.onNodeTap?.(id);
+        updates.force();
+        if (folding.toggle(id)) {
+          foldRevision++;
+          updates.publish(true);
+          updates.force();
+        } else latest.current.onNodeTap?.(id);
       });
       graph.current = cy;
+      const mapApi = mapControl.api(
+        folding,
+        () => {
+          foldRevision++;
+          updates.publish(true);
+          updates.force();
+        },
+        () => panelGeometry(host, latest.current),
+      );
       if (apiRef) {
         apiRef.current = {
           zoomIn: () => {
+            updates.force();
             mapControl.zoom(cy, ZOOM_STEP);
           },
           zoomOut: () => {
+            updates.force();
             mapControl.zoom(cy, 1 / ZOOM_STEP);
           },
-          ...mapControl.api(folding, sync, () => panelGeometry(host, latest.current)),
+          fit: () => {
+            updates.force();
+            mapApi.fit();
+          },
+          detail: (level) => {
+            updates.force();
+            mapApi.detail(level);
+          },
           reveal: (nodeId) => {
+            updates.force();
             const target = revealNode(cy, nodeId, prefersReducedMotion());
             if (!target) return;
             // The cone card lists what is out of view from the camera it is told of.
@@ -442,12 +524,14 @@ export function GraphView({
       const unexpose = exposeProbe(host, cy);
       source.attach(cy);
       const unsubscribe = stateStore.subscribe(() => {
-        sync();
+        updates.publish();
       });
-      sync();
+      updates.publish();
+      if (visibility.visible()) updates.force();
       if ((latest.current.panelOpen || latest.current.referenceFrame) && startFrame === undefined)
         frameInitialPanel();
       const resize = new ResizeObserver(() => {
+        if (!visibility.visible()) return;
         cy.resize();
         reportSoon();
       });
@@ -469,6 +553,9 @@ export function GraphView({
         detachMap();
         source.detach();
         unsubscribe();
+        updates.dispose();
+        stopVisibility();
+        current.current = undefined;
         unexpose();
         resize.disconnect();
         // Card observation must leave the initial overlay-aware camera scheduled until unmount.
