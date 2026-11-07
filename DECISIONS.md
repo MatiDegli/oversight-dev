@@ -5580,12 +5580,71 @@ retaining its accounting semantics.
 
 ## 2026-11-05 — Allow explicit repository trust before sandbox qualification
 
-The maintainer chose per-repository trust for unsandboxed execution, off by default, with
-exposure disclosed and verified cleanup of processes, ports and temporary state. Shell, network
-and installs reach agents only through the sandbox and policy. Blocking all execution until M3
-qualifies was rejected so M1/M2 can serve trusted repositories earlier, as native Windows does
-(docs/isolation.md:221). M1 replaces the informational, nonblocking trust prompt in
-docs/own-repository.md:32 with explicit trust.
+The maintainer chose per-repository trust for unsandboxed execution, off by default, with exposure
+disclosed and verified cleanup of processes, ports and temporary state. Shell, network and installs
+reach agents only through the sandbox and policy. Blocking all execution until M3 qualifies was
+rejected so M1/M2 can serve trusted repositories earlier, as native Windows does (docs/isolation.md:221).
+M1 replaces the informational, nonblocking trust prompt in docs/own-repository.md:32 with explicit trust.
+
+## 2026-11-06 — Mask tested-tree secrets at model and test-event boundaries
+
+One in-memory redactor belongs to the workspace for the server run, independently of the
+server's lead/message/probe redactor. Both start with the configured provider keys. Only the
+workspace collects values from the tested tree's secret-named files,
+using the existing name policy (including its .example exemption). Before each suite, and after
+child cleanup but before reading diagnostics, it collects literal KEY=VALUE lines in every
+secret-named text file (single-line quotes, export and trailing comments supported), and
+PEM/key/SSH body lines plus their joined body. Comments and assignment names are not collected,
+including in files below .env* directories. Repository values shorter than eight characters
+are ignored. Whole assignment values become [redacted] only for names containing PASS
+(including PASSWORD, PASSWD and PASSPHRASE), PWD, DSN, SECRET, TOKEN, KEY, AUTH, CREDENTIAL or
+PRIVATE (case-insensitive), credential-shaped values,
+or URLs containing a password. URL passwords are also remembered separately. Only
+credential-shaped values/passwords, key bodies and provider keys contribute eight-character
+windows; URLs with passwords contribute whole-value matches, not windows of their public
+host/path. Ordinary settings such as POSTGRES_USER=postgres, DB_HOST=localhost and
+ENVIRONMENT=production are not collected. Whole-value matches are indexed by their first
+eight characters so each output position checks only its matching bucket.
+Discovered material is never logged or persisted by the collector/redactor.
+
+Collection uses guarded regular-file reads: at most 128 secret files, 256 KiB per file and
+1 MiB total per scan; traversal excludes Git metadata and stops after 50,000 entries. Secret
+links, unreadable/non-UTF-8 files or exceeded limits refuse execution. An incomplete inventory
+also withholds subsequent workspace boundary text for that run rather than allowing an
+unmasked diff or summary after a refused suite. It cannot disable lead replies, person
+messages or probes, or add repository settings to their mask. Restart with a valid inventory
+to restore workspace diagnostic text.
+Previously discovered values remain masked when a later test changes or removes their file.
+
+The mask precedes truncation of test stdout/stderr, failed-test lists and JUnit details, so
+run_tests history, agent-step test evidence and tests.executed events receive safe diagnostics.
+Secret-bearing parameter identifiers are withheld from per-case evidence and mark it incomplete;
+unmatched paths and test names retain their exact identity. Whole secret values can still
+collide with ordinary diagnostic text: PASSWORD=postgres masks postgres in test_postgres.py
+and withholds that case. Secret protection takes precedence in those collisions.
+The reviewer receives a masked diff
+from the captured worktree and masked proposal task/summary text. Both observations and the
+review protocol explain the marker. Runtime-path removal precedes masking. Hex-only Git
+object ids and content hashes are exempt from the generic heuristic only in Workspace.redact
+so debugging and identity checks remain usable; explicit known-secret matches still take
+precedence, even for hex values. Shared lead/message/probe masking still catches hex tokens.
+
+Measured invocations are filtered after the same inventory refresh, before change facts or
+review-card model requests. Private identities are dropped; private inputs, results or problems
+withhold both snapshots and make the report incomplete. Behavior workers also inventory before
+and after execution and withhold private observations. Withheld measurements cannot establish
+equality or a behavior difference from two masked values; unaffected rows remain available.
+
+This supersedes the run_tests/reviewer-diff residual in the 2026-10-31 secret-file decision.
+It is output filtering, not filesystem or exfiltration isolation. Secrets absent from a
+secret-named file and not recognized by the heuristic, unmarked non-credential assignments
+(including secrets under ordinary setting names), values shorter than eight characters,
+encodings/escapes/interpolation the matcher does not recognize, and secrets created and removed
+entirely during child execution are not defended. The person's own file contents can still
+persist locally in their event log through existing file/change evidence; that storage is not
+rewritten or certified secret-free by this front. Contracts and person-facing file access stay
+unchanged. Tests use synthetic canaries, real local pytest subprocesses and scripted fake models;
+no provider credits are spent.
 
 ## 2026-11-05 — Three criteria for every product decision
 

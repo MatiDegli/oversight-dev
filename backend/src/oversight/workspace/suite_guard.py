@@ -1,18 +1,23 @@
 """One suite boundary for agents, proposals, combinations and selected-case probes."""
 
 import asyncio
+import os
 import sys
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from dataclasses import replace
 from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from oversight.workspace._platform import is_link_like
+from oversight.workspace.errors import WorkspaceError
+from oversight.workspace.files import read_file
 from oversight.workspace.integrity import IntegrityError
 from oversight.workspace.isolation import IsolatedRunner
 from oversight.workspace.locks import offload
 from oversight.workspace.measured_report import CallTarget
 from oversight.workspace.runner import NtCleanupRunner, Spawn, nt_cleanup_failed
+from oversight.workspace.secret_paths import is_secret_path
 from oversight.workspace.snapshot import finish_snapshot, take_snapshot
 from oversight.workspace.source_nt import OwnEnvironment
 from oversight.workspace.suite import SuiteInterrupted, SuiteRun, SuiteUnavailable, run_suite
@@ -30,6 +35,47 @@ def configure_suite(workspace: "Workspace", *, harness_pack: bool) -> None:
 
 def _nt_cleanup_unverified(runner: Spawn) -> bool:
     return isinstance(runner, NtCleanupRunner) and not runner.cleanup_complete
+
+
+def _secret_files(root: Path) -> Iterator[str]:
+    pending = [root]
+    visited = 0
+    while pending:
+        with os.scandir(pending.pop()) as entries:
+            for entry in entries:
+                visited += 1
+                if visited > 50_000:
+                    raise ValueError
+                if entry.name.casefold() == ".git":
+                    continue
+                relative = Path(entry.path).relative_to(root).as_posix()
+                if is_link_like(entry):
+                    if is_secret_path(relative):
+                        raise ValueError
+                    continue
+                if entry.is_dir(follow_symlinks=False):
+                    pending.append(Path(entry.path))
+                elif is_secret_path(relative):
+                    yield relative
+
+
+def remember_secrets(workspace: "Workspace", tree: "Tree") -> None:
+    """Bound private inventory; refuse execution rather than silently skip unreadable secrets."""
+    try:
+        tree.verify_root()
+        total = 0
+        for count, path in enumerate(_secret_files(tree.root), start=1):
+            if count > 128:
+                raise ValueError
+            # read_file has a 256 KiB limit and the usual no-link/root checks.
+            content = read_file(tree.root, path).content
+            total += len(content.encode("utf-8"))
+            if total > 1024 * 1024:
+                raise ValueError
+            workspace.redactor.remember_file(path, content)
+    except (OSError, WorkspaceError, ValueError):
+        workspace.redactor.withhold()
+        raise WorkspaceError("secret inventory unavailable or exceeds its safety limits") from None
 
 
 async def guarded_suite(
@@ -53,6 +99,7 @@ async def guarded_suite(
     snapshot = await offload(partial(take_snapshot, tree.git_identity, state, timeout_s))
     runner: Spawn = NtCleanupRunner(spawn) if sys.platform == "win32" else spawn
     try:
+        await offload(partial(remember_secrets, workspace, tree))
         before = await offload(partial(file_stamp, tree.root))
         tested_tree, tested_commit = await capture_test_tree(
             tree.root,
@@ -70,6 +117,7 @@ async def guarded_suite(
                 tree_root=tree.root,
                 timeout_s=timeout_s,
                 redact=workspace.redact,
+                refresh_secrets=partial(remember_secrets, workspace, tree),
                 spawn=runner,
                 case_ids=case_ids,
                 pytest_targets=pytest_targets,

@@ -1,5 +1,13 @@
 # Beyond level 2
 
+Secret-boundary hardening (2026-11-06): implemented on backend/secrets-boundary — run-scoped
+provider/tested-tree masking for run_tests observations and test events, reviewer diffs and
+proposal task/summary and measured/behavior evidence; workspace-only inventory failure,
+credential/URL-password masks (including PASS, PWD and DSN names), ordinary-setting test identity
+preservation, indexed whole-value matching, shared hex-token masking and repository hex-id
+preservation have regressions.
+See DECISIONS.md, “Mask tested-tree secrets at model and test-event boundaries”, for limits.
+
 ## Three proofs
 
 The freeze is organized around three proofs. Judge each front by the proof it serves.
