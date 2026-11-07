@@ -82,6 +82,10 @@ Each milestone starts when its gate holds and a slot is free. Milestones run in 
   - price;
   - which features it supports, negotiated before use.
 - It covers every model-using role, not only lead, coder and reviewer. Decision and example calls are included; today they pin Spark Open (`backend/src/oversight/agents/decision.py:219`) and the contracts restrict provider identities (`contracts/src/oversight_contracts/events.py:55`).
+- **Ordered per-role model fallback** (planned; available from M2).
+  - The person configures an ordered model list for each role. No capacity, quota exhausted or persistent 5xx triggers the next eligible model; when none is left, wait or stop, default wait. Existing spending and authority controls still apply.
+  - Cross-provider review stays the default. If its reviewer is unavailable, same-provider review requires the person's explicit choice as a loosening: visible, recorded in the event log and reversible; agents cannot authorize it.
+  - C: fewer manual model changes while work waits; H: keep the maintainer's parallel agents moving across roles; K: person-owned order per role, wait/stop selection and an explicit reversible review exception.
 - Keys in the OS keychain (Windows Credential Manager, macOS Keychain, Secret Service) by default, with `.env` as the development fallback; the person may choose `.env` or another supported store per repository, visibly showing the store (available from M2). Hosted CLI credentials remain with each unmodified CLI.
 - Hosted agents: Claude Code, Codex CLI, Muse Code, then Gemini CLI and others through ACP. Each one gets:
   - a versioned compatibility test;
@@ -152,6 +156,10 @@ Each milestone starts when its gate holds and a slot is free. Milestones run in 
   - The split benchmark must pass first.
   - Until then, leads keep the whole-graph zone (`backend/src/oversight/runtime_leads.py:263`).
 - Workflows as versioned repository files (for example `.oversight/workflows/*.yaml`), a library, and contextual selection.
+- **Versioned gates and workflows with one-click rollback** (planned; available from M5).
+  - The current version is the default. The person returns to the previous version in one action, per repository or per workflow.
+  - Returning to an earlier version is a loosening: visible, recorded in the event log and reversible. Authority stays with the person; agents cannot grant themselves a rollback.
+  - C: no waiting when a new gate fails; H: give the maintainer and his parallel agents a direct return to the previous working version; K: person-owned repository/workflow selection with the current version as the safe default.
 - Hooks and policy as configuration:
   - event-to-action rules (pre-tool, post-edit, pre-merge);
   - a rule and gate editor that replaces the code tables (`backend/src/oversight/changes/_assessment.py:34`, `backend/src/oversight/changes/_protected_paths.py:20`);
@@ -266,6 +274,10 @@ Each milestone starts when its gate holds and a slot is free. Milestones run in 
 - Coverage: per test and graph-selected.
 - A dependency guard: existence, license, vulnerabilities.
 - Repository hooks and formatter diffs as evidence.
+- **The person's CI as verification evidence — large, later work** (planned; available from M10).
+  - Push the agent branch, dispatch the person's workflow and feed failed-job log tails into the next revision. Verification is configurable per repository: local, CI or both; local is the default, preserving today's behavior until this lands.
+  - The push is an outward action requiring the person's explicit authority and is recorded in the event log; workflow dispatch follows that authority too. Loosened verification is visible, recorded in the event log and reversible; agents cannot widen authority.
+  - C: revision feedback without manually copying CI logs; H: use the repository's own verification workflow for the maintainer's agent changes; K: person-selected local/CI/both per repository and explicit authority over outward actions.
 - Counterexample agents, executable disagreement and independent attempts (`docs/additions.md:355`, `docs/additions.md:357`).
 - Decision probabilities and learning from past answers, after M6's review loop works: a person must be able to inspect, annotate, revise and compare real changes first.
 - Retrospectives.
@@ -291,19 +303,24 @@ Each milestone starts when its gate holds and a slot is free. Milestones run in 
 **Secrets (cross-cutting, gates M2 capture and M4).**
 - Filename filtering is not redaction (DECISIONS.md:3084). Credentials stay isolated from tool children.
 - Configurable exclusion and redaction apply to model requests, the event log, terminal capture, exports and reviewer diffs. Agent access to secret files needs an explicit person grant, visibly labeled "secret access granted", logged and revocable (available from M2); filename refusal stays today.
+- **Diff scan before Approve** (planned; available from M2 alongside Secrets).
+  - Scan the agent's diff for secrets, private paths and the person's forbidden markers. Findings appear on the approval card as warnings, not blocks; markers are configurable per repository. The scan is on by default.
+  - Turning it off is the person's loosening: visible, recorded in the event log and reversible. It matters most once applying to the repository or opening PRs exists; a scan never grants either action.
+  - C: exposure warnings beside the approval decision; H: check the maintainer's agent changes before they leave the disposable workspace; K: repository-specific markers and a person-owned, reversible on/off setting.
 - Any remaining exposure is disclosed before a new capture path ships.
 
 ## Planned capabilities: where each goes
 
 Each planned capability family maps to a milestone or an explicit deferral:
 - M1: session branches and integration; native-agent file create, rename and delete; per-language evidence capabilities; non-Python repositories, JUnit and the TypeScript graph; lead persistence; desktop qualification; remembered repository; clone-mode sources; in-app discard; log viewing.
-- M2: outside agents; local models; usage views and projections.
+- M2: outside agents; local models; ordered per-role model fallback; pre-Approve diff scan (Secrets); usage views and projections.
 - M1 WSL/Linux fronts: Linux own-repository admission, desktop WSL folder selection and a matching downloaded Linux backend, with transport, lifecycle and acceptance below.
 - M3: role-based sandbox; isolated tests and probes; WSL, Windows and macOS isolation. WSL2 alone does not qualify filesystem isolation.
 - M4: human terminal; preview items.
 - M5:
   - workflow zones, edit, locks, modes, action nodes;
   - saved flows and libraries;
+  - versioned gates and workflows with one-click rollback;
   - fresh-context plan review and related-doc evidence;
   - grants; protected-area plans; zones;
   - merge queue and waiting stages; checklists and todos; continuation and handoffs;
@@ -313,7 +330,7 @@ Each planned capability family maps to a milestone or an explicit deferral:
 - M7: incremental engine, runtime tracing, worktree pool, git scaling.
 - M9: team and PR integrations, shareable runs, marketplace, live phone review.
 - Canvas milestone (after M5's core): persistent boards, removable graph, object library, live references, browser/previews, presence and assignment, granted canvas tools, custom types, drawing/templates and typed-primitives generative views; composition follows M6's review loop.
-- M10: examples-before-code, pins and lenses, explanations, one-hop context, overlap facts, coverage, dependency guard, repository hooks as evidence, counterexamples, specialist engine, independent attempts beyond M6's first compare-and-merge, disagreement, probe generation, decision probabilities, learning from answers, retrospectives and exported decision pairs, benchmarks and canary, and reference-view release qualification.
+- M10: examples-before-code, pins and lenses, explanations, one-hop context, overlap facts, coverage, dependency guard, repository hooks and the person's CI as evidence, counterexamples, specialist engine, independent attempts beyond M6's first compare-and-merge, disagreement, probe generation, decision probabilities, learning from answers, retrospectives and exported decision pairs, benchmarks and canary, and reference-view release qualification.
 - Deferred or declined:
   - RAG is not planned now beyond evals; opt-in if ever scheduled.
   - Automated video takes and gallery captures stay outside the repository.
