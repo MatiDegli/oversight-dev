@@ -210,7 +210,7 @@ Superseded by 2026-10-31 Docs audit: the record follows main (decision 6); the c
   like level 3. Every color comes from a token under `data-theme` on the root element, including
   what Cytoscape, Monaco and the dot-field canvas receive, so the switch repaints everything and no
   component picks a color. The screenshots (`make shots`) cover both modes.
-- **Approve answers only a pointer click (maintainer, 2026-10-26):** a click with `detail === 0`,
+- **Approve answers only a pointer click (maintainer, 2026-10-26; superseded by focused held Enter, 2026-11-06):** a click with `detail === 0`,
   which is what Enter, Space and a script's click produce on a focused button, never calls approve;
   the review panel shows "Approve with a click: it merges into main" under the buttons instead.
   Approve stays focusable and labelled, and Reject stays keyboard-operable. Reason: AGENTS.md says
@@ -218,7 +218,7 @@ Superseded by 2026-10-31 Docs audit: the record follows main (decision 6); the c
   from the comment box would merge into main. Cost: keyboard and screen-reader users cannot approve;
   they are told why, and the merge stays a deliberate pointer act.
 
-Amended 2026-10-31 (Docs audit): the caption was dropped in ff9ddb9 without a decision; decision 2 of “Docs audit: the record follows main” reinstates it through line B's design-docs front. Approve stays pointer-only.
+Amended 2026-10-31 (Docs audit; superseded with the pointer-only rule on 2026-11-06): the caption was dropped in ff9ddb9 without a decision; decision 2 of “Docs audit: the record follows main” reinstates it through line B's design-docs front. Approve stays pointer-only.
 - **Bezier edges kept over taxi (maintainer, 2026-10-26), superseded on 2026-10-27 by the graph
   at the sketch's direction, below:** captures of both on the preset layout were compared; curves
   read better. That preset packed every module in a tight box, with no room for lanes; on the wide
@@ -2964,7 +2964,7 @@ card's “Evidence 5 of 6” line. Measured caller words belong to the parallel 
 Reason: a docs audit found many docs behind main after several days of changed decisions. The maintainer approved all seven decisions on 2026-10-31 at 18:10:21 ART.
 
 1. Contract versions are assigned next free at landing; docs and comments promise no version number. The lead runtime took 1.10.0 when it landed first (6818b3b); parameter-extension evidence takes the next free version when it lands; safe creation (nullable SaveFile.base_hash, zones, inventory) and item 12's E3 confirmation command take the next free version after their own approval. This supersedes the reservations in the version chain.
-2. The Approve caption ("Approve with a click: it merges into main"), dropped in ff9ddb9 without a decision, is reinstated by line B's design-docs front; Approve stays pointer-only.
+2. The Approve caption ("Approve with a click: it merges into main"), dropped in ff9ddb9 without a decision, is reinstated by line B's design-docs front; Approve stays pointer-only. This approval wording is superseded by the 2026-11-06 focused held-Enter decision.
 3. PRODUCT.md gains one status line saying what is on today and what is target; the maintainer's text is unchanged.
 4. README's models line describes what is real today; turning cross-review on for the demo is a separate decision.
 5. AGENTS.md is aligned only with decisions already recorded.
@@ -5675,6 +5675,9 @@ setting to bind one. Both behave exactly as today until M5 lands. Keeping combin
 click-only approval and agent-authority limits fixed for everyone was rejected because the choice
 of risk belongs to each person; agents still cannot widen their own configured authority.
 
+The keyboard-approval clause above is superseded by the 2026-11-06 focused held-Enter
+decision; the combined-tests clause remains.
+
 ## 2026-11-05 — Roadmap limits become person settings with safe defaults
 
 The maintainer approved editing docs/roadmap.md's limits in place, with each new setting available
@@ -5726,7 +5729,8 @@ provenance and next-run application, before agent settings proposals. M5 adds "A
 keyboard" for keyboard and screen-reader users, off by default with an indicator while on;
 pointer-only remains the default from the 2026-10-26 "Approve answers only a pointer click"
 decision. Every setting may be suggested, prepared or applied by an agent under the safeguards
-below; that front follows M5's contracts and settings-history fronts.
+below; that front follows M5's contracts and settings-history fronts. The off-by-default keyboard
+and pointer-only wording above is superseded by the 2026-11-06 focused held-Enter decision.
 
 This amends "Native agents get a sandboxed shell after M3 qualifies" and roadmap decision 2:
 M4 may deliver the native shell in an explicitly M1-trusted repository before M3 qualifies. It
@@ -5988,3 +5992,39 @@ This retains AGENTS.md:61's network/PID isolation and filesystem-isolation resid
 Blocked namespaces leave the graph open and tests unavailable, with a diagnosed remedy; AppArmor guidance includes sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 and restoration of the previous value (.github/workflows/ci.yml:225).
 Comfort comes from an actionable diagnosis; practice from whole-repository test discovery; control from person-owned timeout/policy, in that order (AGENTS.md:60).
 The approved own-repository documentation update lands with the integration slice; neither the trust prompt nor this plan changes execution authority today.
+## 2026-11-06 — Focused held Enter approves; preferences await recorded settings
+
+The maintainer approved security packet point 12, option (c), at **09:54 ART**
+(**2026-11-06T12:54Z**). Approve accepts a pointer click or a fresh, unmodified Enter held
+continuously on the focused, enabled Approve control. Focused held Enter is enabled by default;
+the approved duration default is one second. The person can disable it and adjust its duration
+when recorded settings work lands. This supersedes the 2026-10-26 pointer-only decision, its
+2026-10-31 caption amendment, the Docs audit reinstatement and the 2026-11-05 off-by-default
+keyboard wording. Those entries remain as history. Global shortcuts, Ctrl+Enter and Approve in
+Ctrl K remain forbidden. Comment typing never triggers a decision.
+
+The frontend front ships enabled with a fixed 1,000 ms hold across the review bar, change-card
+and grant-choice Approve controls, using the existing revision/head-bound decision path. Progress
+appears immediately, without moving focus or changing the accessible name. Every button always
+associates "Hold Enter for 1 second to approve and merge. Release early to cancel." Existing
+disabled reasons and merge warnings remain. Theme-token progress stays clear of text and focus;
+accessible progress has no per-frame announcements. Reduced motion uses discrete updates without
+animation or transitions. Taps, Space (including Tab+Space), modified Enter, composition,
+zero-detail clicks and keys elsewhere never approve. Repeats do not shorten or restart the hold;
+completion checks focus, eligibility and candidate identity and dispatches exactly once.
+Release, focus departure, window blur, hidden page, unmount, disabled/pending state or a changed
+run/candidate revision/head cancel and reset; returning focus requires a fresh press. Pointer
+activation clears any hold.
+
+Settings boundary: GET/PUT `/settings` currently allowlist names, atomically save the selected
+environment file and install a live snapshot without a generic settings event; process environment
+wins. Appearance's browser storage is unsuitable for approval policy, and `merge_mode.changed`
+is specific to merge mode. No disable/duration preferences, browser persistence, contract, schema
+or generated-type changes ship here. The reviewed settings plans keep contracts maintainer-owned.
+The maintainer proposal in docs/roadmap.md covers person/application scope, persistence, proposed
+API fields, validation, effective-value provenance, visible changes, durable event receipts,
+revision-bound history and Restore. That proposal awaits contract review and recorded settings.
+
+Criteria, in order: (1) keyboard access works immediately; (2) deliberate holding preserves the
+maintainer's accidental-merge protection; (3) disabling and duration control remain approved
+settings work, explicitly deferred because recording and Restore require contracts.

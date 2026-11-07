@@ -38,7 +38,8 @@ it("unlocks for all Yes and disables Request changes on an empty comment", () =>
   expect(button(html, "Approve and merge")).toContain("lucide-git-merge");
   expect(button(html, "Request changes")).toContain('disabled=""');
   expect(html).toContain("If main moved since the agent started");
-  expect(html).not.toMatch(/aria-keyshortcuts|Ctrl|Enter|Approve with a click/);
+  expect(html).not.toMatch(/aria-keyshortcuts|Ctrl|Approve with a click/);
+  expect(html).toContain("Hold Enter for 1 second to approve and merge. Release early to cancel.");
 });
 it("says why each decision button is disabled and points the buttons at the reason", () => {
   const html = render("yes");
@@ -60,7 +61,7 @@ it("says why each decision button is disabled and points the buttons at the reas
   expect(loading).toContain("Approve and Request changes open when the file finishes loading.");
   const caption = /<p id="([^"]+)"[^>]*>Approve and Request changes open/.exec(loading)?.[1];
   expect(caption).toBeTruthy();
-  expect(button(loading, "Approve and merge")).toContain(`aria-describedby="${caption ?? ""}"`);
+  expect(button(loading, "Approve and merge")).toContain(`aria-describedby="${caption ?? ""} `);
   expect(button(loading, "Request changes")).toContain(`aria-describedby="${caption ?? ""}"`);
   // A blocked Request changes waits for the file, not for a comment.
   expect(loading).not.toContain("needs a comment");
@@ -74,7 +75,7 @@ it("says why each decision button is disabled and points the buttons at the reas
   );
   const saved = /<p id="([^"]+)" role="status"[^>]*>Save or discard/.exec(edits)?.[1];
   expect(saved).toBeTruthy();
-  expect(button(edits, "Approve and merge")).toContain(` ${saved ?? ""}"`);
+  expect(button(edits, "Approve and merge")).toContain(` ${saved ?? ""} `);
   expect(button(edits, "Request changes")).toContain(`aria-describedby="${saved ?? ""}"`);
 });
 it("prefills the comment from No and enables Request changes", () => {

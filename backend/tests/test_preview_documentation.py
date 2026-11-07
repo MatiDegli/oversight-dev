@@ -132,7 +132,7 @@ def test_agent_settings_application_is_future_and_present_proposals_are_text_onl
         "Plans go to docs/roadmap.md, status and inventory to docs/additions.md, decisions and "
         "their history to DECISIONS.md and CHANGELOG.md",
         "docs/roadmap.md plans product changes; a front that changes a rule edits it here",
-        "Approve has no keyboard shortcut, not even Ctrl+Enter",
+        "Global approval shortcuts, Ctrl+Enter and approval commands in Ctrl K are forbidden",
         "combined tests run first on the combined result",
         "Agents never widen their own or another agent's authority",
         "an agent proposes a setting change to the maintainer in text",
@@ -154,6 +154,29 @@ def test_agent_settings_application_is_future_and_present_proposals_are_text_onl
 def test_current_agent_rules_record_coordinator_ruling(policy: str):
     instructions = (Path(__file__).resolve().parents[2] / "AGENTS.md").read_text()
     assert policy in " ".join(instructions.split())
+
+
+@pytest.mark.parametrize(
+    ("path", "policy"),
+    [
+        (
+            "ARCHITECTURE.md",
+            "Approve accepts a pointer click or focused held Enter for one second, with no "
+            "global shortcut or Ctrl K command.",
+        ),
+        (
+            "docs/additions.md",
+            "No `/approve`: Approve has no global shortcut or typed command; only a pointer "
+            "click or focused held Enter approves.",
+        ),
+    ],
+)
+def test_current_approval_documentation_distinguishes_focused_hold_from_shortcuts(
+    path: str, policy: str
+) -> None:
+    document = (Path(__file__).resolve().parents[2] / path).read_text(encoding="utf-8")
+    assert policy in " ".join(document.split())
+    assert "Approve has no keyboard shortcut" not in document
 
 
 def test_agent_rules_are_compact_and_contain_no_milestone_transitions():
