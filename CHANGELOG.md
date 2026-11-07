@@ -9,7 +9,10 @@ its "Built during the hackathon" section.
 - Treat ESRCH during preview boundary death verification as a gone process while preserving refusal on other identity-read errors.
 - Recorded the approved plans for per-role model fallback (M2), pre-Approve diff scanning (Secrets, M2), the person's CI as evidence (M10), and versioned gates/workflows with one-click rollback (M5); implementation remains pending.
 - Recorded the approved canvas, WSL and Linux own-repository admission plans and decisions, including engine A, the M6 composition gate and the CPython 3.8 venv floor; implementation and acceptance remain pending.
-
+- Judge dependency licenses by their terms, accepting permissive licenses, public-domain dedications and MPL-2.0; other named exceptions remain the maintainer's decision, with tooling unchanged pending its follow-up front.
+- Made dependency choices replaceable through measured tradeoffs and maintainer scope decisions, while retaining the architecture's operational properties.
+- Set the policy to follow the newest stable CPython once every dependency supports it, without changing the pinned version.
+- Widened the CPython PSF-2.0 exception to the desktop distribution's embedded Windows runtime and downloaded WSL runtime payload, without a version restriction.
 - Added the approved post-hackathon roadmap and its decisions, with milestone gates separating
   current capabilities from future language, provider, harness, platform and IDE work.
 - Revised agent rules and product documentation for the post-hackathon baseline. Ended the

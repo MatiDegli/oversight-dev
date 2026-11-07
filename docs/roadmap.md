@@ -353,7 +353,7 @@ All 12 decisions were approved as recommended by the maintainer on 2026-11-05; e
    - Choice: the OS keychain by default, with `.env` as the development fallback; `.env` or another supported store by the person's per-repository choice (available from M2).
    - Alternative: `.env` only.
 5. **Model SDKs.**
-   - Choice: the OpenAI SDK for compatible endpoints, plus the official Anthropic and Google SDKs for native features (caching, thinking), behind the provider contract. No LiteLLM.
+   - Choice: the OpenAI SDK for compatible endpoints, plus the official Anthropic and Google SDKs for native features (caching, thinking), behind the provider contract. LiteLLM is not currently chosen; these library choices are replaceable under DECISIONS.md's "No dependency is an invariant" decision.
    - Alternative: OpenAI-compatible only.
 6. **Extensions.**
    - Choice: MCP now (M6), and a plugin API once the workflow contracts are stable (M9).

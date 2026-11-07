@@ -45,6 +45,9 @@ is adopted only once it is 14 days old (proposal, rule 2). Licenses were read fr
 | json-schema-to-typescript | 16.0.0 | MIT | generates the TypeScript contracts |
 | @types/react, @types/react-dom, @types/node | 19.3.0, 19.3.0, 24.19.2 | MIT | types |
 
+For these dependencies' status as replaceable current choices, see
+[No dependency is an invariant](#2026-11-06--no-dependency-is-an-invariant).
+
 ## Tooling
 
 - **Ports:** the backend listens on 8710 and Vite on 5710, away from the defaults other local
@@ -4694,6 +4697,9 @@ This entry only removes the rule: building another graph view needs its own appr
 
 Reason: a compact node view of a plan is easier to understand and to manipulate than a verbose card.
 
+For the library and wrapper choices' status, see
+[No dependency is an invariant](#2026-11-06--no-dependency-is-an-invariant).
+
 ## 2026-11-03 — Chat preview follows the frozen startup report
 
 Reuse the memoized `previewStartup()` reader and `PreviewStartupPanel` from Settings in the
@@ -4972,6 +4978,9 @@ reported before shipping; nothing is silently covered by CPython's license. The 
 exact typing-extensions/PSF-2.0 exception remains unchanged, as does general dependency policy.
 NSIS must use zlib compression, never LZMA. Git for Windows is a checked external prerequisite
 and is never bundled. Use WebView2's download bootstrapper when the runtime is absent.
+
+The version-specific, installer-only CPython approval is superseded by
+[CPython license scope for the desktop distribution](#2026-11-06--cpython-license-scope-for-the-desktop-distribution).
 
 The install payload belongs under `%LOCALAPPDATA%\Programs\Oversight\app`; writable
 `.runtime` and `.env` belong under `%LOCALAPPDATA%\Oversight` and survive upgrades and
@@ -5520,6 +5529,9 @@ providers; LiteLLM remains excluded. M2 replaces the OpenAI-only call rule in AG
 the Meta-only provider scope in AGENTS.md:18 after M0 records the transition; contract changes
 remain his decisions.
 
+The fixed-exclusion wording for LiteLLM is superseded by
+[No dependency is an invariant](#2026-11-06--no-dependency-is-an-invariant).
+
 ## 2026-11-05 — MCP first, plugins after workflow contracts stabilize
 
 The maintainer chose an MCP client in M6 and a general plugin API in M9 once workflow contracts
@@ -5796,6 +5808,131 @@ This closes the extras bypass and keeps a future per-launch backend credential o
 preview and shop environments; existing callers need no matching names. It does not defend
 against code reading files or process memory as the same user; isolation is a later front.
 
+## 2026-11-06 — No dependency is an invariant
+
+The maintainer decided at about 10:20 ART: "No deberían ser invariantes, nunca nos tenemos que atar a una dependencia."
+("They should not be invariants; we must never tie ourselves to a dependency.")
+
+No dependency is an invariant. Every library is a current choice, replaceable when a measured
+tradeoff favors it. This supersedes the library mandates and exclusions in AGENTS.md:50 and :54
+at base main `f2ea7a19`, not the operational properties alongside them. Current choices remain:
+
+- **Git CLI.** The base AGENTS.md:50 records CLI use and excludes GitPython, alongside timed
+  asyncio subprocess execution. No separate reason for excluding GitPython is recorded in this
+  decision log.
+- **The official OpenAI SDK behind the small client interface at the provider's endpoint.**
+  [Dependencies](#dependencies) records its use for Meta and Baseten. [Use native provider SDKs
+  behind one contract](#2026-11-05--use-native-provider-sdks-behind-one-contract) records the reason
+  for the planned native SDKs: retaining native caching and thinking without restricting providers.
+  LiteLLM is still not chosen; the earlier exclusion is a current choice, not a permanent ban.
+- **Cytoscape.js with fcose and no React wrapper.** [Dependencies](#dependencies) records the graph
+  and layout roles; [Remove the one-graph rule](#2026-11-03--remove-the-one-graph-rule) records the
+  wrapper choice and the reason for allowing another graph view: a compact plan is easier to
+  understand and manipulate. Neither entry records a comparative reason for the library or wrapper
+  selection.
+- **Monaco bundled locally.** [Dependencies](#dependencies) records the editor and diff roles and
+  local loading; [the original proposal](docs/proposal.md#2-directory-tree) records local workers too.
+  No separate local-versus-CDN rationale is recorded here. Local package loading remains an
+  operational rule for code and assets, independent of the editor choice.
+
+A replacement proposal measures size, speed, maintenance and fit with what the maintainer and
+their agents actually use. It addresses the product criteria in order:
+
+1. The most comfortable option for the person using Oversight: show the effect on their experience.
+2. How the maintainer and their agents actually work, or better: compare the actual workflow.
+3. Highly controllable and configurable, where appropriate and viable: show the controls and limits.
+
+Replacing a core library is a scope decision for the maintainer, not permission for an agent to
+swap it on its own. This decision changes no dependency or contract. Model calls still go through
+the small client interface at the provider's endpoint; every git command and test run remains an
+asyncio subprocess with a timeout, never a blocking subprocess.run. Frontend code and assets load
+from local packages, never a CDN; live runs and replay share one pure event reducer; the static
+build plays a bundled recorded run, always labeled as real.
+
+## 2026-11-06 — Follow the newest stable CPython when dependencies support it
+
+The maintainer decided before 10:26 ART: "Si, fijamos como politica seguir el ultimo Python estable apenas nuestras dependencias lo soportan. Y apruebo lo del ajuste de la licencia de CPython"
+("Yes, we set as policy following the latest stable Python as soon as our dependencies support it.
+And I approve the CPython license adjustment").
+
+Oversight follows the newest stable CPython as soon as every dependency supports it. Dependency
+compatibility determines when the upgrade can proceed. This front records the policy only:
+`pyproject.toml:6` still pins `>=3.12,<3.13`. A later front surveys compatibility and upgrades the
+pin; no runtime, tool target or lockfile changes here.
+
+## 2026-11-06 — CPython license scope for the desktop distribution
+
+The maintainer approved before 10:26 ART: "Y apruebo lo del ajuste de la licencia de CPython"
+("And I approve the CPython license adjustment").
+
+CPython under PSF-2.0 is approved for Oversight's desktop distribution: the runtime embedded in
+the Windows installer and the WSL runtime payload the app downloads. The approval has no version
+number. It widens the version-specific, installer-only approval in [Package a Windows installer
+with an embedded Python](#package-a-windows-installer-with-an-embedded-python-2026-11-04).
+
+Third-party components retain their own licenses, inventory and notice requirements; CPython's
+license does not cover them. All other terms of the earlier packaging decision remain intact.
+This approval changes no runtime payload or pinned version and makes no delivery claim.
+
+## 2026-11-06 — License policy by terms
+
+The maintainer approved: "Si, cambia la regla." ("Yes, change the rule.")
+
+Dependency licenses are judged by their terms rather than a closed list of identifiers.
+OSI-approved permissive licenses, including MIT, Apache-2.0, BSD, ISC, 0BSD, Zlib, PSF-2.0 and
+BlueOak-1.0.0, public-domain dedications such as Unlicense and CC0-1.0, and MPL-2.0 are accepted.
+Fonts may also use SIL OFL 1.1. Strong copyleft, commercial and source-available licenses require
+a named exception decided by the maintainer, with the actual terms recorded here. The rule
+against copying code from GPL projects remains. Acceptance does not waive notice, attribution,
+source availability or other obligations of the selected license.
+
+This follows [No dependency is an invariant](#2026-11-06--no-dependency-is-an-invariant): a
+dependency is evaluated on its measured tradeoffs, not rejected merely because its permissive
+license has a different identifier. In the product criteria's order:
+
+1. The most comfortable option for the person using Oversight: assess useful dependencies on
+   their benefits and obligations instead of an arbitrary list.
+2. How the maintainer and their agents actually work, or better: review the actual terms and
+   record the reasons, keeping the existing dependency inventory and notices.
+3. Highly controllable and configurable, where appropriate and viable: the maintainer decides
+   named exceptions with visible terms; agents gain no authority to approve them.
+
+For example, the tldraw SDK is source-available under its own license, whose default terms
+permit development use and require a trial, commercial or hobby license and an active key for
+production ([tldraw's license documentation](https://tldraw.dev/community/license)). Choosing it
+would require a named exception recording the applicable terms, including production rights,
+costs, restrictions and obligations. This decision grants no tldraw exception and adds no dependency.
+
+PSF-2.0 is now accepted by default. The typing-extensions exception in [Dependency licenses](#dependency-licenses)
+and both CPython approvals in [Package a Windows installer with an embedded Python](#package-a-windows-installer-with-an-embedded-python-2026-11-04)
+and [CPython license scope for the desktop distribution](#2026-11-06--cpython-license-scope-for-the-desktop-distribution)
+remain history. The same-day desktop-distribution scope (embedded Windows runtime and downloaded
+WSL runtime payload) remains recorded and is now subsumed by the general license rule.
+
+The repository's `desktop/packaging/licenses/cpython-windows.txt` retains PSF-2.0 (:73), BeOpen
+(:123), CNRI (:173) and CWI (:244); the historical grants also appear in THIRD_PARTY_NOTICES.md.
+All four are permissive: they allow use, modification and redistribution without requiring
+disclosure of derivative source. Notice retention, change summaries where required, nonendorsement
+and applicable choice-of-law terms still bind. The file's GPL-compatibility history does not mean
+Python is licensed under the GPL. The complete Windows payload is not wholly permissive:
+the same file's additional Windows conditions (:283) impose Microsoft Distributable Code
+restrictions, also identified by `desktop/packaging/licenses.py:181`. Those components and all
+other incorporated software retain their own terms and notices; PSF-2.0 does not relicense them.
+
+Enforcement remains stricter than this rule until a follow-up tooling front widens it after the
+license-gate front lands. No checker, gate, grant or notice is changed here. The current controls are:
+
+- `tools/notices.py:27`: ALLOWED contains only MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause and ISC.
+- `tools/notices.py:29` and :30: the exact typing-extensions/PSF-2.0 exception and two named font
+  packages; :65 adds OFL-1.1 only for those fonts.
+- `tools/notices.py:53`: the exact target-lexicon version, lockfile and license-expression grant.
+- `desktop/packaging/licenses.py:20`: GRANTS restricts MPL-2.0, Zlib and Unicode-3.0 to named crates.
+  Its :50 guard refuses active target-lexicon; :57 separately accepts unicode-ident's exact combined
+  expression, and :53 delegates other expressions to the general checker.
+
+That follow-up must reconcile these allowlists with the terms-based policy; the new rule does
+not authorize bypassing their current refusals.
+
 ## 2026-11-06 — Canvas direction: the graph is one removable object
 
 The maintainer approved a persistent creative workspace: the code graph is one removable and restorable object among workflows, notes, code, previews and agent objects.
@@ -5992,6 +6129,7 @@ This retains AGENTS.md:61's network/PID isolation and filesystem-isolation resid
 Blocked namespaces leave the graph open and tests unavailable, with a diagnosed remedy; AppArmor guidance includes sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 and restoration of the previous value (.github/workflows/ci.yml:225).
 Comfort comes from an actionable diagnosis; practice from whole-repository test discovery; control from person-owned timeout/policy, in that order (AGENTS.md:60).
 The approved own-repository documentation update lands with the integration slice; neither the trust prompt nor this plan changes execution authority today.
+
 ## 2026-11-06 — Focused held Enter approves; preferences await recorded settings
 
 The maintainer approved security packet point 12, option (c), at **09:54 ART**

@@ -64,14 +64,15 @@ def test_a_worker_names_its_slow_teardown_in_the_log(tmp_path: Path, hang: bool)
                 yield
                 time.sleep({HANG_SLEEP if hang else PASS_SLEEP})
 
-            def test_inner(slow_teardown, worker_id):
+            def test_inner(slow_teardown, worker_id, tmp_path):
                 assert worker_id in {{"gw0", "gw1"}}
+                assert tmp_path.is_relative_to({str(tmp_path / "inner-tmp")!r})
             """
         )
     )
     # Use the same outer process-group bound as PYTEST_RUN. capped.sh is omitted: this
     # tiny run checks stderr transport, without depending on a user systemd manager.
-    # Load only xdist; no inherited addopts, repository conftest or third-party plugins.
+    # Keep temp cleanup local; load only xdist with no inherited config or other plugins.
     # Workers inherit the diagnostic FD. A regular file avoids pipe backpressure and
     # waiting for EOF from a surviving worker when the bounded controller exits.
     # This does not resolve the observed post-100% hang; SIGTERM dumps diagnose it.
@@ -93,6 +94,8 @@ def test_a_worker_names_its_slow_teardown_in_the_log(tmp_path: Path, hang: bool)
                     "-n",
                     "2",
                     "--max-worker-restart=0",
+                    "--basetemp",
+                    str(tmp_path / "inner-tmp"),
                     "--confcutdir",
                     str(tmp_path),
                     "-o",
