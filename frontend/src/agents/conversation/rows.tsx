@@ -1,3 +1,4 @@
+import { useClock } from "../../timeZone";
 import type { RoundStep } from "./rounds";
 import type { SuiteResult } from "@contracts";
 import {
@@ -26,13 +27,10 @@ const icons: Record<string, LucideIcon> = {
 };
 
 export function EventTime({ ts }: { ts?: string }) {
+  const clock = useClock();
   return ts ? (
     <time dateTime={ts} className="shrink-0 font-mono text-[13px] whitespace-nowrap text-faint">
-      {new Date(ts).toLocaleTimeString("en-GB", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      })}
+      {clock(ts)}
     </time>
   ) : null;
 }

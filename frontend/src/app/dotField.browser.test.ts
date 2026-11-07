@@ -204,7 +204,7 @@ async function beside(
   const [width, height] = [960, 600];
   const area = ({ path, x, y }: { path: string; x: number; y: number }) =>
     `<img src="data:image/png;base64,${readFileSync(path).toString("base64")}" style="width:${String(width)}px;height:${String(height)}px;object-fit:none;object-position:-${String(x)}px -${String(y)}px">`;
-  const page = await browser.newPage({ viewport: { width: width * 2, height } });
+  const page = await browser.newPage({ timezoneId: "UTC", viewport: { width: width * 2, height } });
   try {
     await page.setContent(
       `<body style="margin:0;display:flex;background:#000">${area(sketch)}${area(shot)}</body>`,
@@ -256,7 +256,10 @@ async function referenceShot(
   out: string,
 ) {
   if (!browser) throw new Error("Browser was not started");
-  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+  const page = await browser.newPage({
+    timezoneId: "UTC",
+    viewport: { width: 1920, height: 1080 },
+  });
   try {
     await page.goto(
       `file://${referenceFile}?theme=${theme}&${state === "merge" ? "freeze=merge&t=0.975" : "freeze=1"}#${state === "merge" ? "rest" : state}`,

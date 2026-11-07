@@ -54,6 +54,7 @@ async function frame(page: Page) {
 }
 async function withPage(run: (page: Page) => Promise<void>, dockedWatch = false) {
   const page = await browser.newPage({
+    timezoneId: "UTC",
     viewport: { width: 1920, height: 1080 },
     reducedMotion: "reduce",
   });

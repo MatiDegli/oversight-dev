@@ -296,7 +296,8 @@ async def test_shop_request_host_matches_supported_adapter(preview, parent, fram
         if parent == "127.0.0.1":
             error(response, "not_configured")
             assert response.json()["error"]["message"] == (
-                "Shop preview requires a localhost parent until its authority adapter is available."
+                "Shop preview is unavailable at this address. "
+                "Open Oversight at localhost on the same port, then try again."
             )
             assert not h.manager.has_owner and not h.processes and not h.sink.records
             assert h.manager.registry.read() is None

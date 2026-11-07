@@ -4,8 +4,8 @@ import json
 import os
 import stat
 from collections import Counter, defaultdict
-from collections.abc import Sequence
-from dataclasses import dataclass
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -43,6 +43,29 @@ class CallReport:
     calls: tuple[Invocation, ...] = ()
     complete: bool = False
     problems: tuple[str, ...] = ("caller report unavailable",)
+
+
+def redact_calls(report: CallReport, redact: Callable[[str], str]) -> CallReport:
+    """Withhold private snapshots rather than compare two masked values as equal."""
+    calls: list[Invocation] = []
+    withheld = False
+    for call in report.calls:
+        if any(redact(value) != value for value in (call.test_id, call.node_id)):
+            withheld = True
+            continue
+        values = (call.inputs, call.result, call.problem)
+        if any(value is not None and redact(value) != value for value in values):
+            withheld = True
+            call = replace(
+                call, inputs=None, result=None, problem="secret-bearing invocation withheld"
+            )
+        calls.append(call)
+    problems = tuple(redact(problem) for problem in report.problems)
+    if withheld:
+        problems += ("secret-bearing invocations withheld",)
+    return replace(
+        report, calls=tuple(calls), complete=report.complete and not withheld, problems=problems
+    )
 
 
 def canonical(value: object) -> str:

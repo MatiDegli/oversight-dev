@@ -38,7 +38,11 @@ afterAll(async () => {
 });
 async function withPage(width: number, height: number, test: (page: Page) => Promise<void>) {
   if (!browser) throw new Error("Browser not started");
-  const page = await browser.newPage({ viewport: { width, height }, reducedMotion: "reduce" });
+  const page = await browser.newPage({
+    timezoneId: "America/Argentina/Buenos_Aires",
+    viewport: { width, height },
+    reducedMotion: "reduce",
+  });
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   try {

@@ -1,3 +1,4 @@
+import { TimeZoneSettings } from "./TimeZoneSettings";
 import type { MergeMode } from "@contracts";
 import { X } from "lucide-react";
 import { useId, useState, useSyncExternalStore } from "react";
@@ -89,6 +90,7 @@ export function SettingsPanel({
       <EditableSettings live={Boolean(onSetMergeMode)} workspace={state.run?.workspace} />
       <PreviewStartupPanel result={previewStartup()} headingId="settings-preview-startup-heading" />
       <AppearanceSettings />
+      <TimeZoneSettings />
     </SettingsFrame>
   );
 }

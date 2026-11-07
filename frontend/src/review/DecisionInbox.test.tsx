@@ -1,3 +1,11 @@
+import { applyTimeZone, AUTOMATIC } from "../timeZone";
+import { afterEach, beforeEach as beforeZone } from "vitest";
+beforeZone(() => {
+  applyTimeZone("America/Argentina/Buenos_Aires");
+});
+afterEach(() => {
+  applyTimeZone(AUTOMATIC);
+});
 import { existsSync, readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, it, vi } from "vitest";

@@ -50,7 +50,7 @@ const tabs = [
 it.each([1920, 1280, 390])(
   "opens practice at %ipx without fetching decision chunks",
   async (width) => {
-    const page = await browser.newPage({ viewport: { width, height: 1080 } });
+    const page = await browser.newPage({ timezoneId: "UTC", viewport: { width, height: 1080 } });
     const requests: string[] = [];
     await page.route("**/{PhonePractice,ReviewBody,ReviewDecisionBar}.tsx*", (route) => {
       requests.push(new URL(route.request().url()).pathname);
@@ -86,7 +86,7 @@ it.each([1920, 1280, 390])(
 );
 
 it("opens the phone introduction while review evidence is unavailable", async () => {
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const page = await browser.newPage({ timezoneId: "UTC", viewport: { width: 390, height: 844 } });
   const requests: string[] = [];
   await page.route("**/{ReviewBody,ReviewDecisionBar}.tsx*", (route) => {
     requests.push(new URL(route.request().url()).pathname);
@@ -105,7 +105,7 @@ it("opens the phone introduction while review evidence is unavailable", async ()
 });
 
 it("loads evidence before painting the first phone decision without a layout shift", async () => {
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const page = await browser.newPage({ timezoneId: "UTC", viewport: { width: 390, height: 844 } });
   let release = () => {};
   const gate = new Promise<void>((resolve) => {
     release = resolve;
@@ -173,7 +173,7 @@ it("loads evidence before painting the first phone decision without a layout shi
 });
 
 it.each(["failed", "left"])("handles a pending phone decision when %s", async (outcome) => {
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const page = await browser.newPage({ timezoneId: "UTC", viewport: { width: 390, height: 844 } });
   let release = () => {};
   const gate = new Promise<void>((resolve) => {
     release = resolve;
@@ -212,7 +212,10 @@ it.each(["failed", "left"])("handles a pending phone decision when %s", async (o
 });
 
 it("waits for evidence when resizing into an already started phone decision", async () => {
-  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+  const page = await browser.newPage({
+    timezoneId: "UTC",
+    viewport: { width: 1920, height: 1080 },
+  });
   let release = () => {};
   const gate = new Promise<void>((resolve) => {
     release = resolve;
@@ -259,7 +262,7 @@ it("waits for evidence when resizing into an already started phone decision", as
 });
 
 it("keeps the phone fallback chrome out of keyboard focus", async () => {
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const page = await browser.newPage({ timezoneId: "UTC", viewport: { width: 390, height: 844 } });
   let release = () => {};
   const gate = new Promise<void>((resolve) => {
     release = resolve;
@@ -293,7 +296,7 @@ it("keeps the phone fallback chrome out of keyboard focus", async () => {
 it.each([390, 1280, 1920])(
   "keeps practice frame geometry through every stage at %ipx",
   async (width) => {
-    const page = await browser.newPage({ viewport: { width, height: 1080 } });
+    const page = await browser.newPage({ timezoneId: "UTC", viewport: { width, height: 1080 } });
     await page.route("**/", (route) => route.fulfill({ contentType: "text/html", body: html }));
     try {
       await page.goto(url);
@@ -347,6 +350,7 @@ it.each(
   "keeps the $tab frame on its first cold open (failed chunk: $failed)",
   async ({ tab, module, label, content, failed }) => {
     const page = await browser.newPage({
+      timezoneId: "UTC",
       viewport: { width: 1920, height: 1080 },
       reducedMotion: "reduce",
     });

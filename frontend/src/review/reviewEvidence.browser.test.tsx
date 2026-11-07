@@ -24,7 +24,7 @@ it("retains the merged inbox card's grant receipt and comparison map", async () 
     .split("\n")
     .map(parseEvent)
     .reduce(applyEvent, createInitialState());
-  const page = await browser.newPage();
+  const page = await browser.newPage({ timezoneId: "America/Argentina/Buenos_Aires" });
   try {
     await page.setContent(renderToStaticMarkup(<ChangeCard state={state} changeId="change-1" />));
     const card = page.getByRole("complementary", { name: "Change card" });
@@ -57,7 +57,7 @@ const proposal = state.changes[changeId]?.proposal;
 if (!proposal) throw new Error("Missing recorded level 2 proposal");
 
 it("keeps recorded test-run evidence available in the closed Details component", async () => {
-  const page = await browser.newPage();
+  const page = await browser.newPage({ timezoneId: "America/Argentina/Buenos_Aires" });
   try {
     await page.setContent(
       renderToStaticMarkup(<ReviewFacts state={state} proposal={proposal} panel />),
@@ -82,7 +82,7 @@ it("keeps recorded test-run evidence available in the closed Details component",
 });
 
 it("renders recorded level 2 facts without comparisons as state d", async () => {
-  const page = await browser.newPage();
+  const page = await browser.newPage({ timezoneId: "America/Argentina/Buenos_Aires" });
   try {
     await page.setContent(
       renderToStaticMarkup(

@@ -1,5 +1,13 @@
 # Beyond level 2
 
+Secret-boundary hardening (2026-11-06): implemented on backend/secrets-boundary — run-scoped
+provider/tested-tree masking for run_tests observations and test events, reviewer diffs and
+proposal task/summary and measured/behavior evidence; workspace-only inventory failure,
+credential/URL-password masks (including PASS, PWD and DSN names), ordinary-setting test identity
+preservation, indexed whole-value matching, shared hex-token masking and repository hex-id
+preservation have regressions.
+See DECISIONS.md, “Mask tested-tree secrets at model and test-event boundaries”, for limits.
+
 ## Three proofs
 
 The freeze is organized around three proofs. Judge each front by the proof it serves.
@@ -79,6 +87,18 @@ Build Chat only from an approved sketch round.
 - Chat adds no events, contracts or endpoints. Presence in "Where they work" and marks in the
   Files tree read the existing `agent.focus` event and `change.proposed.files`.
 - Graph and map work comes after Chat and the lead; since 2026-11-01 it may start before the freeze when a slot is free (DECISIONS.md).
+
+### Persistent workspace canvas (2026-11-06)
+
+State: **Planned, approved** — the graph becomes one removable/restorable object in a persistent workspace; implementation and acceptance remain pending. See [Canvas milestone](roadmap.md#milestones) and the November 6 canvas decisions. The three-view/startup change is recorded separately as “Code joins Chat and Oversight; reopen the last workspace view”.
+
+- **Measurement complete, not shipped:** front 0 (S) selected engine A, the owned DOM core, over React Flow for faster drag/selection and lower heap/bundle cost; frame smoothness tied on a loaded host. Front 1 must remove the measured zoom long tasks and establish quiet-host acceptance.
+- **Planned:** front 1 (L), core/default board/history, separate repository-scoped append-only board store/stream, compensating Undo, keyboard/phone/outline access, removable graph and person-owned navigation. AGENTS.md:67 and the DESIGN.md widen-window text change only with implementation.
+- **Planned:** front 2 (M), library and panel drag-in: graph/workflow/sticky/text/image/UI component/app/browser/message/live editable file/diff/agent objects, stable IDs and live references, labeled Freeze copy, repository-local persistence and explicit credential-free export.
+- **Planned:** front 3 (L), previews/browser/tests/usage/connectors, event-derived team presence and person-issued assignment/sticky-to-task. Multiple previews and executable objects need lifecycle/isolation qualification; a browser tab needs screen-share consent, and page reading needs a visible revocable grant. Optional extension waits for its own plan and double review.
+- **Planned:** front 4 (L), granted agents, generative UI, canvas_patch/browser_read and custom types after M6's complete review loop, moved out of M10. Board/tool/manifest contracts are approved in principle; the final diff goes to the maintainer, and the fixed tool list changes only in the implementing front. Host-only controls, isolated renderers, attributed revision-checked patches and person grants remain gates.
+- **Planned:** front 5 (M), drawing/templates after front 4 and bounded ingestion; independently usable increments carry their settings. Further object directions are listed in the milestone; command buttons need their own execution plan, terminal objects M4 and voice notes dictation.
+- **Planned acceptance/settings:** fake-only replay, Undo/restart, isolation and keyboard/phone/load evidence; configurable quiet-host ≤1% frames over 20 ms, ≤100 ms interactions and ≤100 KB gzip added canvas JS. Default assets/snapshots budget 5 GB/repository, warning at 80%, pruning by person action or chosen policy; visibility-based heavy-object snapshots, keep alive and live-count warnings without a mandatory cap. Sensitive fronts need full verification and two cross-provider reviewers, one Opus.
 
 ### Queue inventory
 
@@ -226,9 +246,7 @@ new candidate work waits for the maintainer’s order.
 
 - Benchmarks view: a read-only view of the bench and proof results inside Oversight. Until it
   exists, the README and the demo video carry the proofs.
-- Linux on demand: after the native Windows backend port, with the Tauri shell on Windows,
-  git, Python and Node run natively, and only what needs the Linux kernel (isolated test runs,
-  the sandbox) goes to WSL, which starts on demand and stops when idle.
+- Linux on demand: the earlier kernel-only WSL candidate is superseded by the approved matching Linux-backend plan under [Next](#next). General sandbox qualification remains separate M3 work; no WSL bridge is delivered yet.
 - Resume a halted agent in the same conversation and worktree remains a candidate; the live
   Resume command only releases a pending or active pause (`agents/_control.py:RunControl`).
 - Budget reminders with steps reserved for `finish`, and a bounded history with a visible handoff.
@@ -285,11 +303,11 @@ new candidate work waits for the maintainer’s order.
     [Saved agent flows](#saved-agent-flows)); and after that a public workshop or marketplace where people
     publish workflows for others to see and use. A shared workflow uses only nodes from the closed catalog
     and never removes a hard rule.
-  - **The graph optional by configuration.** After the hackathon, not queued. Keep it on by default;
+  - **The graph optional by configuration.** Removable/restorable graph approved for canvas front 1; the broader no-load configuration remains M6 work. Keep it on by default;
     when off, Cytoscape, fcose and the WebGL field never load, and the [Files tree](../DESIGN.md#layout)
     and panels stand in for the graph.
-    Making the repository graph optional requires the maintainer's entry in DECISIONS.md first (AGENTS.md: the repository graph stays visible in the Oversight view).
-    Prerequisites: the editor loader currently waits for `whenFirstGraphDrawn()`; node selection, the impact
+    The November 6 canvas direction and decision 2 approve the AGENTS.md:67 replacement; it takes effect only when the implementing front edits that rule.
+    Remaining prerequisites: node selection, the impact
     cone, the palette's graph commands and both practice graphs need paths that work with the graph off.
   - **A fresh-context review of the plan.** After the hackathon, not queued. Before the person queues a lead's plan, a second Meta model
     that never saw the lead's conversation reads only the plan and its named files, returning findings ranked blocker, major or minor in the plan piece.
@@ -376,13 +394,20 @@ new candidate work waits for the maintainer’s order.
   target-lexicon exception; [audit](../desktop/packaging/crate-license-audit.md). One installer
   notice generator inventories crate, Python, CPython/component, frontend and NSIS terms.
   Native runner results, failure-path/headed rendering acceptance and independent review remain
-  pending; no WSL bridge. Native File > Open repository… and Open demo, disposable per-source
+  pending; the approved WSL bridge below is planned, not delivered. Native File > Open repository… and Open demo, disposable per-source
   state and shared locked spending history are implemented conditionally. The installed harness
   runs after PATH restoration and before uninstall; Windows CI, two independent reviews and
   headed acceptance must pass before November 4, 18:00 ART (21:00 UTC), or this front stays
   unmerged and opening a repository remains next. Remembering the last repository, --clone-root
-  own sources, Linux and macOS, non-Python repositories and in-app discard remain out of scope.
+  own sources, macOS, non-Python repositories and in-app discard remain outside that Windows front; Linux admission is planned below.
   See the November 4 repository-opening DECISIONS entry.
+- **Planned, approved 2026-11-06 — Linux own-repository admission (2a):** backend-only native Linux/WSL source launches, independent of F1-B. Four slices in order: admission/Git layouts (L), environments/isolation (L), shared recovery/audit (L), CLI/runtime/factory integration and the approved own-repository documentation edit (M); public enablement last. See [WSL/Linux fronts](roadmap.md#milestones) and the ten November 6 Linux admission decisions.
+  - Planned Git/placement: linked worktrees, shallow/hard-linked/large-object clones, bounded metadata witnesses, preserved originals/disposable COPY, exact discard consent and per-source runtime/agent-work retention with shared spending. `serve --repository` will use flag > environment > `.env`, exact-case absolute keys and reload/factory inheritance, superseding the old no-source-selection-CLI text only when implemented.
+  - Planned environments: selected venv → `.venv` → `venv/`, external Poetry/pyenv, CPython 3.8+ without an upper pin, end-of-life warnings, free-threaded probe coverage; system-site-packages waits for root validation/remapping. Unsupported environments keep graph access, never install/substitute. DrvFs and private groups have explicit checks/warnings, person-owned risk settings and Linux-resident runtime/locks/SQLite.
+  - Planned audit/execution: `source.admission` is approved in principle with private pre-store audit; the final contract diff goes to the maintainer. Require network/PID isolation for tests/probes, with no filesystem-isolation claim; blocked isolation keeps the graph with diagnosis/remedy. Trust stays informational, reviewed-self/running development sources stay refused, and unsandboxed tests require a separate maintainer AGENTS.md change. Fake-only matrix/recovery/switching evidence, Windows dispatch regressions and native Linux/WSL/real-DrvFs acceptance remain pending.
+- **Planned, approved 2026-11-06 — desktop WSL repositories:** Windows window plus a matching Linux backend in the selected WSL2 distro; no extension or independent backend version. Order: F1-B authenticated handoff (M), 2a above and 2b desktop selection (M selection scope, after both), payload (L or M plus notices), transport/lifecycle (L), installer/acceptance (M). The initial selection estimate is expanded by 2a's approved four slices.
+  - Planned distribution/transport: hash-pinned first-use payload, automatic/on/off installer prefetch (automatic when WSL plus a distro exists), owned framed HTTP/SSE tunnel preserving the Windows loopback origin, identity-verified Linux cleanup and visible lifecycle budgets. Linux state stays local; Windows owns shared settings/spending with labeled local tracking and exactly-once reconciliation if its private channel fails. Read the Windows `.env` in place, never copy/write it from Linux.
+  - Pending gates: final contracts, payload Python/license-policy decisions, component notices, fake-only transport/cleanup/credential tests and maintainer-machine Windows+WSL acceptance. WSL2 alone is no filesystem sandbox; lifecycle/authority fronts require full verification and two cross-provider reviewers, one Opus. The plan supersedes the older no-bridge scope only as its fronts land.
 - The minimal native Windows backend and public own-repository COPY are implemented;
   their native qualification remains pending. Broader platform ports and macOS follow as
   separate fronts. First a per-OS layer in `backend/src/oversight/workspace/` (network isolation,
@@ -802,7 +827,7 @@ stays in place. Merge rehearsal has its own one-page plan outside this slice.
 
 ### Lead browser size rationale
 
-chatLeads.browser.test.ts (1311 lines) and chatLeads.browser.fixture.tsx (641 lines) stay
+chatLeads.browser.test.ts (1312 lines) and chatLeads.browser.fixture.tsx (641 lines) stay
 together because the six-lead scene table and lifecycle proofs are inherently tabular. The
 fixture keeps valid event sequences beside their scene definitions; the browser suite keeps
 Stop, cap, density and capture assertions together so their shared lifecycle evidence can be

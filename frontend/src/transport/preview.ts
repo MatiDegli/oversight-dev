@@ -1,10 +1,51 @@
 import type {
+  ErrorCode,
   PreviewCreated,
   PreviewDetails,
   PreviewStatus,
   PreviewTokenRequest,
   StartPreview,
 } from "@contracts";
+import { CommandError } from "./commands";
+
+const errorCodes: Record<ErrorCode, true> = {
+  not_found: true,
+  wrong_state: true,
+  slot_busy: true,
+  spend_brake: true,
+  not_configured: true,
+  invalid_path: true,
+  stale_file: true,
+  not_implemented: true,
+  invalid_request: true,
+  internal: true,
+  forbidden: true,
+  too_large: true,
+};
+function refusal(value: unknown, status: number, lease?: string): CommandError | null {
+  if (!value || typeof value !== "object" || Array.isArray(value) || !("error" in value))
+    return null;
+  const error = value.error;
+  if (
+    !error ||
+    typeof error !== "object" ||
+    Array.isArray(error) ||
+    !("code" in error) ||
+    typeof error.code !== "string" ||
+    !Object.hasOwn(errorCodes, error.code) ||
+    !("message" in error) ||
+    typeof error.message !== "string" ||
+    !error.message.trim() ||
+    (lease && error.message.includes(lease))
+  )
+    return null;
+  // Keep remote copy within a short panel paragraph; check the full text for leases first.
+  return new CommandError(
+    status,
+    error.code as ErrorCode,
+    error.message.trim().slice(0, 500).trimEnd(),
+  );
+}
 
 const previewId = (value: unknown): value is string =>
   typeof value === "string" && /^preview-[0-9a-f]{32}$/.test(value);
@@ -70,6 +111,7 @@ class LivePreviewPort {
     body?: StartPreview | PreviewTokenRequest,
     keepalive = false,
   ): Promise<unknown> {
+    let rejected: CommandError | null = null;
     try {
       const request = this.request;
       const response = await request(new URL(path, this.origin), {
@@ -86,6 +128,14 @@ class LivePreviewPort {
         redirect: "error",
         referrerPolicy: "no-referrer",
       });
+      if (response.status >= 400 && response.status <= 599) {
+        rejected = refusal(
+          await response.json(),
+          response.status,
+          body && "lease_token" in body ? body.lease_token : undefined,
+        );
+        throw new Error();
+      }
       if (
         response.status !== (path === "/previews" ? 202 : 200) ||
         response.headers.get("Cache-Control") !== "no-store"
@@ -93,6 +143,7 @@ class LivePreviewPort {
         throw new Error();
       return await response.json();
     } catch {
+      if (rejected) throw rejected;
       throw new Error("Preview request could not be verified");
     }
   }

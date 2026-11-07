@@ -210,7 +210,7 @@ async function withPanel(
   test: (page: Page, frame: Frame, response: Response) => Promise<void>,
 ) {
   if (!browser) throw new Error("Missing sandbox browser");
-  const context = await browser.newContext();
+  const context = await browser.newContext({ timezoneId: "UTC" });
   context.setDefaultTimeout(5_000);
   try {
     const page = await context.newPage();

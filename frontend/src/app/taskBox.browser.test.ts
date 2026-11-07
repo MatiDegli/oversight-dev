@@ -57,6 +57,7 @@ async function withPage(
   if (!browser) throw new Error("Browser was not started");
   const width = options.width ?? 1600;
   const page = await browser.newPage({
+    timezoneId: "UTC",
     viewport: { width, height: width === 1920 ? 1080 : width === 1280 ? 800 : 900 },
     reducedMotion: options.reducedMotion,
   });

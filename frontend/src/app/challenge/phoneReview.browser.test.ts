@@ -40,7 +40,7 @@ async function revealDecisions(page: Page) {
 }
 
 it.each(["dark", "day"])("preserves agent and node sizes in %s", async (theme) => {
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const page = await browser.newPage({ timezoneId: "UTC", viewport: { width: 390, height: 844 } });
   try {
     await page.goto(url);
     await openOversight(page);
@@ -71,7 +71,7 @@ it.each(["dark", "day"])("preserves agent and node sizes in %s", async (theme) =
 });
 
 it("preserves dock wrapping without a lock caption across practice screens", async () => {
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const page = await browser.newPage({ timezoneId: "UTC", viewport: { width: 390, height: 844 } });
   try {
     await page.goto(url);
     await openOversight(page);
@@ -95,7 +95,10 @@ it("preserves dock wrapping without a lock caption across practice screens", asy
 it.each(["dark", "day"])(
   "captures recorded decisions in %s",
   async (theme) => {
-    const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    const page = await browser.newPage({
+      timezoneId: "UTC",
+      viewport: { width: 390, height: 844 },
+    });
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(e.message));
     try {
@@ -168,7 +171,7 @@ it.each(["dark", "day"])(
 
 type FixtureName = "a" | "b" | "c" | "d2";
 async function fixturePage(name: FixtureName) {
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const page = await browser.newPage({ timezoneId: "UTC", viewport: { width: 390, height: 844 } });
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   const html = await server.transformIndexHtml(
@@ -251,7 +254,10 @@ async function captureFixture(page: Page, name: FixtureName) {
         import.meta.url,
       ),
     );
-    const report = await browser.newPage({ viewport: { width: 780, height: 844 } });
+    const report = await browser.newPage({
+      timezoneId: "UTC",
+      viewport: { width: 780, height: 844 },
+    });
     try {
       await report.setContent(
         `<style>body{margin:0;display:flex}img{width:390px;height:844px;object-fit:contain;object-position:top}</style><img src="data:image/png;base64,${product.toString("base64")}"><img src="data:image/png;base64,${sketch.toString("base64")}">`,

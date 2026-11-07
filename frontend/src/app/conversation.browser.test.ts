@@ -29,7 +29,11 @@ afterAll(async () => {
 });
 
 async function open(commands = true, width = 1920, height = 1080, theme = "dark") {
-  const page = await browser.newPage({ viewport: { width, height }, reducedMotion: "reduce" });
+  const page = await browser.newPage({
+    timezoneId: "UTC",
+    viewport: { width, height },
+    reducedMotion: "reduce",
+  });
   await page.route("**/", (route) => route.fulfill({ contentType: "text/html", body: html }));
   await page.goto(url);
   await page.waitForFunction(() => !!window.conversationTabTest);

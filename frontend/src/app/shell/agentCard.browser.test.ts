@@ -48,6 +48,7 @@ async function outside(page: Page) {
 
 async function openCardPage(commands = true) {
   const page = await browser.newPage({
+    timezoneId: "UTC",
     viewport: { width: 1920, height: 1080 },
     reducedMotion: "reduce",
   });
@@ -191,6 +192,7 @@ it.each(["task", "steps", "diff", "stop"] as const)(
   "ready preserves external layout and %s focus",
   async (target) => {
     const page = await browser.newPage({
+      timezoneId: "UTC",
       viewport: { width: 1920, height: 1080 },
       reducedMotion: "reduce",
     });

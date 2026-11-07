@@ -1,3 +1,11 @@
+import { applyTimeZone, AUTOMATIC } from "../timeZone";
+import { beforeEach as beforeZone, afterEach as afterZone } from "vitest";
+beforeZone(() => {
+  applyTimeZone("America/Argentina/Buenos_Aires");
+});
+afterZone(() => {
+  applyTimeZone(AUTOMATIC);
+});
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 

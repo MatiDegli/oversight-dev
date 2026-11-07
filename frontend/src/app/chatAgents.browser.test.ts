@@ -30,6 +30,7 @@ afterAll(async () => {
 });
 async function open(name = "working", width = 1920, theme = "dark", commands = true) {
   const page = await browser.newPage({
+    timezoneId: "UTC",
     viewport: { width, height: width === 1920 ? 1080 : 800 },
     reducedMotion: "reduce",
   });
@@ -588,7 +589,7 @@ const decisionsUrl = new URL("../../../DECISIONS.md", import.meta.url);
 it.runIf(evidence)(
   "verifies all 20 full-size capture-left/reference-right comparisons",
   async () => {
-    const page = await browser.newPage();
+    const page = await browser.newPage({ timezoneId: "UTC" });
     try {
       for (const state of ["empty", "working", "proposed", "review", "merged"])
         for (const width of [1920, 1280])

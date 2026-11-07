@@ -61,6 +61,7 @@ for (const width of [1920, 1280])
         `captures ${scene} ${String(width)} ${theme}`,
         async () => {
           const page = await browser.newPage({
+            timezoneId: "UTC",
             viewport: { width, height: width === 1280 ? 800 : 1080 },
             reducedMotion: "reduce",
           });

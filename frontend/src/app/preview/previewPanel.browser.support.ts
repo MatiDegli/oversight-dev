@@ -138,6 +138,7 @@ class BrowserSupport {
     if (scenario === "isolation-before-launch")
       authority.publish("failed", "isolation_unavailable");
     const context = await browser.newContext({
+      timezoneId: "UTC",
       viewport: { width: options.width ?? 1920, height: options.height ?? 1080 },
       reducedMotion: "reduce",
     });
@@ -305,6 +306,7 @@ class BrowserSupport {
     );
     if (!this.browser) throw new Error("Preview browser is unavailable");
     const page = await this.browser.newPage({
+      timezoneId: "UTC",
       viewport: { width: frame.viewport.width * 2, height: frame.viewport.height + 44 },
     });
     try {

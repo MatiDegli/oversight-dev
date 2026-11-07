@@ -76,6 +76,7 @@ async function ready(page: Page) {
 }
 async function setup(width = 1920, theme = "dark", real = false) {
   const page = await browser.newPage({
+    timezoneId: "UTC",
     viewport: { width, height: width === 1280 ? 800 : 1080 },
     reducedMotion: "reduce",
   });

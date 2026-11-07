@@ -20,6 +20,8 @@ def test_observation(
             "Set a different test limit when starting the next run."
         )
     content += f"\nFailed tests: {failed}"
+    if "[redacted]" in run.output:
+        content += "\n[redacted] masks known secret values/fragments and credential-shaped text."
     if harness_pack:
         output = retain_failure(run.output, max_chars)
         if len(run.output) > max_chars:
