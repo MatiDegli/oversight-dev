@@ -152,14 +152,14 @@ function applyGeometry(
     (saved) => ![...saved.additions].some((id) => byId.has(id)),
   );
   const needsAdditions = elements.some((e) => !applied.get(cy)?.ids.has(e.data.id));
-  // Only simultaneous arrivals need the restored frame measured before the application batch.
-  const restoreBeforePlacement = restoringGrowth && needsAdditions;
-  if (restoreBeforePlacement) cy.batch(removeObsolete);
-  const { additions, relocated } = needsAdditions
-    ? placeAdditions(cy, elements, theme)
-    : { additions: [], relocated: new Map<string, Position>() };
+  // Restore before scanning live membership: removing nodes can also remove surviving edges.
+  if (restoringGrowth) cy.batch(removeObsolete);
+  const { additions, relocated } =
+    restoringGrowth || needsAdditions
+      ? placeAdditions(cy, elements, theme)
+      : { additions: [], relocated: new Map<string, Position>() };
   cy.batch(() => {
-    if (!restoreBeforePlacement) removeObsolete();
+    if (!restoringGrowth) removeObsolete();
     for (const [id, point] of relocated) cy.getElementById(id).position(point);
     if (additions.length)
       cy.add(additions.map((definition) => ({ ...definition, data: { ...definition.data } })));
